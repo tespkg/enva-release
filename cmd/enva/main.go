@@ -135,12 +135,11 @@ func main() {
 	// Name conversion for the options & args, e.g:
 	// enva --env-store-dsn http://localhost:8500 \
 	// /usr/local/example-svc --oidc env://sso --ac env://ac --dsn postgres://postgres:password@env://postgres/example?sslmode=disable
-	_, _, _ = absFiles, relFiles, s
+	args := getopt.Args()
+	fmt.Println(args, absFiles, relFiles, s)
 
 	// Watch Proc options & args change and restart when the values changed.
 
 	// Register Proc location if needed
 
-	args := getopt.Args()
-	fmt.Println(args)
 }

@@ -84,7 +84,7 @@ func TestPopulatedVars(t *testing.T) {
 	se.Get(store.Key{Name: "dev/bar"}).Return("bar val", nil).AnyTimes()
 
 	var err error
-	vars, err = populatedVars(s, rd, vars)
+	vars, err = fetchVars(s, rd, vars)
 	require.Nil(t, err)
 	require.Equal(t, map[string]string{
 		"ENV_dev_bar":  "bar val",
@@ -126,8 +126,13 @@ func TestPopulateVars(t *testing.T) {
 	}()
 
 	a := &agent{
-		s:               s,
-		args:            []string{"/usr/local/example-svc", "--oidc env://sso", "--ac env://ac", "--dsn postgres://postgres:password@env://postgres/example?sslmode=disable"},
+		s: s,
+		args: []string{
+			"/usr/local/example-svc",
+			"--oidc env://sso",
+			"--ac env://ac",
+			"--dsn postgres://postgres:password@env://postgres/example?sslmode=disable",
+		},
 		absInspectFiles: absFiles,
 		relInspectFiles: relFiles,
 
@@ -137,4 +142,6 @@ func TestPopulateVars(t *testing.T) {
 	}
 	err := a.populateEnvVars()
 	require.Nil(t, err)
+	t.Log(a.finalisedArgs)
+	t.Log(a.finalisedVars)
 }
