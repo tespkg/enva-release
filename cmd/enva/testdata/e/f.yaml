@@ -1,0 +1,4 @@
+version: "3"
+
+foo: {%% .ENV_test_foo %%}
+bar: %% .ENV_dev_bar %%

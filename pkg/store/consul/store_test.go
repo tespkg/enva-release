@@ -25,7 +25,7 @@ func TestNewStore(t *testing.T) {
 	u, err := url.Parse(dsn)
 	require.Nil(t, err)
 
-	s, err := newStore(dsn)
+	s, err := NewStore(dsn)
 	require.Nil(t, err)
 	ss := s.(*cs)
 	require.Equal(t, strings.TrimPrefix(u.Path, "/"), ss.prefix)
@@ -33,7 +33,7 @@ func TestNewStore(t *testing.T) {
 
 func newConsulStore(t *testing.T) *cs {
 	dsn := getConsulDsn(t)
-	s, err := newStore(dsn)
+	s, err := NewStore(dsn)
 	require.Nil(t, err)
 	return s.(*cs)
 }

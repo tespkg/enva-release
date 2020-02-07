@@ -115,7 +115,7 @@ func parseKey(prefix string, key store.Key) string {
 	return strings.Join(keys, "/")
 }
 
-func newStore(dsn string) (store.Store, error) {
+func NewStore(dsn string) (store.Store, error) {
 	// E.g for dsn: etcd://localhost:2379/prefix/for/key
 	u, err := url.Parse(dsn)
 	if err != nil {

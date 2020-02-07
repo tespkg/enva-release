@@ -1,20 +1,31 @@
 package main
 
 import (
-	"regexp"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
-func TestRegexKey(t *testing.T) {
-	a := regexp.MustCompile(`^\{\{ \.Consul_([a-z].*)_([a-z].*) \}\}`)
-	parts := a.FindStringSubmatch(`{{ .Consul_aaa_bbb }}`)
-	require.Equal(t, []string{`{{ .Consul_aaa_bbb }}`, "aaa", "bbb"}, parts)
-}
-
-func TestNilSlice(t *testing.T) {
-	var a []*int
-	a = append(a, nil, nil)
-	t.Log(a)
+func TestVerifyInspectFiles(t *testing.T) {
+	cases := []struct {
+		fn          string
+		expectedErr bool
+	}{
+		{fn: "/a/b/c", expectedErr: false},
+		{fn: "/a/b/c*", expectedErr: true},
+		{fn: "/a/b?/c*", expectedErr: true},
+		{fn: "./a/b?/c*", expectedErr: false},
+		{fn: "../a/b?/c*", expectedErr: true},
+	}
+	for i, c := range cases {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			_, _, err := verifyInspectFiles([]string{c.fn})
+			if c.expectedErr {
+				require.NotNil(t, err)
+			} else {
+				require.Nil(t, err)
+			}
+		})
+	}
 }

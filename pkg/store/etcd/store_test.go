@@ -25,7 +25,7 @@ func TestNewEtcdStore(t *testing.T) {
 	u, err := url.Parse(dsn)
 	require.Nil(t, err)
 
-	s, err := newStore(dsn)
+	s, err := NewStore(dsn)
 	require.Nil(t, err)
 	ss := s.(*es)
 	require.Equal(t, strings.TrimPrefix(u.Path, "/"), ss.prefix)
@@ -33,7 +33,7 @@ func TestNewEtcdStore(t *testing.T) {
 
 func newEtcdStore(t *testing.T) *es {
 	dsn := getEtcdDsn(t)
-	s, err := newStore(dsn)
+	s, err := NewStore(dsn)
 	require.Nil(t, err)
 	return s.(*es)
 }

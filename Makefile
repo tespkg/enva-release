@@ -8,6 +8,8 @@ help:
 	@echo ""
 	@echo "Available targets are:"
 	@echo ""
+	@echo "    generate-mock               Generate mock code for interfaces"
+	@echo ""
 	@echo "    run-fmt                     Run gofmt/goimports for the code"
 	@echo "    run-lint                    Run golangci-lint for the code static lint"
 	@echo "    run-test                    Run coverage test"
@@ -15,6 +17,15 @@ help:
 	@echo "    vendor                      Create/Update vendor packages"
 	@echo "    build                       Build the binary"
 	@echo ""
+
+.PHONY: get-protoc
+get-protoc:
+	@scripts/get_protoc.sh
+
+.PHONY: generate-mock
+generate-mock: get-protoc
+	@rm -f ./pkg/store/store_mock.go
+	@.bin/mockgen --source ./pkg/store/store.go --package store --destination ./pkg/store/store_mock.go
 
 .PHONY: run-fmt
 run-fmt:
