@@ -1,6 +1,6 @@
 package store
 
-import "github.com/pkg/errors"
+import "errors"
 
 var (
 	ErrNotFound             = errors.New("not found")

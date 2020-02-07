@@ -2,6 +2,7 @@ package etcd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"reflect"
@@ -9,7 +10,6 @@ import (
 	"time"
 
 	"github.com/coreos/etcd/clientv3"
-	"github.com/pkg/errors"
 	"meera.tech/envs/pkg/store"
 )
 
@@ -122,7 +122,7 @@ func newStore(dsn string) (store.Store, error) {
 		return nil, err
 	}
 	if u.Scheme != etcdSchema {
-		return nil, errors.Errorf("invalid schema, excepted: %v, got: %v", etcdSchema, u.Scheme)
+		return nil, fmt.Errorf("invalid schema, excepted: %v, got: %v", etcdSchema, u.Scheme)
 	}
 	if u.Path == "" {
 		return nil, errors.New("invalid path, got empty value")
