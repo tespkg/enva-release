@@ -59,7 +59,7 @@ func main() {
 
 	// Get Proc options & args from env store and start the Proc.
 	// Name conversion for the options & args, e.g:
-	// enva --env-store-dsn http://localhost:8500 /usr/local/example-svc --oidc store://sso --ac store://ac --dsn postgres://postgres:password@store://postgres:5432/example?sslmode=disable
+	// enva --env-store-dsn http://localhost:8500 /usr/local/example-svc --oidc env://sso --ac env://ac --dsn postgres://postgres:password@env://postgres:5432/example?sslmode=disable
 
 	// Watch Proc options & args change and restart when the values changed.
 
