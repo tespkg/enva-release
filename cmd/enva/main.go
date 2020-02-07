@@ -43,8 +43,8 @@ func printUsage(s *getopt.Set, w io.Writer) {
 	}
 	fmt.Fprintln(w, strings.Join(parts, " "))
 	s.PrintOptions(w)
-	fmt.Fprintln(w, `The supported key pattern in inspected files are: ^\{\{ \.Consul_([a-z].*)_([a-z].*) \}\}\n
-For example if there is a string "{{ .Consul_Workspace_OauthID }}" in a file, 
+	fmt.Fprintln(w, `The supported key pattern in inspected files are: ^\{\{ \.ENV_([a-z].*)_([a-z].*) \}\}\n
+For example if there is a string "{{ .ENV_Workspace_OauthID }}" in a file, 
 then it will be replaced with value of key "Workspace/OauthID" in env store.`)
 }
 
@@ -59,7 +59,7 @@ func main() {
 
 	// Get Proc options & args from env store and start the Proc.
 	// Name conversion for the options & args, e.g:
-	// enva --env-store-dsn http://localhost:8500 /usr/local/example-svc --oidc env://sso --ac env://ac --dsn postgres://postgres:password@env://postgres:5432/example?sslmode=disable
+	// enva --env-store-dsn http://localhost:8500 /usr/local/example-svc --oidc env://sso --ac env://ac --dsn postgres://postgres:password@env://postgres/example?sslmode=disable
 
 	// Watch Proc options & args change and restart when the values changed.
 
