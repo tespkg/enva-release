@@ -378,7 +378,7 @@ func populateInspectedFiles(vars values, tplFiles []string, tplLD, tplRD string,
 		dstFn := fn
 		dirPrefix := pt.tplDir()
 		if len(dirPrefix) > 0 {
-			dstFn = fn[len(dirPrefix)-1:]
+			dstFn = fn[len(dirPrefix):]
 		}
 		f, err := pt.create(dstFn)
 		if err != nil {
