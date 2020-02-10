@@ -171,15 +171,24 @@ func TestTermRunProc(t *testing.T) {
 	require.Equal(t, errors.New("test term"), err)
 }
 
-func TestKillRunProc(t *testing.T) {
-	terminate := make(chan error)
+func TestBackupTemplateFiles(t *testing.T) {
+	wd, _ := os.Getwd()
+	mfs := map[string]struct{}{
+		filepath.Join(wd, "testdata/g.html"):      {},
+		filepath.Join(wd, "testdata/a/bc/d.yaml"): {},
+	}
 
-	timer := time.NewTicker(time.Second * 2)
-	go func() {
-		<-timer.C
-		terminate <- errors.New("test kill")
-	}()
+	tplDir := "/tmp"
+	tplFs, err := backupTemplateFiles(mfs, tplDir)
+	require.Nil(t, err)
 
-	err := runProc([]string{"tail", "-f", "agent_test.go"}, terminate)
-	require.Equal(t, errors.New("test kill"), err)
+	expected := make(map[string]struct{})
+	for fn := range mfs {
+		expected[filepath.Join(tplDir, fn)] = struct{}{}
+	}
+	res := make(map[string]struct{})
+	for _, fn := range tplFs {
+		res[fn] = struct{}{}
+	}
+	require.Equal(t, expected, res)
 }
