@@ -83,12 +83,11 @@ func verifyInspectFiles(inspectFiles []string) ([]string, []string, error) {
 	return absFiles, relFiles, nil
 }
 
-// waitSignal awaits for SIGINT or SIGTERM and closes the channel
-func waitSignal(stop chan struct{}) {
+// waitSignal awaits for SIGINT or SIGTERM
+func waitSignal() {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	<-sigs
-	close(stop)
 	_ = log.Sync()
 }
 
@@ -196,5 +195,5 @@ func main() {
 
 	// TODO: Register Proc location if needed
 
-	waitSignal(make(chan struct{}))
+	waitSignal()
 }
