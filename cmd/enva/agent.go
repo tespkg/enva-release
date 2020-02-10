@@ -1,16 +1,20 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"text/template"
 
 	"meera.tech/envs/pkg/store"
+	"meera.tech/kit/log"
 	"meera.tech/kit/templates"
 )
 
@@ -23,7 +27,7 @@ const (
 
 var (
 	// E.g, env://example
-	envArgsRegex = regexp.MustCompile(fmt.Sprintf(`%s[a-z]*`, envArgSchema))
+	envArgsRegex = regexp.MustCompile(fmt.Sprintf(`%s[a-zA-Z]*`, envArgSchema))
 	// E.g, %% .ENV_project_env %%
 	envInspectFilesRegex = regexp.MustCompile(fmt.Sprintf(`%s \.(%s)_([a-zA-Z].*)_([a-zA-Z].*) %s`,
 		tplLeftDelimiter, strings.ToUpper(envKeyword), tplRightDelimiter))
@@ -36,11 +40,23 @@ func newValues() values {
 	return make(map[string]string)
 }
 
-type createFunc func(name string) (*os.File, error)
+func mergeValues(vals ...values) values {
+	mergedVal := newValues()
+	for _, val := range vals {
+		for k, v := range val {
+			mergedVal[k] = v
+		}
+	}
+	return mergedVal
+}
 
-// replaceable set of functions for fault injection
+type createFunc func(name string) (*os.File, error)
+type templateDirFunc func() string
+
+// Replaceable set of functions for test & fault injection
 type patchTable struct {
 	create createFunc
+	tplDir templateDirFunc
 }
 
 type agent struct {
@@ -49,64 +65,80 @@ type agent struct {
 	absInspectFiles []string
 	relInspectFiles []string
 
-	// Replaceable set of functions for fault injection
+	// Replaceable set of functions for test & fault injection
 	p patchTable
 
 	// Delimiters of template var indicator in files need to inspect
 	tplLeftDelim  string
 	tplRightDelim string
 
-	// Values populated with the env store.
-	finalisedArgs []string
-	finalisedVars values
+	// Template files
+	tplFiles []string
+
+	// Env values
+	argVars values
+	fsVars  values
+
+	// Channel for vars modification notifications
+	varsCh chan interface{}
+	// Channel for process exit notifications
+	statusCh chan error
 }
 
-func (a *agent) populateEnvVars() error {
-	var err error
-
-	// Populate env var for args.
-	a.finalisedArgs, err = populateArgs(a.s, a.args)
+func (a *agent) parse() (err error) {
+	// Parse args, get vars name & value from args
+	a.argVars, err = parseArgs(a.s, a.args)
 	if err != nil {
-		return fmt.Errorf("populate args failed: %v", err)
+		return fmt.Errorf("parse args failed: %v", err)
 	}
 
-	// Populate inspect files
-	a.finalisedVars, err = populateInspectedFiles(a.s, a.absInspectFiles, a.relInspectFiles, a.tplLeftDelim, a.tplRightDelim, a.p.create)
+	// Parse inspected files, get vars name & value from inspected files and template files list
+	a.fsVars, a.tplFiles, err = parseInspectedFiles(a.s, a.absInspectFiles, a.relInspectFiles, a.p.tplDir)
 	if err != nil {
 		return fmt.Errorf("populate inspected files failed: %v", err)
 	}
 
-	return nil
+	return
 }
 
-func populateArgs(s store.Store, args []string) ([]string, error) {
-	var finalisedArgs []string
-	for _, arg := range args {
-		bNewArg := envArgsRegex.ReplaceAllFunc([]byte(arg), func(bytes []byte) []byte {
-			rawArg := string(bytes)
-			rawKey := rawArg[len(envArgSchema)-1:]
-			val, err := s.Get(store.Key{
-				Name: rawKey,
-			})
-			if err != nil {
-				return bytes
-			}
-			return []byte(val.(string))
-		})
+func (a *agent) populateProcEnvVars(vars values) ([]string, error) {
+	// Populate env var for args.
+	finalisedArgs, err := populateArgs(vars, a.args)
+	if err != nil {
+		return nil, fmt.Errorf("populate args failed: %v", err)
+	}
 
-		newArg := string(bNewArg)
-		if strings.Contains(newArg, envArgSchema) {
-			return nil, fmt.Errorf("unable to get env var for: %v", arg)
-		}
-		finalisedArgs = append(finalisedArgs, newArg)
+	// Populate inspect files
+	err = populateInspectedFiles(vars, a.tplFiles, a.tplLeftDelim, a.tplRightDelim, a.p)
+	if err != nil {
+		return nil, fmt.Errorf("populate inspected files failed: %v", err)
 	}
 
 	return finalisedArgs, nil
 }
 
-func populateInspectedFiles(s store.Store, absFiles, relFiles []string, tplLD, tplRD string, create createFunc) (vars values, err error) {
-	vars = newValues()
+func parseArgs(s store.Store, args []string) (values, error) {
+	vars := newValues()
+	for _, arg := range args {
+		parts := envArgsRegex.FindAll([]byte(arg), -1)
+		for _, part := range parts {
+			ele := string(part)
+			rawKey := ele[len(envArgSchema):]
+			val, err := s.Get(store.Key{
+				Name: rawKey,
+			})
+			if err != nil {
+				return nil, err
+			}
+			vars[rawKey] = val.(string)
+		}
+	}
 
+	return vars, nil
+}
+
+func parseInspectedFiles(s store.Store, absFiles, relFiles []string, tplDir templateDirFunc) (vars values, tplFiles []string, err error) {
+	vars = newValues()
 	// Get env var from abs path files
 	allFiles := make(map[string]struct{})
 	for _, fn := range absFiles {
@@ -116,12 +148,12 @@ func populateInspectedFiles(s store.Store, absFiles, relFiles []string, tplLD, t
 
 		f, err := os.Open(fn)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		vars, err = fetchVars(s, f, vars)
 		if err != nil {
 			f.Close()
-			return nil, fmt.Errorf("populated vars failed fn: %v err: %v", fn, err)
+			return nil, nil, fmt.Errorf("populated vars failed fn: %v err: %v", fn, err)
 		}
 		f.Close()
 		allFiles[fn] = struct{}{}
@@ -159,30 +191,165 @@ func populateInspectedFiles(s store.Store, absFiles, relFiles []string, tplLD, t
 			return nil
 		})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	// Render files with populated vars
-	for fn := range allFiles {
+	tplFiles, err = backupTemplateFiles(allFiles, tplDir())
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return
+}
+
+func populateArgs(vars values, args []string) ([]string, error) {
+	var finalisedArgs []string
+	for _, arg := range args {
+		var rawKey string
+		bNewArg := envArgsRegex.ReplaceAllFunc([]byte(arg), func(bytes []byte) []byte {
+			rawArg := string(bytes)
+			rawKey = rawArg[len(envArgSchema):]
+			val, ok := vars[rawKey]
+			if !ok {
+				return bytes
+			}
+			return []byte(val)
+		})
+
+		newArg := string(bNewArg)
+		if strings.Contains(newArg, envArgSchema) {
+			return nil, fmt.Errorf("unable to get env var for: %v", arg)
+		}
+		finalisedArgs = append(finalisedArgs, newArg)
+	}
+
+	return finalisedArgs, nil
+}
+
+func populateInspectedFiles(vars values, tplFiles []string, tplLD, tplRD string, pt patchTable) error {
+	for _, fn := range tplFiles {
 		b, err := ioutil.ReadFile(fn)
 		if err != nil {
+			return err
+		}
+
+		// Trim tplDir and create new file
+		dstFn := fn
+		dirPrefix := pt.tplDir()
+		if len(dirPrefix) > 0 {
+			dstFn = fn[len(dirPrefix)-1:]
+		}
+		f, err := pt.create(dstFn)
+		if err != nil {
+			return err
+		}
+
+		tpl := template.New(dstFn)
+		tpl, err = tpl.Delims(tplLD, tplRD).Parse(string(b))
+		if err != nil {
+			return err
+		}
+		if err := tpl.Execute(f, vars); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (a *agent) run(ctx context.Context) {
+	log.Infoa("Starting ", a.args)
+
+	for {
+		select {
+		case vars := <-a.varsCh:
+			_ = vars
+		case status := <-a.statusCh:
+			_ = status
+		case <-ctx.Done():
+		}
+	}
+}
+
+func (a *agent) runWait(nameArgs []string, abort <-chan error) {
+	err := runProc(nameArgs, abort)
+	a.statusCh <- err
+}
+
+func runProc(nameArgs []string, abort <-chan error) error {
+	if len(nameArgs) == 0 {
+		return errors.New("require at least proc name")
+	}
+	name := nameArgs[0]
+
+	var args []string
+	if len(nameArgs) > 1 {
+		args = nameArgs[1:]
+	}
+	cmd := exec.Command(name, args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	done := make(chan error, 1)
+	go func() {
+		done <- cmd.Wait()
+	}()
+
+	select {
+	case err := <-abort:
+		log.Warnf("Aborting %v", name)
+		if errKill := cmd.Process.Kill(); errKill != nil {
+			log.Warnf("killing %v caused an error %v", name, errKill)
+		}
+		return err
+	case err := <-done:
+		return err
+	}
+}
+
+// backupTemplateFiles Copy all the inspected files to template dir, use them as the templates files
+func backupTemplateFiles(files map[string]struct{}, tplDir string) ([]string, error) {
+	var templateFiles []string
+	if tplDir == "" {
+		for fn := range files {
+			templateFiles = append(templateFiles, fn)
+		}
+		return templateFiles, nil
+	}
+
+	var opendFds []io.Closer
+	defer func() {
+		for _, closer := range opendFds {
+			closer.Close()
+		}
+	}()
+
+	for fn := range files {
+		tplFn := filepath.Join(tplDir, fn)
+		if err := os.MkdirAll(filepath.Dir(tplFn), 0755); err != nil {
+			return nil, fmt.Errorf("mkdir for tpl file: %v failed: %w", tplFn, err)
+		}
+		input, err := os.Open(fn)
+		if err != nil {
 			return nil, err
 		}
-		f, err := create(fn)
+		opendFds = append(opendFds, input)
+
+		output, err := os.Create(tplFn)
 		if err != nil {
+			return nil, err
+		}
+		opendFds = append(opendFds, output)
+
+		if _, err := io.Copy(output, input); err != nil {
 			return nil, err
 		}
 
-		tpl := template.New(fn)
-		tpl, err = tpl.Delims(tplLD, tplRD).Parse(string(b))
-		if err != nil {
-			return nil, err
-		}
-		if err := tpl.Execute(f, vars); err != nil {
-			return nil, err
-		}
+		templateFiles = append(templateFiles, tplFn)
 	}
-	return
+
+	return templateFiles, nil
 }
 
 func matchWildcardsRelFiles(wildcardPatterns []string, path string) bool {

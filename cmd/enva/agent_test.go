@@ -109,17 +109,22 @@ func TestPopulateVars(t *testing.T) {
 	se := s.EXPECT()
 	se.Get(gomock.Any()).Return("foo", nil).AnyTimes()
 
-	p := patchTable{create: func(name string) (file *os.File, err error) {
-		name, err = filepath.Rel(wd, name)
-		if err != nil {
-			return nil, err
-		}
-		name = "/tmp/genfiles/" + strings.TrimPrefix(name, "testdata")
-		if err := os.MkdirAll(filepath.Dir(name), 0755); err != nil {
-			return nil, fmt.Errorf("mkdirall failed: %v", err)
-		}
-		return os.Create(name)
-	}}
+	p := patchTable{
+		create: func(name string) (file *os.File, err error) {
+			name, err = filepath.Rel(wd, name)
+			if err != nil {
+				return nil, err
+			}
+			name = "/tmp/genfiles/" + strings.TrimPrefix(name, "testdata")
+			if err := os.MkdirAll(filepath.Dir(name), 0755); err != nil {
+				return nil, fmt.Errorf("mkdirall failed: %v", err)
+			}
+			return os.Create(name)
+		},
+		tplDir: func() string {
+			return ""
+		},
+	}
 
 	defer func() {
 		_ = os.RemoveAll("testdata/genfiles")
@@ -140,8 +145,21 @@ func TestPopulateVars(t *testing.T) {
 		tplLeftDelim:  tplLeftDelimiter,
 		tplRightDelim: tplRightDelimiter,
 	}
-	err := a.populateEnvVars()
+	err := a.parse()
 	require.Nil(t, err)
-	t.Log(a.finalisedArgs)
-	t.Log(a.finalisedVars)
+
+	vars := mergeValues(a.argVars, a.fsVars)
+	require.Equal(t, values(map[string]string{
+		"ENV_Swagger_CallbackURL": "foo",
+		"ENV_Swagger_JSONURI":     "foo",
+		"ENV_dev_bar":             "foo",
+		"ENV_test_foo":            "foo",
+		"ac":                      "foo",
+		"postgres":                "foo",
+		"sso":                     "foo",
+	}), vars)
+
+	finalisedArgs, err := a.populateProcEnvVars(vars)
+	require.Nil(t, err)
+	require.Equal(t, "/usr/local/example-svc --oidc foo --ac foo --dsn postgres://postgres:password@foo/example?sslmode=disable", strings.Join(finalisedArgs, " "))
 }

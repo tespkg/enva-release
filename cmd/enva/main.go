@@ -129,6 +129,9 @@ func main() {
 			log.Fatala("initiate etcd env store failed: ", err)
 			os.Exit(-1)
 		}
+	default:
+		log.Fatala("unknown env store schema: ", u.Scheme)
+		os.Exit(-1)
 	}
 
 	// Get Proc options & args from env store and start the Proc.
