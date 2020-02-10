@@ -11,7 +11,9 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"syscall"
 	"text/template"
+	"time"
 
 	"meera.tech/envs/pkg/store"
 	"meera.tech/kit/log"
@@ -23,6 +25,8 @@ const (
 	envArgSchema      = envKeyword + "://"
 	tplLeftDelimiter  = `%%`
 	tplRightDelimiter = `%%`
+
+	gracefullyTerminateTimeout = time.Second * 10
 )
 
 var (
@@ -59,6 +63,19 @@ type patchTable struct {
 	tplDir templateDirFunc
 }
 
+func defaultPatchTable() patchTable {
+	return patchTable{
+		create: os.Create,
+		tplDir: func() string {
+			dir, err := os.UserConfigDir()
+			if err != nil {
+				dir = "/tmp"
+			}
+			return dir
+		},
+	}
+}
+
 type agent struct {
 	s               store.Store
 	args            []string
@@ -72,33 +89,49 @@ type agent struct {
 	tplLeftDelim  string
 	tplRightDelim string
 
+	// Channel for vars modification notifications
+	varsCh chan values
+	// Channel for process exit notifications
+	statusCh    chan error
+	terminateCh chan error
+
 	// Template files
 	tplFiles []string
-
 	// Env values
 	argVars values
 	fsVars  values
-
-	// Channel for vars modification notifications
-	varsCh chan interface{}
-	// Channel for process exit notifications
-	statusCh chan error
+	vars    values
 }
 
-func (a *agent) parse() (err error) {
+func newAgent(s store.Store, args, absFiles, relFiles []string, pt patchTable) (*agent, error) {
+	a := &agent{
+		s:               s,
+		args:            args,
+		absInspectFiles: absFiles,
+		relInspectFiles: relFiles,
+		p:               pt,
+		tplLeftDelim:    tplLeftDelimiter,
+		tplRightDelim:   tplRightDelimiter,
+		varsCh:          make(chan values),
+		statusCh:        make(chan error),
+		terminateCh:     make(chan error),
+	}
+
+	var err error
 	// Parse args, get vars name & value from args
 	a.argVars, err = parseArgs(a.s, a.args)
 	if err != nil {
-		return fmt.Errorf("parse args failed: %v", err)
+		return nil, fmt.Errorf("initialize args failed: %v", err)
 	}
 
 	// Parse inspected files, get vars name & value from inspected files and template files list
 	a.fsVars, a.tplFiles, err = parseInspectedFiles(a.s, a.absInspectFiles, a.relInspectFiles, a.p.tplDir)
 	if err != nil {
-		return fmt.Errorf("populate inspected files failed: %v", err)
+		return nil, fmt.Errorf("populate inspected files failed: %v", err)
 	}
+	a.vars = mergeValues(a.argVars, a.fsVars)
 
-	return
+	return a, nil
 }
 
 func (a *agent) populateProcEnvVars(vars values) ([]string, error) {
@@ -115,6 +148,114 @@ func (a *agent) populateProcEnvVars(vars values) ([]string, error) {
 	}
 
 	return finalisedArgs, nil
+}
+
+func (a *agent) run(ctx context.Context) {
+	log.Infoa("Starting ", a.args)
+
+	err := a.reconcile(a.vars)
+	if err != nil {
+		log.Errora(err)
+		return
+	}
+
+	for {
+		select {
+		case vars := <-a.varsCh:
+			log.Infof("Restarting %v, caused by env vars changing", a.args[0])
+			a.terminate(nil)
+			err = a.reconcile(vars)
+			if err != nil {
+				log.Errora(err)
+				return
+			}
+		case status := <-a.statusCh:
+			log.Infof("Restarting %v, caused by %v", a.args[0], status)
+			err = a.reconcile(nil)
+			if err != nil {
+				log.Errorf("Restart %v failed: %v", a.args[0], err)
+				return
+			}
+		case <-ctx.Done():
+			a.terminate(nil)
+			log.Infoa("enva has successfully terminated")
+			return
+		}
+	}
+}
+
+// TODO: watch env store for key changes...
+func (a *agent) watch(ctx context.Context) {
+	_ = ctx
+}
+
+func (a *agent) reconcile(vars values) error {
+	if vars == nil {
+		vars = a.vars
+	}
+	finalisedArgs, err := a.populateProcEnvVars(vars)
+	if err != nil {
+		return err
+	}
+	go a.runWait(finalisedArgs, a.terminateCh)
+
+	return nil
+}
+
+func (a *agent) terminate(err error) {
+	a.terminateCh <- err
+	<-a.statusCh
+}
+
+func (a *agent) runWait(nameArgs []string, terminate <-chan error) {
+	err := runProc(nameArgs, terminate)
+	a.statusCh <- err
+}
+
+func runProc(nameArgs []string, terminate <-chan error) error {
+	if len(nameArgs) == 0 {
+		return errors.New("require at least proc name")
+	}
+	log.Infoa("Running ", nameArgs)
+
+	name := nameArgs[0]
+	var args []string
+	if len(nameArgs) > 1 {
+		args = nameArgs[1:]
+	}
+	cmd := exec.Command(name, args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	done := make(chan error, 1)
+	go func() {
+		done <- cmd.Wait()
+	}()
+
+	abort := make(chan error)
+	select {
+	case err := <-abort:
+		log.Warnf("Aborting %v", name)
+		if errKill := cmd.Process.Kill(); errKill != nil {
+			log.Warnf("killing %v caused an error %v", name, errKill)
+		}
+		return err
+	case err := <-terminate:
+		log.Infof("Gracefully terminate %v", name)
+		tick := time.NewTicker(gracefullyTerminateTimeout)
+		go func() {
+			<-tick.C
+			abort <- errors.New("gracefully terminate timeout")
+		}()
+		if errTerm := cmd.Process.Signal(syscall.SIGTERM); errTerm != nil {
+			log.Warnf("terminating %v caused an error %v", name, errTerm)
+		}
+		return err
+	case err := <-done:
+		return err
+	}
 }
 
 func parseArgs(s store.Store, args []string) (values, error) {
@@ -254,58 +395,6 @@ func populateInspectedFiles(vars values, tplFiles []string, tplLD, tplRD string,
 		}
 	}
 	return nil
-}
-
-func (a *agent) run(ctx context.Context) {
-	log.Infoa("Starting ", a.args)
-
-	for {
-		select {
-		case vars := <-a.varsCh:
-			_ = vars
-		case status := <-a.statusCh:
-			_ = status
-		case <-ctx.Done():
-		}
-	}
-}
-
-func (a *agent) runWait(nameArgs []string, abort <-chan error) {
-	err := runProc(nameArgs, abort)
-	a.statusCh <- err
-}
-
-func runProc(nameArgs []string, abort <-chan error) error {
-	if len(nameArgs) == 0 {
-		return errors.New("require at least proc name")
-	}
-	name := nameArgs[0]
-
-	var args []string
-	if len(nameArgs) > 1 {
-		args = nameArgs[1:]
-	}
-	cmd := exec.Command(name, args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Start(); err != nil {
-		return err
-	}
-	done := make(chan error, 1)
-	go func() {
-		done <- cmd.Wait()
-	}()
-
-	select {
-	case err := <-abort:
-		log.Warnf("Aborting %v", name)
-		if errKill := cmd.Process.Kill(); errKill != nil {
-			log.Warnf("killing %v caused an error %v", name, errKill)
-		}
-		return err
-	case err := <-done:
-		return err
-	}
 }
 
 // backupTemplateFiles Copy all the inspected files to template dir, use them as the templates files

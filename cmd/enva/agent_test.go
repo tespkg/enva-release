@@ -2,18 +2,18 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
-
-	"meera.tech/envs/pkg/store"
-
 	"github.com/stretchr/testify/require"
+	"meera.tech/envs/pkg/store"
 )
 
 const (
@@ -130,25 +130,19 @@ func TestPopulateVars(t *testing.T) {
 		_ = os.RemoveAll("testdata/genfiles")
 	}()
 
-	a := &agent{
-		s: s,
-		args: []string{
+	a, err := newAgent(
+		s,
+		[]string{
 			"/usr/local/example-svc",
 			"--oidc env://sso",
 			"--ac env://ac",
 			"--dsn postgres://postgres:password@env://postgres/example?sslmode=disable",
 		},
-		absInspectFiles: absFiles,
-		relInspectFiles: relFiles,
-
-		p:             p,
-		tplLeftDelim:  tplLeftDelimiter,
-		tplRightDelim: tplRightDelimiter,
-	}
-	err := a.parse()
+		absFiles,
+		relFiles,
+		p,
+	)
 	require.Nil(t, err)
-
-	vars := mergeValues(a.argVars, a.fsVars)
 	require.Equal(t, values(map[string]string{
 		"ENV_Swagger_CallbackURL": "foo",
 		"ENV_Swagger_JSONURI":     "foo",
@@ -157,9 +151,35 @@ func TestPopulateVars(t *testing.T) {
 		"ac":                      "foo",
 		"postgres":                "foo",
 		"sso":                     "foo",
-	}), vars)
+	}), a.vars)
 
-	finalisedArgs, err := a.populateProcEnvVars(vars)
+	finalisedArgs, err := a.populateProcEnvVars(a.vars)
 	require.Nil(t, err)
 	require.Equal(t, "/usr/local/example-svc --oidc foo --ac foo --dsn postgres://postgres:password@foo/example?sslmode=disable", strings.Join(finalisedArgs, " "))
+}
+
+func TestTermRunProc(t *testing.T) {
+	terminate := make(chan error)
+
+	timer := time.NewTicker(time.Second * 2)
+	go func() {
+		<-timer.C
+		terminate <- errors.New("test term")
+	}()
+
+	err := runProc([]string{"tail", "-f", "agent_test.go"}, terminate)
+	require.Equal(t, errors.New("test term"), err)
+}
+
+func TestKillRunProc(t *testing.T) {
+	terminate := make(chan error)
+
+	timer := time.NewTicker(time.Second * 2)
+	go func() {
+		<-timer.C
+		terminate <- errors.New("test kill")
+	}()
+
+	err := runProc([]string{"tail", "-f", "agent_test.go"}, terminate)
+	require.Equal(t, errors.New("test kill"), err)
 }

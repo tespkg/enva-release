@@ -1,20 +1,22 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/url"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"sync"
+	"syscall"
 
+	"github.com/pborman/getopt/v2"
 	"meera.tech/envs/pkg/store"
 	"meera.tech/envs/pkg/store/consul"
 	"meera.tech/envs/pkg/store/etcd"
-
 	"meera.tech/kit/log"
-
-	"github.com/pborman/getopt/v2"
 )
 
 var (
@@ -32,7 +34,7 @@ func init() {
 	getopt.FlagLong(&envStoreDsn, "env-store-dsn", 'a', "Required, env store dsn")
 	getopt.FlagLong(&registerLocation, "register-location", 'l', "Optional, register Proc location")
 	getopt.FlagLong(&registerKVs, "register-kvs", 'k',
-		`Optional, register extra k=v values to env store, e.g: register a=b and c=d by using "-k a=b -k c=d"`)
+		`Optional, register k=v values to env store, e.g: register a=b and c=d by using "-k a=b -k c=d"`)
 	getopt.FlagLong(&inspectFiles, "inspect-files", 'i',
 		`Optional, inspect files(support "*" and "?" wildcards) and replace the env key with the value in env store, `+
 			`if there is any key can't found in env store then prompt an error, `+
@@ -81,16 +83,20 @@ func verifyInspectFiles(inspectFiles []string) ([]string, []string, error) {
 	return absFiles, relFiles, nil
 }
 
+// waitSignal awaits for SIGINT or SIGTERM and closes the channel
+func waitSignal(stop chan struct{}) {
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	<-sigs
+	close(stop)
+	_ = log.Sync()
+}
+
 func main() {
 	getopt.Parse()
 	if help {
 		printUsage(getopt.CommandLine, os.Stdout)
 		os.Exit(0)
-	}
-
-	if envStoreDsn == "" {
-		printUsage(getopt.CommandLine, os.Stdout)
-		os.Exit(-1)
 	}
 
 	// Initiate log facility.
@@ -99,6 +105,11 @@ func main() {
 	}
 	if err := log.Configure(logOptions); err != nil {
 		fmt.Fprintln(os.Stderr, "initiate log failed: ", err)
+		os.Exit(-1)
+	}
+
+	if envStoreDsn == "" {
+		log.Fatala(`option "env-store-dsn" is missing`)
 		os.Exit(-1)
 	}
 
@@ -134,15 +145,56 @@ func main() {
 		os.Exit(-1)
 	}
 
+	// Register kv pairs
+	for _, kv := range registerKVs {
+		parts := strings.Split(kv, "=")
+		if len(parts) < 2 {
+			log.Warnf("invalid kv pair found: %v", kv)
+			continue
+		}
+		k, v := strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1])
+		if err := s.Set(store.Key{Name: k}, v); err != nil {
+			log.Errorf("failed to register kv pair: %v, err: %v", kv, err)
+			os.Exit(-1)
+		}
+	}
+
 	// Get Proc options & args from env store and start the Proc.
 	// Name conversion for the options & args, e.g:
 	// enva --env-store-dsn http://localhost:8500 \
 	// /usr/local/example-svc --oidc env://sso --ac env://ac --dsn postgres://postgres:password@env://postgres/example?sslmode=disable
 	args := getopt.Args()
-	fmt.Println(args, absFiles, relFiles, s)
+	if len(args) == 0 {
+		log.Fatala("Proc name is missing")
+		os.Exit(-1)
+	}
+	a, err := newAgent(s, args, absFiles, relFiles, defaultPatchTable())
+	if err != nil {
+		log.Fatala(err)
+		os.Exit(-1)
+	}
+
+	wg := sync.WaitGroup{}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer func() {
+		log.Info("env agent is terminating")
+		cancel()
+		wg.Wait()
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		a.run(ctx)
+	}()
 
 	// Watch Proc options & args change and restart when the values changed.
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		a.watch(ctx)
+	}()
 
-	// Register Proc location if needed
+	// TODO: Register Proc location if needed
 
+	waitSignal(make(chan struct{}))
 }
