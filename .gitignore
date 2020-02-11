@@ -34,3 +34,4 @@
 # temporary ignores
 .bin
 bin
+vars.yaml

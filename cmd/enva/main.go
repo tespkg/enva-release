@@ -20,10 +20,10 @@ import (
 )
 
 var (
-	envStoreDsn      = "http://localhost:8502"
-	registerLocation bool
+	envStoreDsn      = "http://localhost:8502/a/bc"
 	registerKVs      []string
 	inspectFiles     []string
+	registerLocation bool
 	verbose          bool
 	help             bool
 
@@ -31,15 +31,15 @@ var (
 )
 
 func init() {
-	getopt.FlagLong(&envStoreDsn, "env-store-dsn", 'a', "Required, env store dsn")
-	getopt.FlagLong(&registerLocation, "register-location", 'l', "Optional, register Proc location")
-	getopt.FlagLong(&registerKVs, "register-kvs", 'k',
-		`Optional, register k=v values to env store, e.g: register a=b and c=d by using "-k a=b -k c=d"`)
+	getopt.FlagLong(&envStoreDsn, "envs", 'e', "Required, env store dsn")
+	getopt.FlagLong(&registerKVs, "kvs", 'k',
+		`Optional, register k=v value pair to env store, e.g: register a=b and c=d by using "-k a=b -k c=d"`)
 	getopt.FlagLong(&inspectFiles, "inspect-files", 'i',
 		`Optional, inspect files(support "*" and "?" wildcards) and replace the env key with the value in env store, `+
 			`if there is any key can't found in env store then prompt an error, `+
 			`e.g: "-i *.yaml -i *.html" will inspect all the yaml & html files under the working dir.`)
-	getopt.Flag(&verbose, 'v', "Optional, be verbose")
+	getopt.FlagLong(&registerLocation, "location", 'l', "Optional, enable Proc location register")
+	getopt.FlagLong(&verbose, "verbose", 'v', "Optional, be verbose")
 	getopt.FlagLong(&help, "help", 'h', "Optional, display usage")
 	getopt.SetUsage(func() {
 		s := getopt.CommandLine
@@ -52,9 +52,9 @@ func printUsage(s *getopt.Set, w io.Writer) {
 		"Usage:",
 		s.Program(),
 		"[Options]",
-		"Proc",
+		"<Proc>",
 		"[Proc options]",
-		"{Proc args]",
+		"[Proc args]",
 	}
 	fmt.Fprintln(w, strings.Join(parts, " "))
 	s.PrintOptions(w)

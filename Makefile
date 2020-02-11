@@ -48,3 +48,4 @@ vendor:
 build:
 	@mkdir -p bin
 	@go build -mod vendor -o bin/enva meera.tech/envs/cmd/enva
+	@go build -mod vendor -o bin/envi meera.tech/envs/cmd/envi
