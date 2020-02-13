@@ -43,7 +43,7 @@ ps:
 - [ ] support envf
 - [ ] support watch
 - [ ] support store value of os.Env in store
-- [ ] wrap images to include `enva`, `s4` binary
+- [ ] wrap images to include `enva`, `s4`(simple static site service) binary
 - [ ] a docker-compose file for dev purpose
 - [ ] serve front end with `s4`
 - [ ] operator...
