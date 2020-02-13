@@ -38,3 +38,13 @@ ps:
 1. command line: `envf://sso-config`
 2. store: `sso-config: /path/to/file.yaml=ENV_content_of_file`
 3. store: `content_of_file: blablabla....`
+
+## TODO
+- [ ] support envf
+- [ ] support watch
+- [ ] support store value of os.Env in store
+- [ ] wrap images to include `enva`, `s4` binary
+- [ ] a docker-compose file for dev purpose
+- [ ] serve front end with `s4`
+- [ ] operator...
+- [ ] env store on k8s, istio
