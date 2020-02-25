@@ -33,7 +33,7 @@ const (
 
 var (
 	// E.g, env://example
-	envArgsRegex = regexp.MustCompile(fmt.Sprintf(`\{(%s|%s)[\-A-Za-z0-9/]*\}`, envArgSchema, envfArgSchema))
+	envArgsRegex = regexp.MustCompile(fmt.Sprintf(`(%s|%s)[\-A-Za-z0-9/]*`, envArgSchema, envfArgSchema))
 	// E.g, %% .ENV_project_env %%
 	envInspectFilesRegex = regexp.MustCompile(fmt.Sprintf(`%s \.(%s)_([\-A-Za-z0-9].*)_([\-A-Za-z0-9].*) %s`,
 		tplLeftDelimiter, strings.ToUpper(envKeyword), tplRightDelimiter))

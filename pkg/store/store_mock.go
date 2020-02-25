@@ -58,12 +58,11 @@ func (mr *MockStoreMockRecorder) Get(key interface{}) *gomock.Call {
 }
 
 // GetNsValues mocks base method
-func (m *MockStore) GetNsValues(namespace string) ([]Key, []interface{}, error) {
+func (m *MockStore) GetNsValues(namespace string) (KeyVals, error) {
 	ret := m.ctrl.Call(m, "GetNsValues", namespace)
-	ret0, _ := ret[0].([]Key)
-	ret1, _ := ret[1].([]interface{})
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
+	ret0, _ := ret[0].(KeyVals)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // GetNsValues indicates an expected call of GetNsValues
@@ -72,12 +71,11 @@ func (mr *MockStoreMockRecorder) GetNsValues(namespace interface{}) *gomock.Call
 }
 
 // GetKindValues mocks base method
-func (m *MockStore) GetKindValues(kind string) ([]Key, []interface{}, error) {
+func (m *MockStore) GetKindValues(kind string) (KeyVals, error) {
 	ret := m.ctrl.Call(m, "GetKindValues", kind)
-	ret0, _ := ret[0].([]Key)
-	ret1, _ := ret[1].([]interface{})
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
+	ret0, _ := ret[0].(KeyVals)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // GetKindValues indicates an expected call of GetKindValues
@@ -86,17 +84,16 @@ func (mr *MockStoreMockRecorder) GetKindValues(kind interface{}) *gomock.Call {
 }
 
 // GetNsKindValues mocks base method
-func (m *MockStore) GetNsKindValues(ns, kind string) ([]Key, []interface{}, error) {
-	ret := m.ctrl.Call(m, "GetNsKindValues", ns, kind)
-	ret0, _ := ret[0].([]Key)
-	ret1, _ := ret[1].([]interface{})
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
+func (m *MockStore) GetNsKindValues(namespace, kind string) (KeyVals, error) {
+	ret := m.ctrl.Call(m, "GetNsKindValues", namespace, kind)
+	ret0, _ := ret[0].(KeyVals)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // GetNsKindValues indicates an expected call of GetNsKindValues
-func (mr *MockStoreMockRecorder) GetNsKindValues(ns, kind interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNsKindValues", reflect.TypeOf((*MockStore)(nil).GetNsKindValues), ns, kind)
+func (mr *MockStoreMockRecorder) GetNsKindValues(namespace, kind interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNsKindValues", reflect.TypeOf((*MockStore)(nil).GetNsKindValues), namespace, kind)
 }
 
 // Close mocks base method

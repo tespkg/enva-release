@@ -16,15 +16,15 @@ type cs struct {
 	client *api.Client
 }
 
-func (c *cs) GetNsValues(namespace string) ([]store.Key, []interface{}, error) {
+func (c *cs) GetNsValues(namespace string) (store.KeyVals, error) {
 	panic("implement me")
 }
 
-func (c *cs) GetKindValues(kind string) ([]store.Key, []interface{}, error) {
+func (c *cs) GetKindValues(kind string) (store.KeyVals, error) {
 	panic("implement me")
 }
 
-func (c *cs) GetNsKindValues(namespace, kind string) ([]store.Key, []interface{}, error) {
+func (c *cs) GetNsKindValues(namespace, kind string) (store.KeyVals, error) {
 	panic("implement me")
 }
 

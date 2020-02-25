@@ -15,69 +15,35 @@ import (
 	"tespkg.in/envs/pkg/store"
 )
 
+const (
+	envKind   = "env"
+	envfKind  = "envf"
+	envoKind  = "envo"
+	envofKind = "envof"
+	specKind  = "spec"
+)
+
+var (
+	leftDlims  = []string{"{env://", "{envf://", "{envo://", "{envof://"}
+	rightDlims = []string{"}", "}", "}", "}"}
+)
+
 var (
 	envKeyRegex      = regexp.MustCompile(`{env(f|o|of)?:// *\.([_a-zA-Z][_a-zA-Z0-9]*) *}`)
 	envFilenameRegex = regexp.MustCompile(`{envfn: *([-_a-zA-Z0-9]*) *}`)
 )
 
-type kvPair struct {
-	kind string
+type tempFunc func(dir, pattern string) (f *os.File, err error)
+
+type kv struct {
 	spec string
+	kind string
 	key  string
 	val  string
 }
 
-type tempFunc func(dir, pattern string) (f *os.File, err error)
-
 func Render(es store.Store, spec string, ir io.Reader, iw io.Writer) error {
 	return render(es, spec, ir, iw, &kvState{}, ioutil.TempFile)
-}
-
-func scan(spec string, r io.Reader, scanFilename bool) ([]kvPair, error) {
-	if spec == "" {
-		return nil, errors.New("got empty spec")
-	}
-
-	bs, err := ioutil.ReadAll(r)
-	if err != nil {
-		return nil, err
-	}
-	doc := string(bs)
-
-	var kvs []kvPair
-	var isFn bool
-
-	if scanFilename {
-		// Check if doc is an envf or not
-		fnRes := envFilenameRegex.FindAllStringSubmatch(doc, -1)
-		if len(fnRes) > 1 {
-			return nil, fmt.Errorf("expected only one {envfn: *}, got %v", len(fnRes))
-		}
-
-		// Found a filename annotation
-		if len(fnRes) == 1 {
-			isFn = true
-			fn := fnRes[0][1]
-			kvs = append(kvs, kvPair{
-				kind: "envf",
-				spec: spec,
-				key:  fn,
-				val:  doc,
-			})
-		}
-	}
-
-	// Scan doc, exact all keys
-	keyRes := envKeyRegex.FindAllStringSubmatch(doc, -1)
-	for _, keyMatch := range keyRes {
-		kv := kvFromMatchItem(spec, keyMatch)
-		kvs = append(kvs, kv)
-		if isFn && (kv.kind == "envf" || kv.kind == "envof") && kv.key == kvs[0].key {
-			return nil, errors.New("found cycle reference in envf file")
-		}
-	}
-
-	return kvs, nil
 }
 
 func render(es store.Store, spec string, ir io.Reader, iw io.Writer, kvS *kvState, tmpFunc tempFunc) error {
@@ -98,17 +64,17 @@ func render(es store.Store, spec string, ir io.Reader, iw io.Writer, kvS *kvStat
 			return err
 		}
 		switch kv.kind {
-		case "env", "envo":
-			if kv.key == "env" && val == "" {
+		case envKind, envoKind:
+			if kv.key == envKind && val == "" {
 				return fmt.Errorf("got empty value on required env key: %v", kv.key)
 			}
 			vars[kv.key] = val
-		case "envf", "envof":
-			if kv.key == "envf" && val == "" {
+		case envfKind, envofKind:
+			if kv.key == envfKind && val == "" {
 				return fmt.Errorf("got empty value on required envf key: %v", kv.key)
 			}
 			// Create a tmp file save the val as it's content, and set the file name to the key
-			f, err := tmpFunc("", "envf*")
+			f, err := tmpFunc("", kv.kind+"-*")
 			if err != nil {
 				return err
 			}
@@ -124,13 +90,10 @@ func render(es store.Store, spec string, ir io.Reader, iw io.Writer, kvS *kvStat
 		}
 	}
 
-	leftDlims := []string{"{env://", "{envf://", "{envo://", "{envof://"}
-	rightDlims := []string{"}", "}", "}", "}"}
-
 	doc := string(bs)
 	for i := range leftDlims {
 		buf := &bytes.Buffer{}
-		tpl := template.New("i")
+		tpl := template.New("")
 		tpl, err = tpl.Delims(leftDlims[i], rightDlims[i]).Parse(doc)
 		if err != nil {
 			return err
@@ -147,10 +110,57 @@ func render(es store.Store, spec string, ir io.Reader, iw io.Writer, kvS *kvStat
 	return nil
 }
 
+func scan(spec string, r io.Reader, scanFilename bool) ([]kv, error) {
+	if spec == "" {
+		return nil, errors.New("got empty spec")
+	}
+
+	bs, err := ioutil.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+	doc := string(bs)
+
+	var kvs []kv
+	var isFn bool
+
+	if scanFilename {
+		// Check if doc is an envf or not
+		fnRes := envFilenameRegex.FindAllStringSubmatch(doc, -1)
+		if len(fnRes) > 1 {
+			return nil, fmt.Errorf("expected only one {envfn: *}, got %v", len(fnRes))
+		}
+
+		// Found a filename annotation
+		if len(fnRes) == 1 {
+			isFn = true
+			fn := fnRes[0][1]
+			kvs = append(kvs, kv{
+				spec: spec,
+				kind: envfKind,
+				key:  fn,
+				val:  doc,
+			})
+		}
+	}
+
+	// Scan doc, exact all keys
+	keyRes := envKeyRegex.FindAllStringSubmatch(doc, -1)
+	for _, keyMatch := range keyRes {
+		kv := kvFromMatchItem(spec, keyMatch)
+		kvs = append(kvs, kv)
+		if isFn && (kv.kind == envfKind || kv.kind == envofKind) && kv.key == kvs[0].key {
+			return nil, errors.New("found cycle reference in envf file")
+		}
+	}
+
+	return kvs, nil
+}
+
 func valueOf(es store.Store, spec, kind, key string, kvS *kvState, tmpFunc tempFunc) (string, error) {
 	val, err := es.Get(store.Key{
-		Kind:      kind,
 		Namespace: spec,
+		Kind:      kind,
 		Name:      key,
 	})
 	if err != nil {
@@ -181,11 +191,11 @@ func valueOf(es store.Store, spec, kind, key string, kvS *kvState, tmpFunc tempF
 	return out.String(), nil
 }
 
-func kvFromMatchItem(spec string, math []string) kvPair {
-	kind, key := "env"+math[1], math[2]
-	return kvPair{
-		kind: kind,
+func kvFromMatchItem(spec string, math []string) kv {
+	kind, key := envKind+math[1], math[2]
+	return kv{
 		spec: spec,
+		kind: kind,
 		key:  key,
 	}
 }

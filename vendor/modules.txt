@@ -209,7 +209,7 @@ honnef.co/go/tools/staticcheck/vrp
 honnef.co/go/tools/stylecheck
 honnef.co/go/tools/unused
 honnef.co/go/tools/version
-# tespkg.in/kit v1.0.1-0.20200115142449-859fc9ae97b8 => ../kit
+# tespkg.in/kit v1.1.0
 tespkg.in/kit/log
 tespkg.in/kit/strcase
 tespkg.in/kit/templates

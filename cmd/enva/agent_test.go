@@ -39,9 +39,9 @@ func TestRegexArgs(t *testing.T) {
 	parts := envArgsRegex.FindAll([]byte(`enva --env-store-dsn http://localhost:8500 \
 /usr/local/example-svc --oidc {env://sso} --ac {envf://ac/01} --dsn postgres://postgres:password@{env://postgres}/example?sslmode=disable`), -1)
 	expected := []string{
-		"{env://sso}",
-		"{envf://ac/01}",
-		"{env://postgres}",
+		"env://sso",
+		"envf://ac/01",
+		"env://postgres",
 	}
 
 	var res []string
@@ -131,9 +131,9 @@ func TestPopulateVars(t *testing.T) {
 		s,
 		[]string{
 			"/usr/local/example-svc",
-			"--oidc {env://sso}",
-			"--ac {env://ac}",
-			"--dsn postgres://postgres:password@{env://postgres}/example?sslmode=disable",
+			"--oidc env://sso",
+			"--ac env://ac",
+			"--dsn postgres://postgres:password@env://postgres?sslmode=disable",
 		},
 		absFiles,
 		relFiles,
@@ -152,7 +152,7 @@ func TestPopulateVars(t *testing.T) {
 
 	finalisedArgs, err := a.populateProcEnvVars(a.vars)
 	require.Nil(t, err)
-	require.Equal(t, "/usr/local/example-svc --oidc foo --ac foo --dsn postgres://postgres:password@foo/example?sslmode=disable", strings.Join(finalisedArgs, " "))
+	require.Equal(t, "/usr/local/example-svc --oidc foo --ac foo --dsn postgres://postgres:password@foo?sslmode=disable", strings.Join(finalisedArgs, " "))
 }
 
 func TestTermRunProc(t *testing.T) {
@@ -219,24 +219,3 @@ hello: {{envrf://.msg }}
 `
 	require.Equal(t, expected, buf.String())
 }
-
-var doc = `# {envfn: chapter01}
-poet: "{{env://.poet}}"
-title: "{env:// .title }"
-stanza:
-  - "{envo:// .at}"
-  - "{envof://.length }"
-  - "{env://._did}"
-  - {env://.cRoSs}
-  - {envf:// .an }
-  - {env:// .Albatross }
-
-mariner:
-  with: "{envo://.crossbow}"
-  shot: "{envof://.ALBATROSS}"
-
-water:
-  water:
-    where: "everywhere"
-    nor: "any drop to drink"
-`

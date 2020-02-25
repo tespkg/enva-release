@@ -4,7 +4,6 @@ go 1.13
 
 require (
 	github.com/coreos/etcd v3.3.10+incompatible
-	github.com/ghodss/yaml v1.0.0
 	github.com/gin-contrib/cors v1.3.0
 	github.com/gin-contrib/gzip v0.0.1
 	github.com/gin-gonic/gin v1.5.0

@@ -25,15 +25,15 @@ type es struct {
 	db *clientv3.Client
 }
 
-func (s *es) GetNsValues(namespace string) ([]store.Key, []interface{}, error) {
+func (s *es) GetNsValues(namespace string) (store.KeyVals, error) {
 	panic("implement me")
 }
 
-func (s *es) GetKindValues(kind string) ([]store.Key, []interface{}, error) {
+func (s *es) GetKindValues(kind string) (store.KeyVals, error) {
 	panic("implement me")
 }
 
-func (s *es) GetNsKindValues(namespace, kind string) ([]store.Key, []interface{}, error) {
+func (s *es) GetNsKindValues(namespace, kind string) (store.KeyVals, error) {
 	panic("implement me")
 }
 

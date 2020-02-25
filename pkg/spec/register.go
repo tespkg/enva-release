@@ -66,8 +66,8 @@ func saveSpecEle(es store.Store, spec, fn string, ir io.Reader) error {
 		return err
 	}
 	if err := es.Set(store.Key{
-		Kind:      "spec",
 		Namespace: spec,
+		Kind:      specKind,
 		Name:      fn,
 	}, string(bs)); err != nil {
 		return fmt.Errorf("save spec itself failed: %T", err)
