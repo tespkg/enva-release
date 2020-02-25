@@ -15,7 +15,7 @@ POC: run everything inside one docker, consider:
 
 ## goal
 1. service start command line args, options and configs in the yaml files will not need to change at most time.
-2. move changeable command line args, options and configs from yaml file to config store.
+1. move changeable command line args, options and configs from yaml file to config store.
 
 ## key register & setup flow
 1. (DevOps) Start envs + state
@@ -31,7 +31,7 @@ POC: run everything inside one docker, consider:
 1. Required key `{env:// .key }`
 1. Required file key `{envf:// .keyf }`
 1. Optional key `{envo:// .key }`
-1. Optional file key `{envof://. keyf }`
+1. Optional file key `{envof:// .keyf }`
 1. Filename annotation `{envfn: filename}` 
 1. Allowed key name pattern `{env(f|o|of)?:// *\.([_a-zA-Z][_a-zA-Z0-9]*) *}`
 1. Allowed filename annotation `{envfn: *([-_a-zA-Z0-9]*) *}`
