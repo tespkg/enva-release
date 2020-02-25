@@ -43,6 +43,7 @@ POC: run everything inside one docker, consider:
 - [x] Render application/service spec from env store
 - [ ] Implement keys query on store level
 - [ ] Implement GET, PUT REST APIs for keys
+- [ ] Implement Register REST APIS for new application/spec
 - [ ] Refactor enva to use envs instead of using naked underlying etcd/consul
 - [ ] An addons way to extend the pre-configuration for service startup, e.g, create database if not exist etc.
 - [ ] Wrap images to include `enva`, `s4`(simple static site service) binary
