@@ -47,5 +47,6 @@ vendor:
 .PHONY: build
 build:
 	@mkdir -p bin
-	@go build -mod vendor -o bin/enva meera.tech/envs/cmd/enva
-	@go build -mod vendor -o bin/envi meera.tech/envs/cmd/envi
+	@go build -mod vendor -o bin/enva tespkg.in/envs/cmd/enva
+	@go build -mod vendor -o bin/envs tespkg.in/envs/cmd/envs
+	@go build -mod vendor -o bin/s4 tespkg.in/envs/cmd/s4

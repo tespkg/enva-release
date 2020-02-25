@@ -15,14 +15,16 @@ import (
 	"text/template"
 	"time"
 
-	"meera.tech/envs/pkg/store"
-	"meera.tech/kit/log"
-	"meera.tech/kit/templates"
+	"tespkg.in/envs/pkg/store"
+	"tespkg.in/kit/log"
+	"tespkg.in/kit/templates"
 )
 
 const (
 	envKeyword        = "env"
+	envfKeyword       = "envf"
 	envArgSchema      = envKeyword + "://"
+	envfArgSchema     = envfKeyword + "://"
 	tplLeftDelimiter  = `%%`
 	tplRightDelimiter = `%%`
 
@@ -31,9 +33,9 @@ const (
 
 var (
 	// E.g, env://example
-	envArgsRegex = regexp.MustCompile(fmt.Sprintf(`%s[a-zA-Z]*`, envArgSchema))
+	envArgsRegex = regexp.MustCompile(fmt.Sprintf(`\{(%s|%s)[\-A-Za-z0-9/]*\}`, envArgSchema, envfArgSchema))
 	// E.g, %% .ENV_project_env %%
-	envInspectFilesRegex = regexp.MustCompile(fmt.Sprintf(`%s \.(%s)_([a-zA-Z].*)_([a-zA-Z].*) %s`,
+	envInspectFilesRegex = regexp.MustCompile(fmt.Sprintf(`%s \.(%s)_([\-A-Za-z0-9].*)_([\-A-Za-z0-9].*) %s`,
 		tplLeftDelimiter, strings.ToUpper(envKeyword), tplRightDelimiter))
 )
 

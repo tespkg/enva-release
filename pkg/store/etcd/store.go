@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/coreos/etcd/clientv3"
-	"meera.tech/envs/pkg/store"
+	"tespkg.in/envs/pkg/store"
 )
 
 const (
@@ -23,6 +23,18 @@ type es struct {
 	prefix string
 
 	db *clientv3.Client
+}
+
+func (s *es) GetNsValues(namespace string) ([]store.Key, []interface{}, error) {
+	panic("implement me")
+}
+
+func (s *es) GetKindValues(kind string) ([]store.Key, []interface{}, error) {
+	panic("implement me")
+}
+
+func (s *es) GetNsKindValues(namespace, kind string) ([]store.Key, []interface{}, error) {
+	panic("implement me")
 }
 
 func (s *es) Set(key store.Key, val interface{}) error {

@@ -17,5 +17,8 @@ type Key struct {
 type Store interface {
 	Set(key Key, val interface{}) error
 	Get(key Key) (interface{}, error)
+	GetNsValues(namespace string) ([]Key, []interface{}, error)
+	GetKindValues(kind string) ([]Key, []interface{}, error)
+	GetNsKindValues(namespace, kind string) ([]Key, []interface{}, error)
 	Close() error
 }

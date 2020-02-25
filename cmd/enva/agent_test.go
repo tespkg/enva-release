@@ -4,16 +4,16 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"html/template"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
-	"meera.tech/envs/pkg/store"
+	"tespkg.in/envs/pkg/store"
 )
 
 const (
@@ -25,8 +25,7 @@ bar: %% .ENV_dev_bar %%
 )
 
 func TestRegexInspectFile(t *testing.T) {
-	a := regexp.MustCompile(`\%\% \.(ENV)_([a-z].*)_([a-z].*) \%\%`)
-	res := a.FindAllStringSubmatch(s, -1)
+	res := envInspectFilesRegex.FindAllStringSubmatch(s, -1)
 
 	expected := [][]string{
 		{"%% .ENV_test_foo %%", "ENV", "test", "foo"},
@@ -37,13 +36,12 @@ func TestRegexInspectFile(t *testing.T) {
 }
 
 func TestRegexArgs(t *testing.T) {
-	a := regexp.MustCompile(`env://[a-z]*`)
-	parts := a.FindAll([]byte(`enva --env-store-dsn http://localhost:8500 \
-/usr/local/example-svc --oidc env://sso --ac env://ac --dsn postgres://postgres:password@env://postgres/example?sslmode=disable`), -1)
+	parts := envArgsRegex.FindAll([]byte(`enva --env-store-dsn http://localhost:8500 \
+/usr/local/example-svc --oidc {env://sso} --ac {envf://ac/01} --dsn postgres://postgres:password@{env://postgres}/example?sslmode=disable`), -1)
 	expected := []string{
-		"env://sso",
-		"env://ac",
-		"env://postgres",
+		"{env://sso}",
+		"{envf://ac/01}",
+		"{env://postgres}",
 	}
 
 	var res []string
@@ -54,10 +52,9 @@ func TestRegexArgs(t *testing.T) {
 }
 
 func TestRegexReplaceArgs(t *testing.T) {
-	a := regexp.MustCompile(`env://[a-z]*`)
-	newArgs := a.ReplaceAllFunc(
+	newArgs := envArgsRegex.ReplaceAllFunc(
 		[]byte(`enva --env-store-dsn http://localhost:8500 \
-/usr/local/example-svc --oidc env://sso --ac env://ac --dsn postgres://postgres:password@env://postgres/example?sslmode=disable`),
+/usr/local/example-svc --oidc {env://sso} --ac {envf://ac} --dsn postgres://postgres:password@{env://postgres}/example?sslmode=disable`),
 		func(bytes []byte) []byte {
 			t.Log(string(bytes))
 			return bytes
@@ -134,9 +131,9 @@ func TestPopulateVars(t *testing.T) {
 		s,
 		[]string{
 			"/usr/local/example-svc",
-			"--oidc env://sso",
-			"--ac env://ac",
-			"--dsn postgres://postgres:password@env://postgres/example?sslmode=disable",
+			"--oidc {env://sso}",
+			"--ac {env://ac}",
+			"--dsn postgres://postgres:password@{env://postgres}/example?sslmode=disable",
 		},
 		absFiles,
 		relFiles,
@@ -192,3 +189,54 @@ func TestBackupTemplateFiles(t *testing.T) {
 	}
 	require.Equal(t, expected, res)
 }
+
+func TestTplDeli(t *testing.T) {
+	s := `
+hello: {{env://.Msg }}
+hello: {{env://.msg}}
+hello: {{envf://.msg }}
+hello: {{envr://.msg }}
+hello: {{envrf://.msg }}
+`
+	var err error
+	tpl := template.New("s")
+	tpl, err = tpl.Delims("{env://", "}").Parse(s)
+	require.Nil(t, err)
+
+	buf := &bytes.Buffer{}
+	vars := map[string]string{
+		"Msg": "WORLD",
+		"msg": "world",
+	}
+	err = tpl.Execute(buf, vars)
+	require.Nil(t, err)
+	expected := `
+hello: {WORLD}
+hello: {world}
+hello: {{envf://.msg }}
+hello: {{envr://.msg }}
+hello: {{envrf://.msg }}
+`
+	require.Equal(t, expected, buf.String())
+}
+
+var doc = `# {envfn: chapter01}
+poet: "{{env://.poet}}"
+title: "{env:// .title }"
+stanza:
+  - "{envo:// .at}"
+  - "{envof://.length }"
+  - "{env://._did}"
+  - {env://.cRoSs}
+  - {envf:// .an }
+  - {env:// .Albatross }
+
+mariner:
+  with: "{envo://.crossbow}"
+  shot: "{envof://.ALBATROSS}"
+
+water:
+  water:
+    where: "everywhere"
+    nor: "any drop to drink"
+`

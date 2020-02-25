@@ -9,7 +9,7 @@ import (
 
 	"github.com/hashicorp/consul/api"
 	"github.com/stretchr/testify/require"
-	"meera.tech/envs/pkg/store"
+	"tespkg.in/envs/pkg/store"
 )
 
 func getConsulDsn(t *testing.T) string {

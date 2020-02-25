@@ -15,36 +15,39 @@ POC: run everything inside one docker, consider:
 
 ## goal
 1. service start command line args, options and configs in the yaml files will not need to change at most time.
-2. move changable command line args, options and configs from yaml file to config store.
+2. move changeable command line args, options and configs from yaml file to config store.
 
 ## key register & setup flow
-1. enva register the service's endpoint(internal, external) key name to store.
-2. ops set values for those registed key manually in store.
-3. enva consume the value with the registered key name and feed them to consumer service.
-4. envs migration tool provide a set of pre-defined key name of vender's endpoint to store.
-5. devops setup vendor's endpoint value under the pre-defined key into store manually.
-
-ps:
-- service's public endpoint which can be access from outside, e.g, oidc-issuer endpoint.
-- service's internal endpoint, e.g, grpc endpoint.
+1. (DevOps) Start envs + state
+1. (Auto) envs scan application/service specs
+1. (Auto) Required keys scanned
+1. (Auto) Swagger.json ready
+1. (DevOps) Get swagger.json
+1. (DevOps) PUT /keys {key1: val1, ..., keyN: valN}
+1. (DevOps) Start service
+1. (Dev) Upload new application spec, if there is a new application/service developed
 
 ## convention
-1. key name convention for the endpoint: <servicename>-<protocol>, e.g, sso-grpc, ac-http, ac-grpc configurator-graphql...
-2. each service will have it's own dsn key
-3. a better token for env, envf schema in command line: {env://abc}, {envf://abc}
-4. token in the files would be: %% .ENV_<project>_<keyname> %%, use `%%` instead of `{{` to avoid conflict in html or js code.
-
-## envf explanation
-1. command line: `envf://sso-config`
-2. store: `sso-config: /path/to/file.yaml=ENV_content_of_file`
-3. store: `content_of_file: blablabla....`
+1. Required key `{env:// .key }`
+1. Required file key `{envf:// .keyf }`
+1. Optional key `{envo:// .key }`
+1. Optional file key `{envof://. keyf }`
+1. Filename annotation `{envfn: filename}` 
+1. Allowed key name pattern `{env(f|o|of)?:// *\.([_a-zA-Z][_a-zA-Z0-9]*) *}`
+1. Allowed filename annotation `{envfn: *([-_a-zA-Z0-9]*) *}`
 
 ## TODO
-- [ ] support envf
-- [ ] support watch
-- [ ] support store value of os.Env in store
-- [ ] wrap images to include `enva`, `s4`(simple static site service) binary
-- [ ] a docker-compose file for dev purpose
-- [ ] serve front end with `s4`
-- [ ] operator...
+- [x] enva start application/service
+- [x] Support envf
+- [x] Scan application/service spec
+- [x] Render application/service spec from env store
+- [ ] Implement keys query on store level
+- [ ] Implement GET, PUT REST APIs for keys
+- [ ] Refactor enva to use envs instead of using naked underlying etcd/consul
+- [ ] An addons way to extend the pre-configuration for service startup, e.g, create database if not exist etc.
+- [ ] Wrap images to include `enva`, `s4`(simple static site service) binary
+- [ ] Local app specs for dev purpose
+- [ ] Serve front end with `s4`
+- [ ] Support key watch & restart 
+- [ ] Kubernetes operator...
 - [ ] env store on k8s, istio

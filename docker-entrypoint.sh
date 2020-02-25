@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 set -e
 
@@ -7,4 +7,5 @@ if [[ "${1#-}" != "$1" ]]; then
 	set -- enva "$@"
 fi
 
+echo $@
 exec "$@"

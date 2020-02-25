@@ -13,10 +13,10 @@ import (
 	"syscall"
 
 	"github.com/pborman/getopt/v2"
-	"meera.tech/envs/pkg/store"
-	"meera.tech/envs/pkg/store/consul"
-	"meera.tech/envs/pkg/store/etcd"
-	"meera.tech/kit/log"
+	"tespkg.in/envs/pkg/store"
+	"tespkg.in/envs/pkg/store/consul"
+	"tespkg.in/envs/pkg/store/etcd"
+	"tespkg.in/kit/log"
 )
 
 var (
@@ -151,7 +151,7 @@ func main() {
 			log.Warnf("invalid kv pair found: %v", kv)
 			continue
 		}
-		k, v := strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1])
+		k, v := strings.TrimSpace(parts[0]), strings.Join(strings.Split(strings.TrimSpace(parts[1]), "-"), "/")
 		if err := s.Set(store.Key{Name: k}, v); err != nil {
 			log.Errorf("failed to register kv pair: %v, err: %v", kv, err)
 			os.Exit(-1)

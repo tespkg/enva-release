@@ -7,13 +7,25 @@ import (
 	"strings"
 
 	"github.com/hashicorp/consul/api"
-	"meera.tech/envs/pkg/store"
+	"tespkg.in/envs/pkg/store"
 )
 
 type cs struct {
 	prefix string
 
 	client *api.Client
+}
+
+func (c *cs) GetNsValues(namespace string) ([]store.Key, []interface{}, error) {
+	panic("implement me")
+}
+
+func (c *cs) GetKindValues(kind string) ([]store.Key, []interface{}, error) {
+	panic("implement me")
+}
+
+func (c *cs) GetNsKindValues(namespace, kind string) ([]store.Key, []interface{}, error) {
+	panic("implement me")
 }
 
 func (c *cs) Set(key store.Key, val interface{}) error {

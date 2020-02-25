@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"meera.tech/envs/pkg/store"
+	"tespkg.in/envs/pkg/store"
 )
 
 func getEtcdDsn(t *testing.T) string {
