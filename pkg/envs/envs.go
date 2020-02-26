@@ -50,6 +50,15 @@ func newServer(a *Args, p *patchTable) (*Server, error) {
 		MaxAge:           12 * time.Hour,
 	}))
 
+	ge.GET("keys")
+	ge.PUT("keys")
+	ge.GET("key/:fully_qualified_key_name")
+	ge.PUT("key/:fully_qualified_key_name")
+	ge.GET("specs")
+	ge.GET("spec/:name")
+	ge.PUT("spec/:name")
+	ge.POST("deployment")
+
 	return &Server{
 		ginEngine: ge,
 		args:      a,
