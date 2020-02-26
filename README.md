@@ -42,7 +42,7 @@ POC: run everything inside one docker, consider:
 - [x] Scan application/service spec
 - [x] Render application/service spec from env store
 - [x] Implement query on store level for keys
-- [ ] Implement GET, PUT REST APIs for keys
+- [ ] Implement GET, PUT REST APIs for keys & serve swagger.json
 - [ ] Implement Register REST APIS for new application/service spec
 - [ ] Refactor enva to use envs instead of using naked underlying etcd/consul
 - [ ] API for start service
