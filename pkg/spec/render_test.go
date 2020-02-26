@@ -36,62 +36,62 @@ water:
 func TestScan(t *testing.T) {
 	kvs, err := scan("envs", bytes.NewBufferString(doc), true)
 	require.Nil(t, err)
-	expected := []kv{
+	expected := []KeyVal{
 		{
-			spec: "envs",
-			kind: envfKind,
-			key:  "chapter01",
-			val:  doc,
+			Spec:  "envs",
+			Kind:  envfKind,
+			Name:  "chapter01",
+			Value: doc,
 		},
 		{
-			spec: "envs",
-			kind: envKind,
-			key:  "poet",
+			Spec: "envs",
+			Kind: envKind,
+			Name: "poet",
 		},
 		{
-			spec: "envs",
-			kind: envKind,
-			key:  "title",
+			Spec: "envs",
+			Kind: envKind,
+			Name: "title",
 		},
 		{
-			spec: "envs",
-			kind: envoKind,
-			key:  "at",
+			Spec: "envs",
+			Kind: envoKind,
+			Name: "at",
 		},
 		{
-			spec: "envs",
-			kind: envofKind,
-			key:  "length",
+			Spec: "envs",
+			Kind: envofKind,
+			Name: "length",
 		},
 		{
-			spec: "envs",
-			kind: envKind,
-			key:  "_did",
+			Spec: "envs",
+			Kind: envKind,
+			Name: "_did",
 		},
 		{
-			spec: "envs",
-			kind: envKind,
-			key:  "cRoSs",
+			Spec: "envs",
+			Kind: envKind,
+			Name: "cRoSs",
 		},
 		{
-			spec: "envs",
-			kind: envfKind,
-			key:  "an",
+			Spec: "envs",
+			Kind: envfKind,
+			Name: "an",
 		},
 		{
-			spec: "envs",
-			kind: envKind,
-			key:  "Albatross",
+			Spec: "envs",
+			Kind: envKind,
+			Name: "Albatross",
 		},
 		{
-			spec: "envs",
-			kind: envoKind,
-			key:  "crossbow",
+			Spec: "envs",
+			Kind: envoKind,
+			Name: "crossbow",
 		},
 		{
-			spec: "envs",
-			kind: envofKind,
-			key:  "ALBATROSS",
+			Spec: "envs",
+			Kind: envofKind,
+			Name: "ALBATROSS",
 		},
 	}
 

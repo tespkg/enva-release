@@ -35,12 +35,14 @@ var (
 
 type tempFunc func(dir, pattern string) (f *os.File, err error)
 
-type kv struct {
-	spec string
-	kind string
-	key  string
-	val  string
+type KeyVal struct {
+	Spec  string
+	Kind  string
+	Name  string
+	Value string
 }
+
+type KeyVals []KeyVal
 
 func Render(es store.Store, spec string, ir io.Reader, iw io.Writer) error {
 	return render(es, spec, ir, iw, &kvState{}, ioutil.TempFile)
@@ -59,22 +61,22 @@ func render(es store.Store, spec string, ir io.Reader, iw io.Writer, kvS *kvStat
 
 	vars := make(map[string]string)
 	for _, kv := range kvs {
-		val, err := valueOf(es, spec, kv.kind, kv.key, kvS, tmpFunc)
+		val, err := valueOf(es, spec, kv.Kind, kv.Name, kvS, tmpFunc)
 		if err != nil {
 			return err
 		}
-		switch kv.kind {
+		switch kv.Kind {
 		case envKind, envoKind:
-			if kv.key == envKind && val == "" {
-				return fmt.Errorf("got empty value on required env key: %v", kv.key)
+			if kv.Name == envKind && val == "" {
+				return fmt.Errorf("got empty value on required env key: %v", kv.Name)
 			}
-			vars[kv.key] = val
+			vars[kv.Name] = val
 		case envfKind, envofKind:
-			if kv.key == envfKind && val == "" {
-				return fmt.Errorf("got empty value on required envf key: %v", kv.key)
+			if kv.Name == envfKind && val == "" {
+				return fmt.Errorf("got empty value on required envf key: %v", kv.Name)
 			}
 			// Create a tmp file save the val as it's content, and set the file name to the key
-			f, err := tmpFunc("", kv.kind+"-*")
+			f, err := tmpFunc("", kv.Kind+"-*")
 			if err != nil {
 				return err
 			}
@@ -84,9 +86,9 @@ func render(es store.Store, spec string, ir io.Reader, iw io.Writer, kvS *kvStat
 				return err
 			}
 			f.Close()
-			vars[kv.key] = f.Name()
+			vars[kv.Name] = f.Name()
 		default:
-			return fmt.Errorf("unexpected env key kind: %v", kv.kind)
+			return fmt.Errorf("unexpected env key kind: %v", kv.Kind)
 		}
 	}
 
@@ -110,7 +112,7 @@ func render(es store.Store, spec string, ir io.Reader, iw io.Writer, kvS *kvStat
 	return nil
 }
 
-func scan(spec string, r io.Reader, scanFilename bool) ([]kv, error) {
+func scan(spec string, r io.Reader, scanFilename bool) (KeyVals, error) {
 	if spec == "" {
 		return nil, errors.New("got empty spec")
 	}
@@ -121,7 +123,7 @@ func scan(spec string, r io.Reader, scanFilename bool) ([]kv, error) {
 	}
 	doc := string(bs)
 
-	var kvs []kv
+	var kvs KeyVals
 	var isFn bool
 
 	if scanFilename {
@@ -135,11 +137,11 @@ func scan(spec string, r io.Reader, scanFilename bool) ([]kv, error) {
 		if len(fnRes) == 1 {
 			isFn = true
 			fn := fnRes[0][1]
-			kvs = append(kvs, kv{
-				spec: spec,
-				kind: envfKind,
-				key:  fn,
-				val:  doc,
+			kvs = append(kvs, KeyVal{
+				Spec:  spec,
+				Kind:  envfKind,
+				Name:  fn,
+				Value: doc,
 			})
 		}
 	}
@@ -149,7 +151,7 @@ func scan(spec string, r io.Reader, scanFilename bool) ([]kv, error) {
 	for _, keyMatch := range keyRes {
 		kv := kvFromMatchItem(spec, keyMatch)
 		kvs = append(kvs, kv)
-		if isFn && (kv.kind == envfKind || kv.kind == envofKind) && kv.key == kvs[0].key {
+		if isFn && (kv.Kind == envfKind || kv.Kind == envofKind) && kv.Name == kvs[0].Name {
 			return nil, errors.New("found cycle reference in envf file")
 		}
 	}
@@ -177,8 +179,8 @@ func valueOf(es store.Store, spec, kind, key string, kvS *kvState, tmpFunc tempF
 
 	for _, keyMatch := range keyRes {
 		kv := kvFromMatchItem(spec, keyMatch)
-		if kvS.exists(kv.spec, kv.key) {
-			return "", fmt.Errorf("cycle key usage found on %v", kv.key)
+		if kvS.exists(kv.Spec, kv.Name) {
+			return "", fmt.Errorf("cycle key usage found on %v", kv.Name)
 		}
 	}
 
@@ -191,12 +193,12 @@ func valueOf(es store.Store, spec, kind, key string, kvS *kvState, tmpFunc tempF
 	return out.String(), nil
 }
 
-func kvFromMatchItem(spec string, math []string) kv {
+func kvFromMatchItem(spec string, math []string) KeyVal {
 	kind, key := envKind+math[1], math[2]
-	return kv{
-		spec: spec,
-		kind: kind,
-		key:  key,
+	return KeyVal{
+		Spec: spec,
+		Kind: kind,
+		Name: key,
 	}
 }
 

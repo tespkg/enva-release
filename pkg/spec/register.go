@@ -30,10 +30,10 @@ func (p PlainRegister) Scan(ir io.ReadSeeker) error {
 	}
 	for _, kv := range kvs {
 		if err := p.es.Set(store.Key{
-			Kind:      kv.kind,
-			Namespace: kv.spec,
-			Name:      kv.key,
-		}, kv.val); err != nil {
+			Kind:      kv.Kind,
+			Namespace: kv.Spec,
+			Name:      kv.Name,
+		}, kv.Value); err != nil {
 			return fmt.Errorf("set key failed: %T", err)
 		}
 	}

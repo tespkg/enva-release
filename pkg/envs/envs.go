@@ -3,7 +3,13 @@ package envs
 import (
 	"fmt"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
+
+	"tespkg.in/envs/pkg/store"
+	"tespkg.in/envs/pkg/store/consul"
+	"tespkg.in/envs/pkg/store/etcd"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -39,6 +45,27 @@ func newServer(a *Args, p *patchTable) (*Server, error) {
 		return nil, err
 	}
 
+	// Connect to env store, i.e, consul.
+	u, err := url.Parse(a.Dsn)
+	if err != nil {
+		return nil, fmt.Errorf("invalid env store dsn: %v", a.Dsn)
+	}
+	var s store.Store
+	switch strings.ToLower(u.Scheme) {
+	case "http", "https":
+		s, err = consul.NewStore(a.Dsn)
+		if err != nil {
+			return nil, fmt.Errorf("initiate consul env store failed: :%v", err)
+		}
+	case "etcd":
+		s, err = etcd.NewStore(a.Dsn)
+		if err != nil {
+			return nil, fmt.Errorf("initiate etcd env store failed: %v", err)
+		}
+	default:
+		return nil, fmt.Errorf("unknown env store schema: %v", u.Scheme)
+	}
+
 	// Create gin engine
 	ge := gin.Default()
 	ge.Use(cors.New(cors.Config{
@@ -50,14 +77,17 @@ func newServer(a *Args, p *patchTable) (*Server, error) {
 		MaxAge:           12 * time.Hour,
 	}))
 
-	ge.GET("keys")
-	ge.PUT("keys")
-	ge.GET("key/:fully_qualified_key_name")
-	ge.PUT("key/:fully_qualified_key_name")
-	ge.GET("specs")
-	ge.GET("spec/:name")
-	ge.PUT("spec/:name")
-	ge.POST("deployment")
+	// Create APIs handler
+	handler := NewHandler(s)
+	ge.GET("keys", handler.GetKeys)
+	ge.PUT("keys", handler.PutKeys)
+	ge.GET("key/:fully_qualified_key_name", handler.GetKey)
+	ge.PUT("key/:fully_qualified_key_name", handler.PutKey)
+	ge.GET("specs", handler.GetSpecs)
+	ge.GET("spec/:name", handler.GetSpec)
+	ge.PUT("spec/:name", handler.PutSpec)
+	ge.PATCH("spec/:name", handler.PatchSpec)
+	ge.POST("deployment", handler.PostDeployment)
 
 	return &Server{
 		ginEngine: ge,
