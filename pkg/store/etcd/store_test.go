@@ -41,7 +41,7 @@ func newEtcdStore(t *testing.T) *es {
 func TestSetGet(t *testing.T) {
 	es := newEtcdStore(t)
 	key := store.Key{
-		Kind:      "",
+		Kind:      "test",
 		Namespace: "test",
 		Name:      "foo",
 	}
@@ -58,7 +58,7 @@ func TestSetGet(t *testing.T) {
 func TestSetOverwrite(t *testing.T) {
 	es := newEtcdStore(t)
 	key := store.Key{
-		Kind:      "",
+		Kind:      "test",
 		Namespace: "test",
 		Name:      "foo",
 	}
@@ -84,7 +84,7 @@ func TestSet(t *testing.T) {
 	}
 	es := newEtcdStore(t)
 	key := store.Key{
-		Kind:      "",
+		Kind:      "test",
 		Namespace: "test",
 		Name:      "foo",
 	}
@@ -99,12 +99,127 @@ func TestSet(t *testing.T) {
 func TestGetNotFound(t *testing.T) {
 	es := newEtcdStore(t)
 	key := store.Key{
-		Kind:      "",
+		Kind:      "test",
 		Namespace: "test",
 		Name:      "hello",
 	}
 	_, err := es.Get(key)
 	require.True(t, errors.As(err, &store.ErrNotFound))
+}
+
+func setKeyValues(t *testing.T, s *es) {
+	var kvals = store.KeyVals{
+		{
+			Key: store.Key{
+				Namespace: "multi-dev",
+				Kind:      "multi-animal",
+				Name:      "s1",
+			},
+			Value: "s1",
+		},
+		{
+			Key: store.Key{
+				Namespace: "multi-dev",
+				Kind:      "multi-nuts",
+				Name:      "s2",
+			},
+			Value: "s2",
+		},
+		{
+			Key: store.Key{
+				Namespace: "multi-test",
+				Kind:      "multi-animal",
+				Name:      "s3",
+			},
+			Value: "s3",
+		},
+		{
+			Key: store.Key{
+				Namespace: "multi-test",
+				Kind:      "multi-nuts",
+				Name:      "s4",
+			},
+			Value: "s4",
+		},
+	}
+
+	for _, kval := range kvals {
+		err := s.Set(kval.Key, kval.Value)
+		require.Nil(t, err)
+	}
+}
+
+func TestGetNsValues(t *testing.T) {
+	es := newEtcdStore(t)
+	setKeyValues(t, es)
+
+	kvals, err := es.GetNsValues("multi-dev")
+	require.Nil(t, err)
+	expected := store.KeyVals{
+		{
+			Key: store.Key{
+				Namespace: "multi-dev",
+				Kind:      "multi-animal",
+				Name:      "s1",
+			},
+			Value: "s1",
+		},
+		{
+			Key: store.Key{
+				Namespace: "multi-dev",
+				Kind:      "multi-nuts",
+				Name:      "s2",
+			},
+			Value: "s2",
+		},
+	}
+	require.Equal(t, expected, kvals)
+}
+
+func TestGetNsKindValues(t *testing.T) {
+	es := newEtcdStore(t)
+	setKeyValues(t, es)
+
+	kvals, err := es.GetNsKindValues("multi-dev", "multi-animal")
+	require.Nil(t, err)
+	expected := store.KeyVals{
+		{
+			Key: store.Key{
+				Namespace: "multi-dev",
+				Kind:      "multi-animal",
+				Name:      "s1",
+			},
+			Value: "s1",
+		},
+	}
+	require.Equal(t, expected, kvals)
+}
+
+func TestGetKindValues(t *testing.T) {
+	es := newEtcdStore(t)
+	setKeyValues(t, es)
+
+	kvals, err := es.GetKindValues("multi-animal")
+	require.Nil(t, err)
+	expected := store.KeyVals{
+		{
+			Key: store.Key{
+				Namespace: "multi-dev",
+				Kind:      "multi-animal",
+				Name:      "s1",
+			},
+			Value: "s1",
+		},
+		{
+			Key: store.Key{
+				Namespace: "multi-test",
+				Kind:      "multi-animal",
+				Name:      "s3",
+			},
+			Value: "s3",
+		},
+	}
+	require.Equal(t, expected, kvals)
 }
 
 func TestSetUnsupportedType(t *testing.T) {
@@ -128,4 +243,13 @@ func TestGetUnsupportedType(t *testing.T) {
 	_, err := decodeVal(bVal)
 	require.NotNil(t, err)
 	require.True(t, errors.As(err, &store.ErrUnsupportedValueType))
+}
+
+func TestExactKey(t *testing.T) {
+	rawKey := "ns/kind/a/b/c"
+	key, err := extractKey("", rawKey)
+	require.Nil(t, err)
+	require.Equal(t, "ns", key.Namespace)
+	require.Equal(t, "kind", key.Kind)
+	require.Equal(t, "a/b/c", key.Name)
 }

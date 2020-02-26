@@ -1,6 +1,7 @@
 package consul
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 	"reflect"
@@ -10,25 +11,21 @@ import (
 	"tespkg.in/envs/pkg/store"
 )
 
+const (
+	namespacePrefix = "ns-"
+	kindPrefix      = "kind-"
+)
+
 type cs struct {
 	prefix string
 
 	client *api.Client
 }
 
-func (c *cs) GetNsValues(namespace string) (store.KeyVals, error) {
-	panic("implement me")
-}
-
-func (c *cs) GetKindValues(kind string) (store.KeyVals, error) {
-	panic("implement me")
-}
-
-func (c *cs) GetNsKindValues(namespace, kind string) (store.KeyVals, error) {
-	panic("implement me")
-}
-
 func (c *cs) Set(key store.Key, val interface{}) error {
+	if err := validateKey(key); err != nil {
+		return err
+	}
 	kv := c.client.KV()
 
 	p, err := toKVPair(parseKey(c.prefix, key), val)
@@ -51,6 +48,79 @@ func (c *cs) Get(key store.Key) (interface{}, error) {
 	}
 
 	return fromKVPair(pair)
+}
+
+func (c *cs) GetNsValues(namespace string) (store.KeyVals, error) {
+	if namespace == "" {
+		return nil, errors.New("empty namespace, not allowed")
+	}
+
+	return c.list(strings.Join([]string{c.prefix, addPrefix(namespacePrefix, namespace)}, "/"))
+}
+
+func (c *cs) GetNsKindValues(namespace, kind string) (store.KeyVals, error) {
+	if namespace == "" {
+		return nil, errors.New("empty namespace, not allowed")
+	}
+	if kind == "" {
+		return nil, errors.New("empty kind, not allowed")
+	}
+
+	return c.list(strings.Join([]string{c.prefix, addPrefix(namespacePrefix, namespace), addPrefix(kindPrefix, kind)}, "/"))
+}
+
+func (c *cs) list(prefix string) (store.KeyVals, error) {
+	pairs, _, err := c.client.KV().List(prefix, nil)
+	if err != nil {
+		return nil, err
+	}
+	var kvals store.KeyVals
+	for _, p := range pairs {
+		key, err := extractKey(c.prefix, p.Key)
+		if err != nil {
+			return nil, err
+		}
+		val, err := fromKVPair(p)
+		if err != nil {
+			return nil, err
+		}
+		kvals = append(kvals, store.KeyVal{
+			Key:   key,
+			Value: val,
+		})
+	}
+	return kvals, nil
+}
+
+func (c *cs) GetKindValues(kind string) (store.KeyVals, error) {
+	if kind == "" {
+		return nil, errors.New("empty kind, not allowed")
+	}
+
+	pairs, _, err := c.client.KV().List(c.prefix, nil)
+	if err != nil {
+		return nil, err
+	}
+	var kvals store.KeyVals
+	for _, p := range pairs {
+		key, err := extractKey(c.prefix, p.Key)
+		if err != nil {
+			return nil, err
+		}
+		if key.Kind != kind {
+			continue
+		}
+
+		val, err := fromKVPair(p)
+		if err != nil {
+			return nil, err
+		}
+		kvals = append(kvals, store.KeyVal{
+			Key:   key,
+			Value: val,
+		})
+	}
+	return kvals, nil
 }
 
 func (c *cs) Close() error { return nil }
@@ -85,21 +155,51 @@ func fromKVPair(p *api.KVPair) (interface{}, error) {
 	return val, nil
 }
 
+func validateKey(key store.Key) error {
+	if key.Namespace == "" {
+		return errors.New("empty namespace not allowed")
+	}
+	if key.Kind == "" {
+		return errors.New("empty kind not allowed")
+	}
+	if key.Name == "" {
+		return errors.New("empty name not allowed")
+	}
+	return nil
+}
+
 func parseKey(prefix string, key store.Key) string {
 	var keys []string
 	if prefix != "" {
 		keys = append(keys, prefix)
 	}
 	if key.Namespace != "" {
-		keys = append(keys, key.Namespace)
+		keys = append(keys, addPrefix(namespacePrefix, key.Namespace))
 	}
 	if key.Kind != "" {
-		keys = append(keys, key.Kind)
+		keys = append(keys, addPrefix(kindPrefix, key.Kind))
 	}
 	if key.Name != "" {
 		keys = append(keys, key.Name)
 	}
 	return strings.Join(keys, "/")
+}
+
+func extractKey(prefix, key string) (store.Key, error) {
+	newKey := strings.TrimPrefix(strings.TrimPrefix(key, prefix), "/")
+	parts := strings.SplitN(newKey, "/", 3)
+	if len(parts) != 3 {
+		return store.Key{}, fmt.Errorf("got invalid key: %v", key)
+	}
+	return store.Key{
+		Namespace: strings.TrimPrefix(parts[0], namespacePrefix),
+		Kind:      strings.TrimPrefix(parts[1], kindPrefix),
+		Name:      parts[2],
+	}, nil
+}
+
+func addPrefix(prefix, s string) string {
+	return prefix + s
 }
 
 func NewStore(dsn string) (store.Store, error) {

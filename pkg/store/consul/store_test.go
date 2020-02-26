@@ -41,7 +41,7 @@ func newConsulStore(t *testing.T) *cs {
 func TestSetGet(t *testing.T) {
 	cs := newConsulStore(t)
 	key := store.Key{
-		Kind:      "",
+		Kind:      "animal",
 		Namespace: "test",
 		Name:      "foo",
 	}
@@ -58,7 +58,7 @@ func TestSetGet(t *testing.T) {
 func TestSetOverwrite(t *testing.T) {
 	cs := newConsulStore(t)
 	key := store.Key{
-		Kind:      "",
+		Kind:      "animal",
 		Namespace: "test",
 		Name:      "foo",
 	}
@@ -71,6 +71,121 @@ func TestSetOverwrite(t *testing.T) {
 	val, err := cs.Get(key)
 	require.Nil(t, err)
 	require.Equal(t, vals[1], val.(string))
+}
+
+func setKeyValues(t *testing.T, s *cs) {
+	var kvals = store.KeyVals{
+		{
+			Key: store.Key{
+				Namespace: "multi-dev",
+				Kind:      "multi-animal",
+				Name:      "s1",
+			},
+			Value: "s1",
+		},
+		{
+			Key: store.Key{
+				Namespace: "multi-dev",
+				Kind:      "multi-nuts",
+				Name:      "s2",
+			},
+			Value: "s2",
+		},
+		{
+			Key: store.Key{
+				Namespace: "multi-test",
+				Kind:      "multi-animal",
+				Name:      "s3",
+			},
+			Value: "s3",
+		},
+		{
+			Key: store.Key{
+				Namespace: "multi-test",
+				Kind:      "multi-nuts",
+				Name:      "s4",
+			},
+			Value: "s4",
+		},
+	}
+
+	for _, kval := range kvals {
+		err := s.Set(kval.Key, kval.Value)
+		require.Nil(t, err)
+	}
+}
+
+func TestGetNsValues(t *testing.T) {
+	cs := newConsulStore(t)
+	setKeyValues(t, cs)
+
+	kvals, err := cs.GetNsValues("multi-dev")
+	require.Nil(t, err)
+	expected := store.KeyVals{
+		{
+			Key: store.Key{
+				Namespace: "multi-dev",
+				Kind:      "multi-animal",
+				Name:      "s1",
+			},
+			Value: "s1",
+		},
+		{
+			Key: store.Key{
+				Namespace: "multi-dev",
+				Kind:      "multi-nuts",
+				Name:      "s2",
+			},
+			Value: "s2",
+		},
+	}
+	require.Equal(t, expected, kvals)
+}
+
+func TestGetNsKindValues(t *testing.T) {
+	cs := newConsulStore(t)
+	setKeyValues(t, cs)
+
+	kvals, err := cs.GetNsKindValues("multi-dev", "multi-animal")
+	require.Nil(t, err)
+	expected := store.KeyVals{
+		{
+			Key: store.Key{
+				Namespace: "multi-dev",
+				Kind:      "multi-animal",
+				Name:      "s1",
+			},
+			Value: "s1",
+		},
+	}
+	require.Equal(t, expected, kvals)
+}
+
+func TestGetKindValues(t *testing.T) {
+	cs := newConsulStore(t)
+	setKeyValues(t, cs)
+
+	kvals, err := cs.GetKindValues("multi-animal")
+	require.Nil(t, err)
+	expected := store.KeyVals{
+		{
+			Key: store.Key{
+				Namespace: "multi-dev",
+				Kind:      "multi-animal",
+				Name:      "s1",
+			},
+			Value: "s1",
+		},
+		{
+			Key: store.Key{
+				Namespace: "multi-test",
+				Kind:      "multi-animal",
+				Name:      "s3",
+			},
+			Value: "s3",
+		},
+	}
+	require.Equal(t, expected, kvals)
 }
 
 func TestSetUnsupportedType(t *testing.T) {
@@ -96,4 +211,13 @@ func TestGetUnsupportedType(t *testing.T) {
 	_, err := fromKVPair(p)
 	require.NotNil(t, err)
 	require.True(t, errors.As(err, &store.ErrUnsupportedValueType))
+}
+
+func TestExactKey(t *testing.T) {
+	rawKey := "ns/kind/a/b/c"
+	key, err := extractKey("", rawKey)
+	require.Nil(t, err)
+	require.Equal(t, "ns", key.Namespace)
+	require.Equal(t, "kind", key.Kind)
+	require.Equal(t, "a/b/c", key.Name)
 }
