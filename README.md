@@ -45,10 +45,11 @@ POC: run everything inside one docker, consider:
 - [ ] Implement GET, PUT REST APIs for keys
 - [ ] Implement Register REST APIS for new application/service spec
 - [ ] Refactor enva to use envs instead of using naked underlying etcd/consul
-- [ ] An extensive way to extend the pre-configuration for service startup, e.g, create database if not exist etc.
+- [ ] API for start service
 - [ ] Wrap images to include `enva`, `s4`(simple static site service) binary
 - [ ] Local app specs for dev purpose
 - [ ] Serve front end with `s4`
+- [ ] An extensive way to extend the pre-configuration for service startup, e.g, create database if not exist etc.
 - [ ] Support key watch & restart 
 - [ ] Kubernetes operator...
 - [ ] env store on k8s, istio
