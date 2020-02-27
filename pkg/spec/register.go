@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	defaultKVNs = "kvs"
+	DefaultKVNs = "kvs"
 	specKind    = "spec"
 )
 
@@ -35,7 +35,7 @@ func (p PlainRegister) Scan(ir io.ReadSeeker) error {
 	}
 	for _, kv := range kvs {
 		if err := p.es.Set(store.Key{
-			Namespace: defaultKVNs,
+			Namespace: DefaultKVNs,
 			Kind:      kv.Kind,
 			Name:      kv.Name,
 		}, kv.Value); err != nil {

@@ -153,7 +153,7 @@ func scan(r io.Reader, scanFilename bool) (KeyVals, error) {
 
 func valueOf(es store.Store, kind, key string, kvS *kvState, tmpFunc tempFunc) (string, error) {
 	val, err := es.Get(store.Key{
-		Namespace: defaultKVNs,
+		Namespace: DefaultKVNs,
 		Kind:      kind,
 		Name:      key,
 	})
