@@ -1,7 +1,7 @@
 package spec
 
 import (
-	"archive/zip"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -10,16 +10,19 @@ import (
 )
 
 const (
-	DefaultKVNs = "kvs"
-	specKind    = "spec"
+	DefaultKVNs     = "kvs"
+	specFileKind    = "spec-file"
+	specMetaKind    = "spec-meta"
+	specMetaKeyName = "meta"
 )
 
 // Register save the application spec itself and keys in it to underlying storage.
 type Register interface {
 	Scan(r io.Reader) error
+	Save(r io.Reader) error
 }
 
-type PlainRegister struct {
+type DefaultRegister struct {
 	es store.Store
 
 	// Represent a project.
@@ -27,14 +30,14 @@ type PlainRegister struct {
 	filename string
 }
 
-func (p PlainRegister) Scan(ir io.ReadSeeker) error {
+func (r DefaultRegister) Scan(ir io.Reader) error {
 	// Scan keys in the spec and save them into underlying store.
 	kvs, err := scan(ir, true)
 	if err != nil {
 		return err
 	}
 	for _, kv := range kvs {
-		if err := p.es.Set(store.Key{
+		if err := r.es.Set(store.Key{
 			Namespace: DefaultKVNs,
 			Kind:      kv.Kind,
 			Name:      kv.Name,
@@ -42,40 +45,68 @@ func (p PlainRegister) Scan(ir io.ReadSeeker) error {
 			return fmt.Errorf("set key failed: %T", err)
 		}
 	}
-
-	// Save plain spec to underlying store.
-	_, err = ir.Seek(0, io.SeekStart)
-	if err != nil {
-		return err
-	}
-
-	return saveSpecEle(p.es, p.spec, p.filename, ir)
+	return nil
 }
 
-type ZipRegister struct {
-	es store.Store
-
-	// ZIP reader
-	zr zip.Reader
-	// Represent a project.
-	spec string
+func (r DefaultRegister) Save(ir io.Reader) error {
+	return saveSpecElement(r.es, r.spec, r.filename, ir)
 }
 
-func (z ZipRegister) Scan(r io.Reader) error {
-	panic("implement me")
-}
-
-func saveSpecEle(es store.Store, spec, fn string, ir io.Reader) error {
+func saveSpecElement(es store.Store, spec, fn string, ir io.Reader) error {
 	bs, err := ioutil.ReadAll(ir)
 	if err != nil {
 		return err
 	}
 	if err := es.Set(store.Key{
 		Namespace: spec,
-		Kind:      specKind,
+		Kind:      specFileKind,
 		Name:      fn,
 	}, string(bs)); err != nil {
-		return fmt.Errorf("save spec itself failed: %T", err)
+		return fmt.Errorf("save spec itself failed: %v", err)
 	}
 	return nil
+}
+
+func getSpecElement(es store.Store, spec, fn string) (string, error) {
+	val, err := es.Get(store.Key{
+		Namespace: spec,
+		Kind:      specFileKind,
+		Name:      fn,
+	})
+	if err != nil {
+		return "", err
+	}
+	return val.(string), nil
+}
+
+func saveSpecMeta(es store.Store, hdr Header) error {
+	bs, err := json.Marshal(&hdr)
+	if err != nil {
+		return err
+	}
+	if err := es.Set(store.Key{
+		Namespace: hdr.Spec,
+		Kind:      specMetaKind,
+		Name:      specMetaKeyName,
+	}, string(bs)); err != nil {
+		return fmt.Errorf("save spec meata failed: %T", err)
+	}
+
+	return nil
+}
+
+func getSpecMeta(es store.Store, spec string) (Header, error) {
+	var hdr Header
+	val, err := es.Get(store.Key{
+		Namespace: spec,
+		Kind:      specMetaKind,
+		Name:      specMetaKeyName,
+	})
+	if err != nil {
+		return hdr, err
+	}
+	if err := json.Unmarshal([]byte(val.(string)), &hdr); err != nil {
+		return hdr, err
+	}
+	return hdr, nil
 }

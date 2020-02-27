@@ -123,6 +123,11 @@ func (c *cs) GetKindValues(kind string) (store.KeyVals, error) {
 	return kvals, nil
 }
 
+func (c *cs) Delete(key store.Key) error {
+	_, err := c.client.KV().Delete(parseKey(c.prefix, key), nil)
+	return err
+}
+
 func (c *cs) Close() error { return nil }
 
 func toKVPair(key string, val interface{}) (*api.KVPair, error) {

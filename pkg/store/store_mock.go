@@ -96,6 +96,18 @@ func (mr *MockStoreMockRecorder) GetNsKindValues(namespace, kind interface{}) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNsKindValues", reflect.TypeOf((*MockStore)(nil).GetNsKindValues), namespace, kind)
 }
 
+// Delete mocks base method
+func (m *MockStore) Delete(key Key) error {
+	ret := m.ctrl.Call(m, "Delete", key)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete
+func (mr *MockStoreMockRecorder) Delete(key interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockStore)(nil).Delete), key)
+}
+
 // Close mocks base method
 func (m *MockStore) Close() error {
 	ret := m.ctrl.Call(m, "Close")

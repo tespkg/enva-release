@@ -29,5 +29,6 @@ type Store interface {
 	GetNsValues(namespace string) (KeyVals, error)
 	GetKindValues(kind string) (KeyVals, error)
 	GetNsKindValues(namespace, kind string) (KeyVals, error)
+	Delete(key Key) error
 	Close() error
 }

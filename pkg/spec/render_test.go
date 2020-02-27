@@ -3,6 +3,7 @@ package spec
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"testing"
 
@@ -11,31 +12,17 @@ import (
 	"tespkg.in/envs/pkg/store"
 )
 
-var doc = `
-# {envfn: chapter01}
-poet: "{{env://.poet}}"
-title: "{env:// .title }"
-stanza:
-  - "{envo:// .at}"
-  - "{envof://.length }"
-  - "{env://._did}"
-  - {env://.cRoSs}
-  - {envf:// .an }
-  - {env:// .Albatross }
-
-mariner:
-  with: "{envo://.crossbow}"
-  shot: "{envof://.ALBATROSS}"
-
-water:
-  water:
-    where: "everywhere"
-    nor: "any drop to drink"
-`
+func docOfChapter01(t *testing.T) string {
+	bs, err := ioutil.ReadFile("../../testdata/chapter01.yaml")
+	require.Nil(t, err)
+	return string(bs)
+}
 
 func TestScan(t *testing.T) {
+	doc := docOfChapter01(t)
 	kvs, err := scan(bytes.NewBufferString(doc), true)
 	require.Nil(t, err)
+
 	expected := KeyVals{
 		{
 			Kind:  envfKind,
@@ -88,6 +75,8 @@ func TestScan(t *testing.T) {
 }
 
 func TestRender(t *testing.T) {
+	doc := docOfChapter01(t)
+
 	mockCtrl := gomock.NewController(t)
 	s := store.NewMockStore(mockCtrl)
 
@@ -100,7 +89,7 @@ func TestRender(t *testing.T) {
 	se.Get(store.Key{Namespace: DefaultKVNs, Kind: envKind, Name: "_did"}).Return("did", nil).AnyTimes()
 	se.Get(store.Key{Namespace: DefaultKVNs, Kind: envKind, Name: "cRoSs"}).Return("cross", nil).AnyTimes()
 	se.Get(store.Key{Namespace: DefaultKVNs, Kind: envfKind, Name: "an"}).Return("an", nil).AnyTimes()
-	se.Get(store.Key{Namespace: DefaultKVNs, Kind: envKind, Name: "Albatross"}).Return("{env://.nestedAlbatross}", nil).AnyTimes()
+	se.Get(store.Key{Namespace: DefaultKVNs, Kind: envKind, Name: "Albatross"}).Return("${env://.nestedAlbatross}", nil).AnyTimes()
 	se.Get(store.Key{Namespace: DefaultKVNs, Kind: envKind, Name: "nestedAlbatross"}).Return("nested Albatross", nil).AnyTimes()
 	se.Get(store.Key{Namespace: DefaultKVNs, Kind: envoKind, Name: "crossbow"}).Return("", nil).AnyTimes()
 	se.Get(store.Key{Namespace: DefaultKVNs, Kind: envofKind, Name: "ALBATROSS"}).Return("", nil).AnyTimes()
@@ -113,8 +102,7 @@ func TestRender(t *testing.T) {
 	})
 	require.Nil(t, err)
 
-	expected := fmt.Sprintf(`
-# {envfn: chapter01}
+	expected := fmt.Sprintf(`# ${envfn: chapter01}
 poet: "{poet}"
 title: "title"
 stanza:

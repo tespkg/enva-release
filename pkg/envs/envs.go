@@ -83,9 +83,8 @@ func newServer(a *Args, p *patchTable) (*Server, error) {
 	ge.PUT("key", handler.PutKey)
 	ge.GET("key/*fully_qualified_key_name", handler.GetKey)
 	ge.GET("specs", handler.GetSpecs)
-	ge.PUT("spec", handler.PutSpec)
 	ge.GET("spec/:name", handler.GetSpec)
-	ge.PATCH("spec/:name", handler.PatchSpec)
+	ge.PUT("spec/:name", handler.PutSpec)
 	ge.POST("deployment", handler.PostDeployment)
 
 	return &Server{

@@ -28,13 +28,13 @@ POC: run everything inside one docker, consider:
 1. (Dev) Upload new application/service spec to envs, if there is a new application/service developed
 
 ## Conventions
-1. Required key `{env:// .key }`
-1. Required file key `{envf:// .keyf }`
-1. Optional key `{envo:// .key }`
-1. Optional file key `{envof:// .keyf }`
-1. Filename annotation `{envfn: filename}` 
-1. Allowed key name pattern `{env(f|o|of)?:// *\.([_a-zA-Z][_a-zA-Z0-9]*) *}`
-1. Allowed filename annotation `{envfn: *([-_a-zA-Z0-9]*) *}`
+1. Required key `${env:// .key }`
+1. Required file key `${envf:// .keyf }`
+1. Optional key `${envo:// .key }`
+1. Optional file key `${envof:// .keyf }`
+1. Filename annotation `${envfn: filename}` 
+1. Allowed key name pattern `\${env(f|o|of)?:// *\.([_a-zA-Z][_a-zA-Z0-9]*) *}`
+1. Allowed filename annotation `\${envfn: *([-_a-zA-Z0-9]*) *}`
 
 ## TODO
 - [x] enva start application/service
@@ -42,8 +42,9 @@ POC: run everything inside one docker, consider:
 - [x] Scan application/service spec
 - [x] Render application/service spec from env store
 - [x] Implement query on store level for keys
-- [ ] Implement GET, PUT REST APIs for keys & serve swagger.json
-- [ ] Implement Register REST APIS for new application/service spec
+- [x] Implement GET, PUT REST APIs for keys
+- [x] Implement Register REST APIS for new application/service spec
+- [ ] Serve swagger.json
 - [ ] Refactor enva to use envs instead of using naked underlying etcd/consul
 - [ ] API for start service
 - [ ] Wrap images to include `enva`, `s4`(simple static site service) binary

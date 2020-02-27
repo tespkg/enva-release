@@ -29,12 +29,12 @@ func cmd() *cobra.Command {
 }
 
 func runServer(sa *envs.Args) {
+	log.Printf("server started with: \n%v\n", sa)
+
 	s, err := envs.New(sa)
 	if err != nil {
 		log.Fatalf("ubable to intialise server: %v\n", err)
 	}
-
-	log.Printf("server started with: \n%v\n", sa)
 
 	s.Run()
 	err = s.Wait()

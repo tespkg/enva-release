@@ -134,6 +134,11 @@ func (s *es) GetKindValues(kind string) (store.KeyVals, error) {
 	return kvals, nil
 }
 
+func (s *es) Delete(key store.Key) error {
+	_, err := s.db.Delete(context.Background(), parseKey(s.prefix, key), nil)
+	return err
+}
+
 func (s *es) Close() error {
 	return s.db.Close()
 }

@@ -1,0 +1,19 @@
+# ${envfn: chapter01}
+poet: "{${env://.poet}}"
+title: "${env:// .title }"
+stanza:
+  - "${envo:// .at}"
+  - "${envof://.length }"
+  - "${env://._did}"
+  - ${env://.cRoSs}
+  - ${envf:// .an }
+  - ${env:// .Albatross }
+
+mariner:
+  with: "${envo://.crossbow}"
+  shot: "${envof://.ALBATROSS}"
+
+water:
+  water:
+    where: "everywhere"
+    nor: "any drop to drink"

@@ -22,13 +22,13 @@ const (
 )
 
 var (
-	leftDlims  = []string{"{env://", "{envf://", "{envo://", "{envof://"}
+	leftDlims  = []string{"${env://", "${envf://", "${envo://", "${envof://"}
 	rightDlims = []string{"}", "}", "}", "}"}
 )
 
 var (
-	envKeyRegex      = regexp.MustCompile(`{env(f|o|of)?:// *\.([_a-zA-Z][_a-zA-Z0-9]*) *}`)
-	envFilenameRegex = regexp.MustCompile(`{envfn: *([-_a-zA-Z0-9]*) *}`)
+	envKeyRegex      = regexp.MustCompile(`\${env(f|o|of)?:// *\.([_a-zA-Z][_a-zA-Z0-9]*) *}`)
+	envFilenameRegex = regexp.MustCompile(`\${envfn: *([-_a-zA-Z0-9]*) *}`)
 )
 
 type tempFunc func(dir, pattern string) (f *os.File, err error)
