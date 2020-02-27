@@ -9,6 +9,11 @@ import (
 	"tespkg.in/envs/pkg/store"
 )
 
+const (
+	defaultKVNs = "kvs"
+	specKind    = "spec"
+)
+
 // Register save the application spec itself and keys in it to underlying storage.
 type Register interface {
 	Scan(r io.Reader) error
@@ -24,14 +29,14 @@ type PlainRegister struct {
 
 func (p PlainRegister) Scan(ir io.ReadSeeker) error {
 	// Scan keys in the spec and save them into underlying store.
-	kvs, err := scan(p.spec, ir, true)
+	kvs, err := scan(ir, true)
 	if err != nil {
 		return err
 	}
 	for _, kv := range kvs {
 		if err := p.es.Set(store.Key{
+			Namespace: defaultKVNs,
 			Kind:      kv.Kind,
-			Namespace: kv.Spec,
 			Name:      kv.Name,
 		}, kv.Value); err != nil {
 			return fmt.Errorf("set key failed: %T", err)

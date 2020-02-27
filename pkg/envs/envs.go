@@ -7,12 +7,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
 	"tespkg.in/envs/pkg/store"
 	"tespkg.in/envs/pkg/store/consul"
 	"tespkg.in/envs/pkg/store/etcd"
-
-	"github.com/gin-contrib/cors"
-	"github.com/gin-gonic/gin"
 	"tespkg.in/kit/log"
 )
 

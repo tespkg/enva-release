@@ -7,11 +7,13 @@ import (
 )
 
 type Handler struct {
+	store.Store
 	spec.Handler
 }
 
 func NewHandler(s store.Store) *Handler {
 	return &Handler{
+		Store:   s,
 		Handler: spec.NewHandler(s),
 	}
 }

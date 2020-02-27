@@ -34,62 +34,51 @@ water:
 `
 
 func TestScan(t *testing.T) {
-	kvs, err := scan("envs", bytes.NewBufferString(doc), true)
+	kvs, err := scan(bytes.NewBufferString(doc), true)
 	require.Nil(t, err)
-	expected := []KeyVal{
+	expected := KeyVals{
 		{
-			Spec:  "envs",
 			Kind:  envfKind,
 			Name:  "chapter01",
 			Value: doc,
 		},
 		{
-			Spec: "envs",
 			Kind: envKind,
 			Name: "poet",
 		},
 		{
-			Spec: "envs",
 			Kind: envKind,
 			Name: "title",
 		},
 		{
-			Spec: "envs",
 			Kind: envoKind,
 			Name: "at",
 		},
 		{
-			Spec: "envs",
 			Kind: envofKind,
 			Name: "length",
 		},
 		{
-			Spec: "envs",
 			Kind: envKind,
 			Name: "_did",
 		},
 		{
-			Spec: "envs",
 			Kind: envKind,
 			Name: "cRoSs",
 		},
 		{
-			Spec: "envs",
 			Kind: envfKind,
 			Name: "an",
 		},
 		{
-			Spec: "envs",
 			Kind: envKind,
 			Name: "Albatross",
 		},
 		{
-			Spec: "envs",
 			Kind: envoKind,
 			Name: "crossbow",
 		},
 		{
-			Spec: "envs",
 			Kind: envofKind,
 			Name: "ALBATROSS",
 		},
@@ -103,22 +92,22 @@ func TestRender(t *testing.T) {
 	s := store.NewMockStore(mockCtrl)
 
 	se := s.EXPECT()
-	se.Get(store.Key{Namespace: "envs", Kind: envfKind, Name: "chapter01"}).Return(doc, nil).AnyTimes()
-	se.Get(store.Key{Namespace: "envs", Kind: envKind, Name: "poet"}).Return("poet", nil).AnyTimes()
-	se.Get(store.Key{Namespace: "envs", Kind: envKind, Name: "title"}).Return("title", nil).AnyTimes()
-	se.Get(store.Key{Namespace: "envs", Kind: envoKind, Name: "at"}).Return("at", nil).AnyTimes()
-	se.Get(store.Key{Namespace: "envs", Kind: envofKind, Name: "length"}).Return("length", nil).AnyTimes()
-	se.Get(store.Key{Namespace: "envs", Kind: envKind, Name: "_did"}).Return("did", nil).AnyTimes()
-	se.Get(store.Key{Namespace: "envs", Kind: envKind, Name: "cRoSs"}).Return("cross", nil).AnyTimes()
-	se.Get(store.Key{Namespace: "envs", Kind: envfKind, Name: "an"}).Return("an", nil).AnyTimes()
-	se.Get(store.Key{Namespace: "envs", Kind: envKind, Name: "Albatross"}).Return("{env://.nestedAlbatross}", nil).AnyTimes()
-	se.Get(store.Key{Namespace: "envs", Kind: envKind, Name: "nestedAlbatross"}).Return("nested Albatross", nil).AnyTimes()
-	se.Get(store.Key{Namespace: "envs", Kind: envoKind, Name: "crossbow"}).Return("", nil).AnyTimes()
-	se.Get(store.Key{Namespace: "envs", Kind: envofKind, Name: "ALBATROSS"}).Return("", nil).AnyTimes()
+	se.Get(store.Key{Namespace: defaultKVNs, Kind: envfKind, Name: "chapter01"}).Return(doc, nil).AnyTimes()
+	se.Get(store.Key{Namespace: defaultKVNs, Kind: envKind, Name: "poet"}).Return("poet", nil).AnyTimes()
+	se.Get(store.Key{Namespace: defaultKVNs, Kind: envKind, Name: "title"}).Return("title", nil).AnyTimes()
+	se.Get(store.Key{Namespace: defaultKVNs, Kind: envoKind, Name: "at"}).Return("at", nil).AnyTimes()
+	se.Get(store.Key{Namespace: defaultKVNs, Kind: envofKind, Name: "length"}).Return("length", nil).AnyTimes()
+	se.Get(store.Key{Namespace: defaultKVNs, Kind: envKind, Name: "_did"}).Return("did", nil).AnyTimes()
+	se.Get(store.Key{Namespace: defaultKVNs, Kind: envKind, Name: "cRoSs"}).Return("cross", nil).AnyTimes()
+	se.Get(store.Key{Namespace: defaultKVNs, Kind: envfKind, Name: "an"}).Return("an", nil).AnyTimes()
+	se.Get(store.Key{Namespace: defaultKVNs, Kind: envKind, Name: "Albatross"}).Return("{env://.nestedAlbatross}", nil).AnyTimes()
+	se.Get(store.Key{Namespace: defaultKVNs, Kind: envKind, Name: "nestedAlbatross"}).Return("nested Albatross", nil).AnyTimes()
+	se.Get(store.Key{Namespace: defaultKVNs, Kind: envoKind, Name: "crossbow"}).Return("", nil).AnyTimes()
+	se.Get(store.Key{Namespace: defaultKVNs, Kind: envofKind, Name: "ALBATROSS"}).Return("", nil).AnyTimes()
 
 	idx := 0
 	buf := &bytes.Buffer{}
-	err := render(s, "envs", bytes.NewBufferString(doc), buf, &kvState{}, func(dir, pattern string) (f *os.File, err error) {
+	err := render(s, bytes.NewBufferString(doc), buf, &kvState{}, func(dir, pattern string) (f *os.File, err error) {
 		idx++
 		return os.Create(fmt.Sprintf("%s/tmp-%d.out", os.TempDir(), idx))
 	})

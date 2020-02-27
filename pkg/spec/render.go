@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"os"
 	"regexp"
-	"strings"
 	"sync"
 
 	"tespkg.in/envs/pkg/store"
@@ -20,7 +19,6 @@ const (
 	envfKind  = "envf"
 	envoKind  = "envo"
 	envofKind = "envof"
-	specKind  = "spec"
 )
 
 var (
@@ -36,7 +34,6 @@ var (
 type tempFunc func(dir, pattern string) (f *os.File, err error)
 
 type KeyVal struct {
-	Spec  string
 	Kind  string
 	Name  string
 	Value string
@@ -44,24 +41,24 @@ type KeyVal struct {
 
 type KeyVals []KeyVal
 
-func Render(es store.Store, spec string, ir io.Reader, iw io.Writer) error {
-	return render(es, spec, ir, iw, &kvState{}, ioutil.TempFile)
+func Render(es store.Store, ir io.Reader, iw io.Writer) error {
+	return render(es, ir, iw, &kvState{}, ioutil.TempFile)
 }
 
-func render(es store.Store, spec string, ir io.Reader, iw io.Writer, kvS *kvState, tmpFunc tempFunc) error {
+func render(es store.Store, ir io.Reader, iw io.Writer, kvS *kvState, tmpFunc tempFunc) error {
 	bs, err := ioutil.ReadAll(ir)
 	if err != nil {
 		return err
 	}
 
-	kvs, err := scan(spec, bytes.NewBuffer(bs), false)
+	kvs, err := scan(bytes.NewBuffer(bs), false)
 	if err != nil {
 		return err
 	}
 
 	vars := make(map[string]string)
 	for _, kv := range kvs {
-		val, err := valueOf(es, spec, kv.Kind, kv.Name, kvS, tmpFunc)
+		val, err := valueOf(es, kv.Kind, kv.Name, kvS, tmpFunc)
 		if err != nil {
 			return err
 		}
@@ -112,11 +109,7 @@ func render(es store.Store, spec string, ir io.Reader, iw io.Writer, kvS *kvStat
 	return nil
 }
 
-func scan(spec string, r io.Reader, scanFilename bool) (KeyVals, error) {
-	if spec == "" {
-		return nil, errors.New("got empty spec")
-	}
-
+func scan(r io.Reader, scanFilename bool) (KeyVals, error) {
 	bs, err := ioutil.ReadAll(r)
 	if err != nil {
 		return nil, err
@@ -138,7 +131,6 @@ func scan(spec string, r io.Reader, scanFilename bool) (KeyVals, error) {
 			isFn = true
 			fn := fnRes[0][1]
 			kvs = append(kvs, KeyVal{
-				Spec:  spec,
 				Kind:  envfKind,
 				Name:  fn,
 				Value: doc,
@@ -149,7 +141,7 @@ func scan(spec string, r io.Reader, scanFilename bool) (KeyVals, error) {
 	// Scan doc, exact all keys
 	keyRes := envKeyRegex.FindAllStringSubmatch(doc, -1)
 	for _, keyMatch := range keyRes {
-		kv := kvFromMatchItem(spec, keyMatch)
+		kv := kvFromMatchItem(keyMatch)
 		kvs = append(kvs, kv)
 		if isFn && (kv.Kind == envfKind || kv.Kind == envofKind) && kv.Name == kvs[0].Name {
 			return nil, errors.New("found cycle reference in envf file")
@@ -159,9 +151,9 @@ func scan(spec string, r io.Reader, scanFilename bool) (KeyVals, error) {
 	return kvs, nil
 }
 
-func valueOf(es store.Store, spec, kind, key string, kvS *kvState, tmpFunc tempFunc) (string, error) {
+func valueOf(es store.Store, kind, key string, kvS *kvState, tmpFunc tempFunc) (string, error) {
 	val, err := es.Get(store.Key{
-		Namespace: spec,
+		Namespace: defaultKVNs,
 		Kind:      kind,
 		Name:      key,
 	})
@@ -170,7 +162,7 @@ func valueOf(es store.Store, spec, kind, key string, kvS *kvState, tmpFunc tempF
 	}
 	value := val.(string)
 
-	kvS.set(spec, key)
+	kvS.set(key)
 
 	keyRes := envKeyRegex.FindAllStringSubmatch(value, -1)
 	if len(keyRes) == 0 {
@@ -178,25 +170,24 @@ func valueOf(es store.Store, spec, kind, key string, kvS *kvState, tmpFunc tempF
 	}
 
 	for _, keyMatch := range keyRes {
-		kv := kvFromMatchItem(spec, keyMatch)
-		if kvS.exists(kv.Spec, kv.Name) {
+		kv := kvFromMatchItem(keyMatch)
+		if kvS.exists(kv.Name) {
 			return "", fmt.Errorf("cycle key usage found on %v", kv.Name)
 		}
 	}
 
 	i := bytes.NewBufferString(value)
 	out := &bytes.Buffer{}
-	if err := render(es, spec, i, out, kvS, tmpFunc); err != nil {
+	if err := render(es, i, out, kvS, tmpFunc); err != nil {
 		return "", fmt.Errorf("render nested key: %v failed: %v", value, err)
 	}
 
 	return out.String(), nil
 }
 
-func kvFromMatchItem(spec string, math []string) KeyVal {
+func kvFromMatchItem(math []string) KeyVal {
 	kind, key := envKind+math[1], math[2]
 	return KeyVal{
-		Spec: spec,
 		Kind: kind,
 		Name: key,
 	}
@@ -208,8 +199,8 @@ type kvState struct {
 	m map[string]struct{}
 }
 
-func (kvs *kvState) set(spec, key string) {
-	stateKey := strings.Join([]string{spec, key}, "/")
+func (kvs *kvState) set(key string) {
+	stateKey := key
 
 	kvs.Lock()
 	defer kvs.Unlock()
@@ -219,8 +210,8 @@ func (kvs *kvState) set(spec, key string) {
 	kvs.m[stateKey] = struct{}{}
 }
 
-func (kvs *kvState) exists(spec, key string) bool {
-	stateKey := strings.Join([]string{spec, key}, "/")
+func (kvs *kvState) exists(key string) bool {
+	stateKey := key
 
 	kvs.Lock()
 	defer kvs.Unlock()
