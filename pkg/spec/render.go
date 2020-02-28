@@ -41,11 +41,11 @@ type KeyVal struct {
 
 type KeyVals []KeyVal
 
-func Render(es store.Store, ir io.Reader, iw io.Writer) error {
-	return render(es, ir, iw, &kvState{}, ioutil.TempFile)
+func Render(s store.Store, ir io.Reader, iw io.Writer) error {
+	return render(s, ir, iw, &kvState{}, ioutil.TempFile)
 }
 
-func render(es store.Store, ir io.Reader, iw io.Writer, kvS *kvState, tmpFunc tempFunc) error {
+func render(s store.Store, ir io.Reader, iw io.Writer, kvS *kvState, tmpFunc tempFunc) error {
 	bs, err := ioutil.ReadAll(ir)
 	if err != nil {
 		return err
@@ -58,7 +58,7 @@ func render(es store.Store, ir io.Reader, iw io.Writer, kvS *kvState, tmpFunc te
 
 	vars := make(map[string]string)
 	for _, kv := range kvs {
-		val, err := valueOf(es, kv.Kind, kv.Name, kvS, tmpFunc)
+		val, err := valueOf(s, kv.Kind, kv.Name, kvS, tmpFunc)
 		if err != nil {
 			return err
 		}
@@ -151,8 +151,8 @@ func scan(r io.Reader, scanFilename bool) (KeyVals, error) {
 	return kvs, nil
 }
 
-func valueOf(es store.Store, kind, key string, kvS *kvState, tmpFunc tempFunc) (string, error) {
-	val, err := es.Get(store.Key{
+func valueOf(s store.Store, kind, key string, kvS *kvState, tmpFunc tempFunc) (string, error) {
+	val, err := s.Get(store.Key{
 		Namespace: DefaultKVNs,
 		Kind:      kind,
 		Name:      key,
@@ -178,7 +178,7 @@ func valueOf(es store.Store, kind, key string, kvS *kvState, tmpFunc tempFunc) (
 
 	i := bytes.NewBufferString(value)
 	out := &bytes.Buffer{}
-	if err := render(es, i, out, kvS, tmpFunc); err != nil {
+	if err := render(s, i, out, kvS, tmpFunc); err != nil {
 		return "", fmt.Errorf("render nested key: %v failed: %v", value, err)
 	}
 

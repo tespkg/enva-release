@@ -23,7 +23,7 @@ type Register interface {
 }
 
 type DefaultRegister struct {
-	es store.Store
+	store.Store
 
 	// Represent a project.
 	spec     string
@@ -37,7 +37,7 @@ func (r DefaultRegister) Scan(ir io.Reader) error {
 		return err
 	}
 	for _, kv := range kvs {
-		if err := r.es.Set(store.Key{
+		if err := r.Set(store.Key{
 			Namespace: DefaultKVNs,
 			Kind:      kv.Kind,
 			Name:      kv.Name,
@@ -49,15 +49,15 @@ func (r DefaultRegister) Scan(ir io.Reader) error {
 }
 
 func (r DefaultRegister) Save(ir io.Reader) error {
-	return saveSpecElement(r.es, r.spec, r.filename, ir)
+	return saveSpecElement(r.Store, r.spec, r.filename, ir)
 }
 
-func saveSpecElement(es store.Store, spec, fn string, ir io.Reader) error {
+func saveSpecElement(s store.Store, spec, fn string, ir io.Reader) error {
 	bs, err := ioutil.ReadAll(ir)
 	if err != nil {
 		return err
 	}
-	if err := es.Set(store.Key{
+	if err := s.Set(store.Key{
 		Namespace: spec,
 		Kind:      specFileKind,
 		Name:      fn,
@@ -67,8 +67,8 @@ func saveSpecElement(es store.Store, spec, fn string, ir io.Reader) error {
 	return nil
 }
 
-func getSpecElement(es store.Store, spec, fn string) (string, error) {
-	val, err := es.Get(store.Key{
+func getSpecElement(s store.Store, spec, fn string) (string, error) {
+	val, err := s.Get(store.Key{
 		Namespace: spec,
 		Kind:      specFileKind,
 		Name:      fn,
@@ -79,12 +79,12 @@ func getSpecElement(es store.Store, spec, fn string) (string, error) {
 	return val.(string), nil
 }
 
-func saveSpecMeta(es store.Store, hdr Header) error {
+func saveSpecMeta(s store.Store, hdr Header) error {
 	bs, err := json.Marshal(&hdr)
 	if err != nil {
 		return err
 	}
-	if err := es.Set(store.Key{
+	if err := s.Set(store.Key{
 		Namespace: hdr.Spec,
 		Kind:      specMetaKind,
 		Name:      specMetaKeyName,
@@ -95,9 +95,9 @@ func saveSpecMeta(es store.Store, hdr Header) error {
 	return nil
 }
 
-func getSpecMeta(es store.Store, spec string) (Header, error) {
+func getSpecMeta(s store.Store, spec string) (Header, error) {
 	var hdr Header
-	val, err := es.Get(store.Key{
+	val, err := s.Get(store.Key{
 		Namespace: spec,
 		Kind:      specMetaKind,
 		Name:      specMetaKeyName,

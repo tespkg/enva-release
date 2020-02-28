@@ -49,7 +49,7 @@ func NewSpec(sa SpecArgs) *spec.Swagger {
 func GenerateModel(rv reflect.Value) spec.Schema {
 	properties := make(map[string]spec.Schema)
 	var requiredFields []string
-	fields, _ := TypeFields(rv)
+	fields := typeFields(rv)
 	for _, field := range fields {
 		properties[field.Name] = fieldSchema(field)
 		if field.Required {

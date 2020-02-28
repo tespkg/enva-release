@@ -14,20 +14,14 @@ type Fields []Field
 
 // typeFields returns a list of fields that JSON should recognize for the given type.
 // The algorithm is breadth-first search over the set of plain fields any reachable anonymous structs.
-func TypeFields(rv reflect.Value) (Fields, bool) {
-	fields := typeFields(rv)
-	isArray := isArray(rv.Type())
-	return fields, isArray
-}
-
 func typeFields(rv reflect.Value) (fields Fields) {
 	rv = elementOf(rv)
 	typeOfT := rv.Type()
 	for i := 0; i < rv.NumField(); i++ {
-		sf := typeOfT.Field(i)
-		isUnexported := sf.PkgPath != ""
-		if sf.Anonymous {
-			t := sf.Type
+		fieldTyp := typeOfT.Field(i)
+		isUnexported := fieldTyp.PkgPath != ""
+		if fieldTyp.Anonymous {
+			t := fieldTyp.Type
 			if t.Kind() == reflect.Ptr {
 				t = t.Elem()
 			}
@@ -45,11 +39,11 @@ func typeFields(rv reflect.Value) (fields Fields) {
 		} else if isUnexported {
 			// Ignore unexported non-embedded fields.
 			continue
-		} else if isStruct(sf.Type) {
+		} else if isStruct(fieldTyp.Type) {
 			// Ignore struct fields.
 			continue
 		}
-		tag := sf.Tag.Get("json")
+		tag := fieldTyp.Tag.Get("json")
 		if tag == "-" {
 			continue
 		}
@@ -58,7 +52,7 @@ func typeFields(rv reflect.Value) (fields Fields) {
 			name = ""
 		}
 		if name == "" {
-			name = sf.Name
+			name = fieldTyp.Name
 		}
 		required := true
 		if opts.Contains("omitempty") {
@@ -83,13 +77,6 @@ func isStruct(t reflect.Type) bool {
 	default:
 		return false
 	}
-}
-
-func isArray(t reflect.Type) bool {
-	if t.Kind() == reflect.Slice || t.Kind() == reflect.Array {
-		return true
-	}
-	return false
 }
 
 func elementOf(v reflect.Value) reflect.Value {

@@ -34,7 +34,7 @@ type S0s []S0
 
 func TestTyp2Fields(t *testing.T) {
 	v := reflect.ValueOf(S0s{})
-	fields, isArray := TypeFields(v)
+	fields := typeFields(v)
 	expected := Fields{
 		{Name: "a", Required: true},
 		{Name: "b", Required: false},
@@ -42,7 +42,6 @@ func TestTyp2Fields(t *testing.T) {
 		{Name: "E", Required: true},
 		{Name: "F", Required: true},
 	}
-	require.Equal(t, true, isArray)
 	require.Equal(t, len(expected), len(fields))
 	for i := 0; i < len(expected); i++ {
 		require.Equal(t, expected[i].Name, fields[i].Name)

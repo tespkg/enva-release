@@ -55,7 +55,7 @@ func TestRegister(t *testing.T) {
 		}
 	}()
 
-	h := Handler{s: newStore(t)}
+	h := Handler{Store: newStore(t)}
 	specName := "app"
 	err := h.Register(specName, true, filenames, rds...)
 	require.Nil(t, err)
