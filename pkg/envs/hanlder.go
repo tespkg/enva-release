@@ -77,7 +77,7 @@ func (h *Handler) PutKey(c *gin.Context) {
 }
 
 func (h *Handler) GetKey(c *gin.Context) {
-	rawKey := c.Param("fully_qualified_key_name")
+	rawKey := strings.TrimPrefix(c.Param("fully_qualified_key_name"), "/")
 	parts := strings.SplitN(rawKey, "/", 2)
 	if len(parts) != 2 {
 		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("invalid fully qualified key name: %v", rawKey))
@@ -112,7 +112,7 @@ func (h *Handler) GetSpecs(c *gin.Context) {
 }
 
 func (h *Handler) GetSpec(c *gin.Context) {
-	name := c.Param("name")
+	name := strings.TrimPrefix(c.Param("name"), "/")
 	if name == "" {
 		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("empty spec name"))
 		return
@@ -128,7 +128,7 @@ func (h *Handler) GetSpec(c *gin.Context) {
 }
 
 func (h *Handler) PutSpec(c *gin.Context) {
-	name := c.Param("name")
+	name := strings.TrimPrefix(c.Param("name"), "/")
 	multiForm, err := c.MultipartForm()
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("invalid multipart form: %v", err))
@@ -170,7 +170,7 @@ func (h *Handler) PutSpec(c *gin.Context) {
 func (h *Handler) PostDeployment(c *gin.Context) {}
 
 func toSpecKVals(kvals store.KeyVals) spec.KeyVals {
-	var specKVals spec.KeyVals
+	specKVals := spec.KeyVals{}
 	for _, kval := range kvals {
 		specKVals = append(specKVals, toSpecKVal(kval))
 	}
@@ -186,7 +186,7 @@ func toSpecKVal(kval store.KeyVal) spec.KeyVal {
 }
 
 func fromSpecKVals(kvals spec.KeyVals) store.KeyVals {
-	var storeKVals store.KeyVals
+	storeKVals := store.KeyVals{}
 	for _, kval := range kvals {
 		storeKVals = append(storeKVals, fromSpecKVal(kval))
 	}
@@ -200,7 +200,7 @@ func fromSpecKVal(kval spec.KeyVal) store.KeyVal {
 			Kind:      kval.Kind,
 			Name:      kval.Name,
 		},
-		Value: nil,
+		Value: kval.Value,
 	}
 }
 

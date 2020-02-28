@@ -36,7 +36,7 @@ func (h Handler) GetSpecHeaders() (Headers, error) {
 	if err != nil {
 		return nil, err
 	}
-	var hdrs Headers
+	hdrs := Headers{}
 	for _, kval := range kvals {
 		var hdr Header
 		if err := json.Unmarshal([]byte(kval.Value.(string)), &hdr); err != nil {

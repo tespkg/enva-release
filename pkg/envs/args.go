@@ -35,7 +35,7 @@ type Args struct {
 func DefaultArgs() *Args {
 	return &Args{
 		ListenAddr: ":9112",
-		Dsn:        "http://localhost:8502/envs",
+		Dsn:        "http://localhost:8500/envs",
 
 		StaticAssetDir:  "static",
 		StaticAssetPath: "/_/static",
@@ -44,7 +44,7 @@ func DefaultArgs() *Args {
 		// Spec options
 		SpecArgs: openapi.SpecArgs{
 			KnownHost:    "localhost:9112",
-			BasePath:     "/api",
+			BasePath:     "/",
 			Version:      "0.1.0",
 			ContactEmail: "support@target-energysolutions.com",
 			Title:        "Swagger envs",

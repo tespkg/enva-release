@@ -46,6 +46,9 @@ func (c *cs) Get(key store.Key) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+	if pair == nil {
+		return nil, store.ErrNotFound
+	}
 
 	return fromKVPair(pair)
 }
@@ -131,6 +134,9 @@ func (c *cs) Delete(key store.Key) error {
 func (c *cs) Close() error { return nil }
 
 func toKVPair(key string, val interface{}) (*api.KVPair, error) {
+	if val == nil {
+		val = ""
+	}
 	var bVal []byte
 	var flag uint64
 	switch reflect.TypeOf(val).Kind() {

@@ -145,6 +145,9 @@ func (s *es) Close() error {
 
 // Add a byte in front of the val to represent the val type for the serialization purpose.
 func encodeVal(val interface{}) ([]byte, error) {
+	if val == nil {
+		val = ""
+	}
 	var bVal []byte
 	var flag byte
 	switch reflect.TypeOf(val).Kind() {

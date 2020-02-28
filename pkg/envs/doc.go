@@ -84,23 +84,8 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 		},
 	}
 	// 2. key PUT
-	// 3. key/{fully_qualified_key_name} GET
-	pathItems["/key"] = openspec.PathItem{
+	pathItems["/key/"] = openspec.PathItem{
 		PathItemProps: openspec.PathItemProps{
-			Get: &openspec.Operation{
-				OperationProps: openspec.OperationProps{
-					ID:          "GetKey",
-					Summary:     "Get a keyval with the given key name",
-					Description: "Get a keyval with the given key name",
-					Produces:    []string{"application/json"},
-					Tags:        []string{keyValTag},
-					Parameters: []openspec.Parameter{
-						openapi.BuildParam("path", "fully_qualified_key_name", "string", "", true, nil).
-							WithParameterDesc("Allowed format: kind/name,  supported kind: env, envf, envo, envof"),
-					},
-					Responses: openapi.BuildResp(http.StatusOK, openapi.BuildSuccessResp(openapi.ObjRefSchema(keyValTag))),
-				},
-			},
 			Put: &openspec.Operation{
 				OperationProps: openspec.OperationProps{
 					ID:          "PutKey",
@@ -114,6 +99,26 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 							WithParameterDesc("Update a single keyval"),
 					},
 					Responses: openapi.BuildResp(http.StatusOK, openapi.BuildSuccessResp(nil)),
+				},
+			},
+		},
+	}
+
+	// 3. key/{fully_qualified_key_name} GET
+	pathItems["/key/{fully_qualified_key_name}"] = openspec.PathItem{
+		PathItemProps: openspec.PathItemProps{
+			Get: &openspec.Operation{
+				OperationProps: openspec.OperationProps{
+					ID:          "GetKey",
+					Summary:     "Get a keyval with the given key name",
+					Description: "Get a keyval with the given key name",
+					Produces:    []string{"application/json"},
+					Tags:        []string{keyValTag},
+					Parameters: []openspec.Parameter{
+						openapi.BuildParam("path", "fully_qualified_key_name", "string", "", true, nil).
+							WithParameterDesc("Allowed format: kind/name,  supported kind: env, envf, envo, envof"),
+					},
+					Responses: openapi.BuildResp(http.StatusOK, openapi.BuildSuccessResp(openapi.ObjRefSchema(keyValTag))),
 				},
 			},
 		},
@@ -134,7 +139,7 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 		},
 	}
 	// 5. spec/{name} GET & PUT
-	pathItems["/spec"] = openspec.PathItem{
+	pathItems["/spec/{name}"] = openspec.PathItem{
 		PathItemProps: openspec.PathItemProps{
 			Get: &openspec.Operation{
 				OperationProps: openspec.OperationProps{
@@ -177,7 +182,7 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 	}
 
 	// 6. deployment/{name} POST
-	pathItems["/deployment"] = openspec.PathItem{
+	pathItems["/deployment/{name}"] = openspec.PathItem{
 		PathItemProps: openspec.PathItemProps{
 			Post: &openspec.Operation{
 				OperationProps: openspec.OperationProps{
