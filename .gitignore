@@ -36,3 +36,4 @@
 bin
 vars.yaml
 assets
+.static

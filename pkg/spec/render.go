@@ -34,9 +34,9 @@ var (
 type tempFunc func(dir, pattern string) (f *os.File, err error)
 
 type KeyVal struct {
-	Kind  string
-	Name  string
-	Value string
+	Kind  string `json:"kind"`
+	Name  string `json:"name"`
+	Value string `json:"value"`
 }
 
 type KeyVals []KeyVal

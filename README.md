@@ -44,7 +44,7 @@ POC: run everything inside one docker, consider:
 - [x] Implement query on store level for keys
 - [x] Implement GET, PUT REST APIs for keys
 - [x] Implement Register REST APIS for new application/service spec
-- [ ] Serve swagger.json
+- [x] Serve swagger.json
 - [ ] Refactor enva to use envs instead of using naked underlying etcd/consul
 - [ ] API for start service
 - [ ] Wrap images to include `enva`, `s4`(simple static site service) binary

@@ -11,13 +11,13 @@ import (
 )
 
 type Header struct {
-	Spec      string
-	Filenames []string
+	Spec      string   `json:"spec"`
+	Filenames []string `json:"filenames"`
 }
 
 type Spec struct {
 	Header
-	Documents []string
+	Documents []string `json:"documents"`
 }
 
 type Headers []Header
