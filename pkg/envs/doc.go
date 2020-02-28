@@ -84,7 +84,7 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 		},
 	}
 	// 2. key PUT
-	pathItems["/key/"] = openspec.PathItem{
+	pathItems["/key"] = openspec.PathItem{
 		PathItemProps: openspec.PathItemProps{
 			Put: &openspec.Operation{
 				OperationProps: openspec.OperationProps{
