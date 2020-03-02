@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"reflect"
 
+	"tespkg.in/envs/pkg/kvs"
 	"tespkg.in/envs/pkg/openapi"
 	"tespkg.in/envs/pkg/spec"
 
@@ -25,7 +26,7 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 	// 1. Definition for spec.KeyVal & spec.KeyVals model
 	// 2. Definition for spec.Header & spec.Spec & spec.Specs model
 	specDefs := map[string]openspec.Schema{
-		keyValTag:  openapi.GenerateModel(reflect.ValueOf(spec.KeyVal{})),
+		keyValTag:  openapi.GenerateModel(reflect.ValueOf(kvs.KeyVal{})),
 		specHdrDef: openapi.GenerateModel(reflect.ValueOf(spec.Header{})),
 		specTag:    openapi.GenerateModel(reflect.ValueOf(spec.Spec{})),
 	}

@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 
+	"tespkg.in/envs/pkg/kvs"
 	"tespkg.in/envs/pkg/store"
 )
 
@@ -32,11 +33,11 @@ type DefaultRegister struct {
 
 func (r DefaultRegister) Scan(ir io.Reader) error {
 	// Scan keys in the spec and save them into underlying store.
-	kvs, err := scan(ir, true)
+	keyVals, err := kvs.Scan(ir, true)
 	if err != nil {
 		return err
 	}
-	for _, kv := range kvs {
+	for _, kv := range keyVals {
 		if err := r.Set(store.Key{
 			Namespace: DefaultKVNs,
 			Kind:      kv.Kind,

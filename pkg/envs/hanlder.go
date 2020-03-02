@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"tespkg.in/envs/pkg/kvs"
 	"tespkg.in/envs/pkg/spec"
 	"tespkg.in/envs/pkg/store"
 )
@@ -43,16 +44,16 @@ func (h *Handler) GetKeys(c *gin.Context) {
 			return
 		}
 	}
-	c.JSON(http.StatusOK, toSpecKVals(kvals))
+	c.JSON(http.StatusOK, storeKVs2kvs(kvals))
 }
 
 func (h *Handler) PutKeys(c *gin.Context) {
-	var specKVals spec.KeyVals
+	var specKVals kvs.KeyVals
 	if err := c.BindJSON(&specKVals); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("parse request body failed: %v", err))
 		return
 	}
-	storeKVals := fromSpecKVals(specKVals)
+	storeKVals := kvs2storeKVs(specKVals)
 	for _, kval := range storeKVals {
 		if err := h.Set(kval.Key, kval.Value); err != nil {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("set key: %v failed: %v", kval.Key, err))
@@ -63,12 +64,12 @@ func (h *Handler) PutKeys(c *gin.Context) {
 }
 
 func (h *Handler) PutKey(c *gin.Context) {
-	var kval spec.KeyVal
+	var kval kvs.KeyVal
 	if err := c.BindJSON(&kval); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("parse request body failed: %v", err))
 		return
 	}
-	storeKVal := fromSpecKVal(kval)
+	storeKVal := kv2storeKV(kval)
 	if err := h.Set(storeKVal.Key, storeKVal.Value); err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("set key: %v failed: %v", storeKVal.Key, err))
 		return
@@ -94,9 +95,11 @@ func (h *Handler) GetKey(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, spec.KeyVal{
-		Kind:  kind,
-		Name:  name,
+	c.JSON(http.StatusOK, kvs.KeyVal{
+		Key: kvs.Key{
+			Kind: kind,
+			Name: name,
+		},
 		Value: val.(string),
 	})
 }
@@ -169,31 +172,33 @@ func (h *Handler) PutSpec(c *gin.Context) {
 
 func (h *Handler) PostDeployment(c *gin.Context) {}
 
-func toSpecKVals(kvals store.KeyVals) spec.KeyVals {
-	specKVals := spec.KeyVals{}
+func storeKVs2kvs(kvals store.KeyVals) kvs.KeyVals {
+	specKVals := kvs.KeyVals{}
 	for _, kval := range kvals {
-		specKVals = append(specKVals, toSpecKVal(kval))
+		specKVals = append(specKVals, storeKV2kv(kval))
 	}
 	return specKVals
 }
 
-func toSpecKVal(kval store.KeyVal) spec.KeyVal {
-	return spec.KeyVal{
-		Kind:  kval.Kind,
-		Name:  kval.Name,
+func storeKV2kv(kval store.KeyVal) kvs.KeyVal {
+	return kvs.KeyVal{
+		Key: kvs.Key{
+			Kind: kval.Kind,
+			Name: kval.Name,
+		},
 		Value: kval.Value.(string),
 	}
 }
 
-func fromSpecKVals(kvals spec.KeyVals) store.KeyVals {
+func kvs2storeKVs(kvals kvs.KeyVals) store.KeyVals {
 	storeKVals := store.KeyVals{}
 	for _, kval := range kvals {
-		storeKVals = append(storeKVals, fromSpecKVal(kval))
+		storeKVals = append(storeKVals, kv2storeKV(kval))
 	}
 	return storeKVals
 }
 
-func fromSpecKVal(kval spec.KeyVal) store.KeyVal {
+func kv2storeKV(kval kvs.KeyVal) store.KeyVal {
 	return store.KeyVal{
 		Key: store.Key{
 			Namespace: spec.DefaultKVNs,

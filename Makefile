@@ -25,7 +25,9 @@ get-protoc:
 .PHONY: generate-mock
 generate-mock: get-protoc
 	@rm -f ./pkg/store/store_mock.go
-	@.bin/mockgen --source ./pkg/store/store.go --package store --destination ./pkg/store/store_mock.go
+	@rm -f ./pkg/kvs/mock/kvs_mock.go
+	@.bin/mockgen -package store -destination pkg/store/store_mock.go -source pkg/store/store.go
+	@.bin/mockgen -package kvs -destination pkg/kvs/kvs_mock.go -source pkg/kvs/kvs.go
 
 .PHONY: run-fmt
 run-fmt:
