@@ -1,7 +1,6 @@
 // Package log provides the canonical logging functionality used by Go-based
-// meera components.
 //
-// Meera's logging subsystem is built on top of the [Zap](https://godoc.org/go.uber.org/zap) package.
+// This logging subsystem is built on top of the [Zap](https://godoc.org/go.uber.org/zap) package.
 // Copied & modified from istio.io/pkg/log
 // High performance scenarios should use the Error, Warn, Info, and Debug methods. Lower perf
 // scenarios can use the more expensive convenience methods such as Debugf and Warnw.

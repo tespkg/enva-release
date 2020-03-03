@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -184,6 +186,18 @@ func (c *Client) query(endpoint string, out interface{}) error {
 		return err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		bs, _ := ioutil.ReadAll(resp.Body)
+		message := resp.Status
+		if len(bs) > 0 {
+			var errBody = struct {
+				Error string `json:"error"`
+			}{}
+			_ = json.Unmarshal(bs, &errBody)
+			message += " " + errBody.Error
+		}
+		return errors.New(message)
+	}
 
 	if err := decodeBody(resp, out); err != nil {
 		return err
@@ -194,7 +208,7 @@ func (c *Client) query(endpoint string, out interface{}) error {
 func (c *Client) Get(key kvs.Key) (string, error) {
 	kval := kvs.KeyVal{}
 	keyInPath := fmt.Sprintf("%s/%s", key.Kind, key.Name)
-	endpoint := fmt.Sprintf("key/%s", keyInPath)
+	endpoint := fmt.Sprintf("/key/%s", keyInPath)
 	if err := c.query(endpoint, &kval); err != nil {
 		return "", err
 	}

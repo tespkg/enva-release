@@ -117,12 +117,12 @@ func render(s KVStore, ir io.Reader, iw io.Writer, kvS *kvState, tmpFunc tempFun
 		}
 		switch kv.Kind {
 		case envKind, envoKind:
-			if kv.Name == envKind && val == "" {
+			if kv.Kind == envKind && val == "" {
 				return fmt.Errorf("got empty value on required env key: %v", kv.Name)
 			}
 			vars[kv.Name] = val
 		case envfKind, envofKind:
-			if kv.Name == envfKind && val == "" {
+			if kv.Kind == envfKind && val == "" {
 				return fmt.Errorf("got empty value on required envf key: %v", kv.Name)
 			}
 			// Create a tmp file save the val as it's content, and set the file name to the key
@@ -168,7 +168,7 @@ func valueOf(s KVStore, kind, key string, kvS *kvState, tmpFunc tempFunc) (strin
 		Name: key,
 	})
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("get value of %v/%v failed: %v", kind, key, err)
 	}
 
 	kvS.set(key)

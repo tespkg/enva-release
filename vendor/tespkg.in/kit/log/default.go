@@ -2,6 +2,7 @@ package log
 
 import (
 	"fmt"
+	"os"
 
 	"go.uber.org/zap/zapcore"
 )
@@ -13,6 +14,7 @@ func Fatal(msg string, fields ...zapcore.Field) {
 	if defaultScope.GetOutputLevel() >= FatalLevel {
 		defaultScope.emit(zapcore.FatalLevel, defaultScope.GetStackTraceLevel() >= FatalLevel, msg, fields)
 	}
+	os.Exit(1)
 }
 
 // Fatala uses fmt.Sprint to construct and log a message at fatal level.
@@ -20,6 +22,7 @@ func Fatala(args ...interface{}) {
 	if defaultScope.GetOutputLevel() >= FatalLevel {
 		defaultScope.emit(zapcore.FatalLevel, defaultScope.GetStackTraceLevel() >= FatalLevel, fmt.Sprint(args...), nil)
 	}
+	os.Exit(1)
 }
 
 // Fatalf uses fmt.Sprintf to construct and log a message at fatal level.
@@ -31,6 +34,7 @@ func Fatalf(template string, args ...interface{}) {
 		}
 		defaultScope.emit(zapcore.FatalLevel, defaultScope.GetStackTraceLevel() >= FatalLevel, msg, nil)
 	}
+	os.Exit(1)
 }
 
 // FatalEnabled returns whether output of messages using this scope is currently enabled for fatal-level output.
@@ -156,4 +160,8 @@ func Debugf(template string, args ...interface{}) {
 // DebugEnabled returns whether output of messages using this scope is currently enabled for debug-level output.
 func DebugEnabled() bool {
 	return defaultScope.GetOutputLevel() >= DebugLevel
+}
+
+func DefaultLogger() *Scope {
+	return defaultScope
 }

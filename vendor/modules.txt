@@ -45,7 +45,7 @@ github.com/go-playground/universal-translator
 github.com/gogo/protobuf/gogoproto
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/protoc-gen-gogo/descriptor
-# github.com/golang/mock v1.1.1
+# github.com/golang/mock v1.2.0
 github.com/golang/mock/gomock
 # github.com/golang/protobuf v1.3.2
 github.com/golang/protobuf/proto
@@ -53,7 +53,7 @@ github.com/golang/protobuf/ptypes
 github.com/golang/protobuf/ptypes/any
 github.com/golang/protobuf/ptypes/duration
 github.com/golang/protobuf/ptypes/timestamp
-# github.com/h2non/filetype v1.0.10
+# github.com/h2non/filetype v1.0.12
 github.com/h2non/filetype
 github.com/h2non/filetype/matchers
 github.com/h2non/filetype/matchers/isobmff
@@ -66,7 +66,7 @@ github.com/hashicorp/go-cleanhttp
 github.com/hashicorp/go-immutable-radix
 # github.com/hashicorp/go-rootcerts v1.0.0
 github.com/hashicorp/go-rootcerts
-# github.com/hashicorp/golang-lru v0.5.0
+# github.com/hashicorp/golang-lru v0.5.1
 github.com/hashicorp/golang-lru/simplelru
 # github.com/hashicorp/serf v0.8.2
 github.com/hashicorp/serf/coordinate
@@ -94,7 +94,7 @@ github.com/modern-go/reflect2
 github.com/natefinch/lumberjack
 # github.com/pborman/getopt v0.0.0-20190409184431-ee0cd42419d3
 github.com/pborman/getopt/v2
-# github.com/pkg/errors v0.8.1
+# github.com/pkg/errors v0.9.1
 github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
@@ -140,7 +140,9 @@ golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
 golang.org/x/text/width
-# golang.org/x/tools v0.0.0-20191029190741-b9c20aec41a5
+# golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
+golang.org/x/time/rate
+# golang.org/x/tools v0.0.0-20200302191653-49e4010bbf7f
 golang.org/x/tools/go/analysis
 golang.org/x/tools/go/analysis/passes/inspect
 golang.org/x/tools/go/ast/astutil
@@ -152,13 +154,13 @@ golang.org/x/tools/go/internal/packagesdriver
 golang.org/x/tools/go/packages
 golang.org/x/tools/go/types/objectpath
 golang.org/x/tools/go/types/typeutil
-golang.org/x/tools/internal/fastwalk
-golang.org/x/tools/internal/gopathwalk
-golang.org/x/tools/internal/semver
-golang.org/x/tools/internal/span
+golang.org/x/tools/godoc/util
+golang.org/x/tools/godoc/vfs
+golang.org/x/tools/internal/gocommand
+golang.org/x/tools/internal/packagesinternal
 # google.golang.org/genproto v0.0.0-20190819201941-24fa4b261c55
 google.golang.org/genproto/googleapis/rpc/status
-# google.golang.org/grpc v1.27.0
+# google.golang.org/grpc v1.27.1
 google.golang.org/grpc
 google.golang.org/grpc/attributes
 google.golang.org/grpc/backoff
@@ -198,7 +200,7 @@ google.golang.org/grpc/status
 google.golang.org/grpc/tap
 # gopkg.in/go-playground/validator.v9 v9.29.1
 gopkg.in/go-playground/validator.v9
-# gopkg.in/yaml.v2 v2.2.4
+# gopkg.in/yaml.v2 v2.2.5
 gopkg.in/yaml.v2
 # honnef.co/go/tools v0.0.1-2019.2.3
 honnef.co/go/tools/arg
@@ -226,7 +228,7 @@ honnef.co/go/tools/staticcheck/vrp
 honnef.co/go/tools/stylecheck
 honnef.co/go/tools/unused
 honnef.co/go/tools/version
-# tespkg.in/kit v1.1.0
+# tespkg.in/kit v1.1.2
 tespkg.in/kit/log
 tespkg.in/kit/strcase
 tespkg.in/kit/templates

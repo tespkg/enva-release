@@ -14,10 +14,9 @@ import (
 )
 
 const (
-	keyValTag     = "keyval"
-	specTag       = "spec"
-	specHdrDef    = "spechdr"
-	deploymentTag = "deployment"
+	keyValTag  = "keyval"
+	specTag    = "spec"
+	specHdrDef = "spechdr"
 )
 
 // GenerateSpec generate openapi spec
@@ -40,11 +39,6 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 		{
 			TagProps: openspec.TagProps{
 				Name: specTag,
-			},
-		},
-		{
-			TagProps: openspec.TagProps{
-				Name: deploymentTag,
 			},
 		},
 	}
@@ -175,26 +169,6 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 							WithParameterDesc("Mth file to upload, please change filename key in the request if needed"),
 						openapi.BuildParam("formData", "filename.N", "file", "", false, nil).
 							WithParameterDesc("Nth file to upload, please change filename key in the request if needed"),
-					},
-					Responses: openapi.BuildResp(http.StatusOK, openapi.BuildSuccessResp(nil)),
-				},
-			},
-		},
-	}
-
-	// 6. deployment/{name} POST
-	pathItems["/deployment/{name}"] = openspec.PathItem{
-		PathItemProps: openspec.PathItemProps{
-			Post: &openspec.Operation{
-				OperationProps: openspec.OperationProps{
-					ID:          "PostDeployment",
-					Summary:     "Start a service/application",
-					Description: "Start a service/application",
-					Produces:    []string{"application/json"},
-					Tags:        []string{deploymentTag},
-					Parameters: []openspec.Parameter{
-						openapi.BuildParam("path", "name", "string", "", true, nil).
-							WithParameterDesc("service/application spec name"),
 					},
 					Responses: openapi.BuildResp(http.StatusOK, openapi.BuildSuccessResp(nil)),
 				},

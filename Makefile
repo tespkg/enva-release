@@ -18,12 +18,8 @@ help:
 	@echo "    build                       Build the binary"
 	@echo ""
 
-.PHONY: get-protoc
-get-protoc:
-	@scripts/get_protoc.sh
-
 .PHONY: generate-mock
-generate-mock: get-protoc
+generate-mock:
 	@rm -f ./pkg/store/store_mock.go
 	@rm -f ./pkg/kvs/mock/kvs_mock.go
 	@.bin/mockgen -package store -destination pkg/store/store_mock.go -source pkg/store/store.go

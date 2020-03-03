@@ -46,11 +46,19 @@ POC: run everything inside one docker, consider:
 - [x] Implement Register REST APIS for new application/service spec
 - [x] Serve swagger.json
 - [x] Refactor enva to use envs instead of using naked underlying etcd/consul
-- [ ] API for start service
-- [ ] Wrap images to include `enva`, `s4`(simple static site service) binary
+- [x] Intercept os ENV vars and render os env files
+- [x] Wrap sso, ac, profile, configurator images to include `enva`~~, `s4`(simple static site service) binary~~
+- [x] ~~Serve front end with s4~~, [continue to use nginx to serve front end](#Keep-using-nginx-as-the-frontend-site-server) 
 - [ ] Local app specs for dev purpose
-- [ ] Serve front end with `s4`
 - [ ] An extensive way to extend the pre-configuration for service startup, e.g, create database if not exist etc.
 - [ ] Support key watch & restart 
 - [ ] Kubernetes operator...
+- [ ] API for starting service
 - [ ] env store on k8s, istio
+
+## FAQs
+
+### Keep using nginx as the frontend site server
+
+1. It will require only very little changes to adopt to `envs` management flow
+1. It's a full featured & lightweight web server

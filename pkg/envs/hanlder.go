@@ -1,7 +1,6 @@
 package envs
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -209,11 +208,10 @@ func kv2storeKV(kval kvs.KeyVal) store.KeyVal {
 	}
 }
 
-func jsonErrorf(format string, a ...interface{}) string {
-	sb := strings.Builder{}
-	sb.WriteString(`{"error": "`)
-	b, _ := json.Marshal(fmt.Sprintf(format, a...))
-	sb.Write(b)
-	sb.WriteString(`"}`)
-	return sb.String()
+func jsonErrorf(format string, a ...interface{}) interface{} {
+	return struct {
+		Error string `json:"error"`
+	}{
+		Error: fmt.Sprintf(format, a...),
+	}
 }

@@ -105,7 +105,6 @@ func newServer(a *Args, p *patchTable) (*Server, error) {
 	ge.GET("specs", handler.GetSpecs)
 	ge.GET("spec/:name", handler.GetSpec)
 	ge.PUT("spec/:name", handler.PutSpec)
-	ge.POST("deployment/:name", handler.PostDeployment)
 
 	ge.GET("/", func(c *gin.Context) {
 		c.Redirect(http.StatusFound, a.StaticAssetPath)

@@ -18,6 +18,7 @@ import (
 
 var (
 	envsAddr         = ""
+	osEnvFiles       = ""
 	registerLocation bool
 	verbose          bool
 	help             bool
@@ -27,6 +28,7 @@ var (
 
 func init() {
 	getopt.FlagLong(&envsAddr, "envs-addr", 'e', "Optional, envs address, use ENVS_HTTP_ADDR env if not given, e.g, http://localhost:8502/a/bc")
+	getopt.FlagLong(&osEnvFiles, "os-env-files", 'f', `Optional, os env files, use OS_ENV_FILES env if not given, e.g, "path/to/index.html, path/to/config.js"`)
 	getopt.FlagLong(&registerLocation, "location", 'l', "Optional, enable Proc location register")
 	getopt.FlagLong(&verbose, "verbose", 'v', "Optional, be verbose")
 	getopt.FlagLong(&help, "help", 'h', "Optional, display usage")
@@ -80,7 +82,20 @@ func main() {
 	})
 	if err != nil {
 		log.Fatala("Initiate envs client failed", err)
-		os.Exit(-1)
+	}
+
+	// Analyse os env files
+	if osEnvFiles == "" {
+		osEnvFiles = os.Getenv("OS_ENV_FILES")
+	}
+	var finalisedOSEnvFiles []string
+	parts := strings.Split(osEnvFiles, ",")
+	for _, part := range parts {
+		fn := strings.TrimSpace(part)
+		if fn == "" {
+			continue
+		}
+		finalisedOSEnvFiles = append(finalisedOSEnvFiles, fn)
 	}
 
 	// Get Proc options & args from env store and start the Proc.
@@ -90,12 +105,10 @@ func main() {
 	args := getopt.Args()
 	if len(args) == 0 {
 		log.Fatala("Proc name is missing")
-		os.Exit(-1)
 	}
-	a, err := newAgent(kvs, args)
+	a, err := newAgent(kvs, args, finalisedOSEnvFiles, defaultRetry, defaultPatchTable())
 	if err != nil {
 		log.Fatala(err)
-		os.Exit(-1)
 	}
 
 	wg := sync.WaitGroup{}
@@ -108,14 +121,18 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		a.run(ctx)
+		if err := a.run(ctx); err != nil {
+			log.Fatala(err)
+		}
 	}()
 
 	// Watch Proc options & args change and restart when the values changed.
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		a.watch(ctx)
+		if err := a.watch(ctx); err != nil {
+			log.Fatala(err)
+		}
 	}()
 
 	// TODO: Register Proc location if needed

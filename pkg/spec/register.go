@@ -2,6 +2,7 @@ package spec
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -38,11 +39,21 @@ func (r DefaultRegister) Scan(ir io.Reader) error {
 		return err
 	}
 	for _, kv := range keyVals {
-		if err := r.Set(store.Key{
+		// TODO: find a way to do check & set automatically
+		key := store.Key{
 			Namespace: DefaultKVNs,
 			Kind:      kv.Kind,
 			Name:      kv.Name,
-		}, kv.Value); err != nil {
+		}
+		_, err := r.Get(key)
+		if err != nil && errors.As(err, &store.ErrNotFound) {
+			return fmt.Errorf("check key failed: %T", err)
+		}
+		if err != nil {
+			// Ignore the existed key.
+			continue
+		}
+		if err := r.Set(key, kv.Value); err != nil {
 			return fmt.Errorf("set key failed: %T", err)
 		}
 	}

@@ -2,7 +2,8 @@ package main
 
 import (
 	"context"
-	"errors"
+	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -12,16 +13,16 @@ import (
 )
 
 func TestTermRunProc(t *testing.T) {
-	terminate := make(chan error)
+	terminate, abort := make(chan struct{}), make(chan struct{})
 
 	timer := time.NewTicker(time.Second * 2)
 	go func() {
 		<-timer.C
-		terminate <- errors.New("test term")
+		terminate <- struct{}{}
 	}()
 
-	err := runProc([]string{"tail", "-f", "agent_test.go"}, terminate)
-	require.Equal(t, errors.New("test term"), err)
+	err := runProc([]string{"tail", "-f", "agent_test.go"}, os.Environ(), terminate, abort)
+	require.Nil(t, err)
 }
 
 func TestAgentRun(t *testing.T) {
@@ -31,21 +32,29 @@ func TestAgentRun(t *testing.T) {
 	se := s.EXPECT()
 	se.Get(kvs.Key{Kind: "env", Name: "tailFilename"}).Return("agent_test.go", nil).AnyTimes()
 
-	a, err := newAgent(s, []string{"tail", "-f", "${env:// .tailFilename }"})
+	a, err := newAgent(s, []string{"tail", "-n", "5", "-f", "${env:// .tailFilename }"}, []string{}, defaultRetry, defaultPatchTable())
 	require.Nil(t, err)
 
-	timer := time.NewTicker(time.Second * 2)
-	go func() {
-		<-timer.C
-		a.terminateCh <- errors.New("test term")
-	}()
-
 	ctx, cancel := context.WithCancel(context.Background())
-	cancelTimer := time.NewTicker(time.Second * 3)
+	cancelTimer := time.NewTicker(time.Second * 5)
 	go func() {
 		<-cancelTimer.C
 		cancel()
 	}()
 
-	a.run(ctx)
+	wg := sync.WaitGroup{}
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		a.run(ctx)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		a.watch(ctx)
+	}()
+
+	wg.Wait()
 }
