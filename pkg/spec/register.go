@@ -46,10 +46,10 @@ func (r DefaultRegister) Scan(ir io.Reader) error {
 			Name:      kv.Name,
 		}
 		_, err := r.Get(key)
-		if err != nil && errors.As(err, &store.ErrNotFound) {
+		if err != nil && !errors.As(err, &store.ErrNotFound) {
 			return fmt.Errorf("check key failed: %T", err)
 		}
-		if err != nil {
+		if errors.As(err, &store.ErrNotFound) {
 			// Ignore the existed key.
 			continue
 		}
