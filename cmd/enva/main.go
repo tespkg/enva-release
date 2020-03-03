@@ -124,6 +124,7 @@ func main() {
 		if err := a.run(ctx); err != nil {
 			log.Fatala(err)
 		}
+		raise(syscall.SIGTERM)
 	}()
 
 	// Watch Proc options & args change and restart when the values changed.
@@ -138,4 +139,12 @@ func main() {
 	// TODO: Register Proc location if needed
 
 	waitSignal()
+}
+
+func raise(sig os.Signal) error {
+	p, err := os.FindProcess(os.Getpid())
+	if err != nil {
+		return err
+	}
+	return p.Signal(sig)
 }

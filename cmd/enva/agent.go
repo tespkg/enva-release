@@ -207,24 +207,24 @@ func (a *agent) watch(ctx context.Context) error {
 	_ = ctx
 
 	renderTimer := time.NewTimer(time.Millisecond * 100)
-	select {
-	case <-renderTimer.C:
-		// Render args, osEnvs to new config
-		c, err := render(a.kvs, a.rawArgs, a.rawOSEnvs, a.osEnvTplFiles, a.pt)
-		if err != nil {
-			return err
+	for {
+		select {
+		case <-renderTimer.C:
+			// Render args, osEnvs to new config
+			c, err := render(a.kvs, a.rawArgs, a.rawOSEnvs, a.osEnvTplFiles, a.pt)
+			if err != nil {
+				return err
+			}
+			// Notify new desiredConfig
+			a.configCh <- c
+
+			// Set a very long timer, cancel it when adding watch feature.
+			renderTimer = time.NewTimer(time.Minute * 30)
+
+		case <-ctx.Done():
+			return nil
 		}
-		// Notify new desiredConfig
-		a.configCh <- c
-
-		// Set a very long timer, cancel it when adding watch feature.
-		renderTimer = time.NewTimer(time.Minute * 30)
-
-	case <-ctx.Done():
-		return nil
 	}
-
-	return nil
 }
 
 func (a *agent) reconcile() {
