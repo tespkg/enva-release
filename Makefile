@@ -47,4 +47,8 @@ build:
 	@mkdir -p bin
 	@go build -mod vendor -o bin/enva tespkg.in/envs/cmd/enva
 	@go build -mod vendor -o bin/envs tespkg.in/envs/cmd/envs
+
+.PHONY: build-s4
+build-s4:
+	@mkdir -p bin
 	@go build -mod vendor -o bin/s4 tespkg.in/envs/cmd/s4

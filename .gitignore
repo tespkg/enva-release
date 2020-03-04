@@ -36,3 +36,4 @@
 bin
 vars.yaml
 .static
+cmd/s4

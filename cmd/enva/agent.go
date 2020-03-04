@@ -297,8 +297,12 @@ func render(kvStore kvs.KVStore, rawArgs, rawOSEnvs, osEnvTplFiles []string, pt 
 		if err != nil {
 			return config{}, err
 		}
-		osEnvs[i] = out.String()
-		ii := strings.Split(out.String(), "=")
+		newOSEnv := out.String()
+		if osEnv != newOSEnv {
+			log.Debugf("render %v to %v", osEnv, newOSEnv)
+		}
+		osEnvs[i] = newOSEnv
+		ii := strings.Split(newOSEnv, "=")
 		osEnvsVars[ii[0]] = ii[1]
 	}
 
@@ -308,13 +312,16 @@ func render(kvStore kvs.KVStore, rawArgs, rawOSEnvs, osEnvTplFiles []string, pt 
 	}
 
 	// Render args
+	log.Debuga("rawArgs ", rawArgs, " len ", len(rawArgs))
 	argsStr := strings.Join(rawArgs, "#")
+	log.Debuga("argsStr ", argsStr)
 	out := bytes.Buffer{}
 	err := kvs.Render(kvStore, bytes.NewBufferString(argsStr), &out)
 	if err != nil {
 		return config{}, err
 	}
 	finalisedArgs := strings.Split(out.String(), "#")
+	log.Debuga("finalisedArgs ", finalisedArgs, " len ", len(finalisedArgs))
 
 	return config{
 		args:      finalisedArgs,

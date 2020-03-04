@@ -9,5 +9,6 @@ func Migrate(sourcePath string, register Register) error {
 	if register == nil {
 		return fmt.Errorf("invalid register")
 	}
+	// TODO: implement migrate here
 	return nil
 }

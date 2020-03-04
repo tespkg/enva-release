@@ -50,10 +50,12 @@ POC: run everything inside one docker, consider:
 - [x] Wrap sso, ac, profile, configurator images to include `enva`~~, `s4`(simple static site service) binary~~
 - [x] ~~Serve front end with s4~~, [continue to use nginx to serve front end](#Keep-using-nginx-as-the-frontend-site-server)
 - [x] Export & Import Key values APIs 
-- [ ] Migrate specs at startup
 - [x] Local app specs for dev purpose
-- [ ] An extensive way to extend the pre-configuration for service startup, e.g, create database if not exist etc.
+- [ ] enva publish kvs to envs
 - [ ] Support key watch & restart 
+- [ ] An extensive way to extend the pre-configuration for service startup, e.g, create database if not exist etc.
+- [ ] Replace nginx with our own `simple static site service(s4)`
+- [ ] ~~Migrate specs at startup~~
 - [ ] Kubernetes operator...
 - [ ] API for starting service
 - [ ] env store on k8s, istio
@@ -64,3 +66,4 @@ POC: run everything inside one docker, consider:
 
 1. It will require only very little changes to adopt to `envs` management flow
 1. It's a full featured & lightweight web server
+1. Will replace nginx with our own site service `s4` eventually

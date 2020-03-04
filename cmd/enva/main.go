@@ -68,7 +68,7 @@ func main() {
 	}
 
 	// Initiate log facility.
-	if verbose {
+	if verbose || os.Getenv("ENVA_VERBOSE") == "debug" {
 		logOptions.SetOutputLevel(log.DefaultScopeName, log.DebugLevel)
 	}
 	if err := log.Configure(logOptions); err != nil {
