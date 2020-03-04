@@ -53,8 +53,8 @@ POC: run everything inside one docker, consider:
 - [x] Local app specs for dev purpose
 - [ ] enva publish kvs to envs
 - [ ] Support key watch & restart 
-- [ ] An extensive way to extend the pre-configuration for service startup, e.g, create database if not exist etc.
 - [ ] Replace nginx with our own `simple static site service(s4)`
+- [ ] An extensive way to extend the pre-configuration for service startup, e.g, create database if not exist etc.
 - [ ] ~~Migrate specs at startup~~
 - [ ] Kubernetes operator...
 - [ ] API for starting service

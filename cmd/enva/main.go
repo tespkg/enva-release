@@ -10,9 +10,8 @@ import (
 	"sync"
 	"syscall"
 
-	"tespkg.in/envs/pkg/api"
-
 	"github.com/pborman/getopt/v2"
+	"tespkg.in/envs/pkg/api"
 	"tespkg.in/kit/log"
 )
 

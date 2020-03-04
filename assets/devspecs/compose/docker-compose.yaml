@@ -52,7 +52,6 @@ services:
       --redirect-uri='$${env:// .ssoClientAddr }/callback'
     environment:
       ENVS_HTTP_ADDR: http://host.docker.internal:9112
-      ENVA_VERBOSE: debug
       VUE_APP_API_ENDPOINT: '$${env:// .acRESTAddr }'
       VUE_APP_REDIRECT_URL: '$${env:// .acConsoleAddr }/oauth2'
     ports:
@@ -80,7 +79,7 @@ services:
     image: registry.gitlab.com/target-digital-transformation/access-control/console/master
     container_name: acconsole
     environment:
-      ENVS_HTTP_ADDR: 'http://host.docker.internal:9112'
+      ENVS_HTTP_ADDR: http://host.docker.internal:9112
       VUE_APP_API_ENDPOINT: '$${env:// .acRESTAddr }'
       VUE_APP_CLIENT_ID: access-control
       VUE_APP_CLIENT_SECRET: DzXZxyDObSpsnR7qLqQ4p1LEVoIiE49e
