@@ -256,12 +256,8 @@ func (c *Client) Set(key kvs.Key, value string) error {
 		Value: value,
 	}
 	r := c.newRequest("PUT", "/key")
+	r.obj = kval
 
-	b, err := json.Marshal(&kval)
-	if err != nil {
-		return err
-	}
-	r.body = bytes.NewReader(b)
 	resp, err := requireOK(c.doRequest(r))
 	if err != nil {
 		return err
