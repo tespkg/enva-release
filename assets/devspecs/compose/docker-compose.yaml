@@ -1,0 +1,201 @@
+version: "3"
+services:
+  redis:
+    image: redis:alpine
+    container_name: redis
+    ports:
+      - 6379:6379
+
+  postgres:
+    image: postgres:11.1-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      PGDATA: /var/lib/postgresql/data
+    ports:
+      - 5432:5432
+
+  rabbitstomp:
+    image: itzg/rabbitmq-stomp
+    container_name: rabbitstomp
+    ports:
+      - 5672:5672
+      - 15672:15672
+      - 61613:61613
+
+  consul:
+    image: consul
+    command: consul agent -client=0.0.0.0 -dev
+    ports:
+      - 8500:8500
+      - 8502:8502
+      - 8600:8600
+
+  sso:
+    image: registry.gitlab.com/target-digital-transformation/sso/master
+    container_name: sso
+    command: /usr/local/bin/dex serve '$${envf:// .ssoConfig }'
+    environment:
+      ENVS_HTTP_ADDR: http://host.docker.internal:9112
+    ports:
+      - 5556:5556
+      - 5557:5557
+
+  sso-client:
+    image: registry.gitlab.com/target-digital-transformation/sso/client
+    container_name: sso-client
+    command: |
+      /usr/local/bin/dex-client
+      --listen=http://0.0.0.0:5555
+      --issuer='$${env:// .ssoIssuer }'
+      --redirect-uri='$${env:// .ssoClientAddr }/callback'
+    environment:
+      ENVS_HTTP_ADDR: http://host.docker.internal:9112
+      ENVA_VERBOSE: debug
+      VUE_APP_API_ENDPOINT: '$${env:// .acRESTAddr }'
+      VUE_APP_REDIRECT_URL: '$${env:// .acConsoleAddr }/oauth2'
+    ports:
+      - 5555:5555
+
+  ac:
+    image: registry.gitlab.com/target-digital-transformation/access-control/ac-be/master
+    container_name: ac
+    command: |
+      /usr/local/bin/ac-serve serve
+      --address=:7001
+      --oidc='$${env:// .ssoIssuer }'
+      --dsn='$${env:// .acDSN }'
+      --skip-client-id
+      --client-id=access-control
+      --client-secret=DzXZxyDObSpsnR7qLqQ4p1LEVoIiE49e
+      --redirect-uri='$${env:// .acRESTAddr }'/oaut
+    environment:
+      ENVS_HTTP_ADDR: http://host.docker.internal:9112
+      TARGET_SYS_ADMIN: CiQwOGE4Njg0Yi1kYjg4LTRiNzMtOTBhOS0zY2QxNjYxZjU0NjYSBWxvY2Fs
+    ports:
+      - 7001:7001
+
+  acconsole:
+    image: registry.gitlab.com/target-digital-transformation/access-control/console/master
+    container_name: acconsole
+    environment:
+      ENVS_HTTP_ADDR: 'http://host.docker.internal:9112'
+      VUE_APP_API_ENDPOINT: '$${env:// .acRESTAddr }'
+      VUE_APP_CLIENT_ID: access-control
+      VUE_APP_CLIENT_SECRET: DzXZxyDObSpsnR7qLqQ4p1LEVoIiE49e
+      VUE_APP_STATE: acconsole
+      VUE_APP_TOKEN_URL: '$${env:// .oidcIssuerTokenURL }'
+      VUE_APP_AUTH_URL: '$${env:// .oidcIssuerAuthURL }'
+      VUE_APP_REDIRECT_URL: '$${env:// .acConsoleAddr }/oauth2'
+    ports:
+      - 8080:8080
+
+  profile-grpc:
+    image: registry.gitlab.com/target-digital-transformation/profile-be/master
+    container_name: profile-grpc
+    command: |
+      /usr/local/bin/profile-serve profile grpc
+      --address=:50051
+      --oidc='$${env:// .ssoIssuer }'
+      --dsn='$${env:// .profileDSN }'
+      --rabbitmq-addr='$${env:// .rabbitMQAddr }'
+      --sso-dex-grpc-addr='$${env:// .ssoGRPCAddr }'
+      --verbose
+    environment:
+      ENVS_HTTP_ADDR: http://host.docker.internal:9112
+    ports:
+      - 50051:50051
+
+  profile-graphql:
+    image: registry.gitlab.com/target-digital-transformation/profile-be/master
+    container_name: profile-graphql
+    command: |
+      /usr/local/bin/profile-serve profile graphql
+      --address=:9301
+      --oidc='$${env:// .ssoIssuer }'
+      --dsn='$${env:// .profileDSN }'
+      --rabbitmq-addr='$${env:// .rabbitMQAddr }'
+      --redis='$${env:// .redisAddr }'
+      --cors-hosts='$${env:// .profileCORS }'
+      --ses-grpc='$${env:// .sesGRPCAddr }'
+      --msg-pusher-grpc='$${env:// .msgPusherGRPCAddr }'
+      --notification-addr='$${env:// .notificationAddr }'
+      --debug-url-prefix=/graphql
+      --bypass-license
+      --verbose
+    environment:
+      ENVS_HTTP_ADDR: http://host.docker.internal:9112
+    ports:
+      - 9301:9301
+
+  configurator-be:
+    image: registry.gitlab.com/target-digital-transformation/subscription-store/master
+    container_name: configurator-be
+    command: |
+      /usr/local/bin/subscription-store serve
+      --grpc-address=:9302
+      --address=:9303
+      --oidc='$${env:// .ssoIssuer }'
+      --dsn='$${env:// .configuratorDSN }'
+      --sso-grpc='$${env:// .ssoGRPCAddr }'
+      --ac-grpc='$${env:// .acGRPCAddr }'
+      --ses-grpc='$${env:// .sesGRPCAddr }'
+      --profile-grpc='$${env:// .profileGRPCAddr }'
+      --cors-hosts='$${env:// .configuratorCORS }'
+      --rabbitmq-dsn='$${env:// .rabbitMQAddr }'
+      --bypass-license
+      --verbose
+    environment:
+      ENVS_HTTP_ADDR: http://host.docker.internal:9112
+    ports:
+      - 9302:9302
+      - 9303:9303
+
+  configurator-fe:
+    image: registry.gitlab.com/target-digital-transformation/workspace-configurator-fe/release
+    container_name: configurator-fe
+    environment:
+      ENVS_HTTP_ADDR: http://host.docker.internal:9112
+      MEERA_APP_OAUTH_HOST: '$${env:// .ssoIssuer }'
+      MEERA_APP_OAUTH_CLIENT_ID: configurator
+      MEERA_APP_OAUTH_CLIENT_SECRET: DzXZxyDObSpsnR7qLqQ4p1LEVoIiE49e
+      MEERA_APP_OAUTH_CALLBACK_HOST: '$${env:// .configuratorWebAddr }'
+      MEERA_APP_ENV_VAR_ME_TO: '$${env:// .profileAddr }'
+      MEERA_APP_PRODUCT_APP_URL_CONFIGURATOR: '$${env:// .configuratorAddr }'
+      MEERA_APP_PRODUCT_APP_URL_PROFILE: '$${env:// .profileAddr }'
+      MEERA_APP_MEETING_URL: 'https://meeting.dev.meeraspace.com'
+      MEERA_APP_PRODUCT_APP_URL_EDGE: 'https://edge.dev.meeraspace.com'
+      MEERA_APP_PRODUCT_URL_LANG: 'https://i18n.dev.meeraspace.com'
+      MEERA_APP_PRODUCT_URL_CRM: 'https://manager.dev.meeraspace.com'
+      MEERA_APP_PRODUCT_WORKSPACE_URL: 'https://dev.meeraspace.com'
+      MEERA_APP_PRODUCT_BI_URL: 'https://bi.dev.meeraspace.com'
+      MEERA_APP_PRODUCT_APP_URL_API: 'https://api.dev.meeraspace.com'
+      MEERA_APP_PRODUCT_APP_URL_CADRE: 'https://profile.dev.meeraspace.com'
+      MEERA_APP_PRODUCT_APP_URL_LICENSE: 'https://license.dev.meeraspace.com'
+      MEERA_APP_PRODUCT_APP_URL_PLANNER: 'https://planner.dev.meeraspace.com'
+      MEERA_APP_PRODUCT_URL_HCM: 'https://hcm.dev.meeraspace.com'
+      MEERA_APP_PRODUCT_URL_OKR: 'https://okr.dev.meeraspace.com'
+      MEERA_APP_BASE_ENV_URL: 'https://dev.meeraspace.com'
+      MEERA_APP_PRODUCT_URL_AMC: 'https://amc.dev.meeraspace.com'
+      MEERA_APP_PRODUCT_URL_ORGANIZATION: 'https://organization.dev.meeraspace.com'
+      MEERA_APP_PRODUCT_APP_URL_MAP: 'https://map.dev.meeraspace.com/'
+      MEERA_APP_PRODUCT_APP_URL_PDO: 'https://pdo.dev.meeraspace.com'
+      MEERA_APP_PRODUCT_APP_URL_REACH: 'https://reach.dev.meeraspace.com'
+      MEERA_APP_PRODUCT_APP_URL_CSR: 'https://csr.dev.meeraspace.com/'
+      MEERA_APP_PRODUCT_APP_URL_TROVE: 'https://was.dev.meeraspace.com'
+      MEERA_APP_PRODUCT_APP_URL_COMPANY: 'https://company.dev.meeraspace.com'
+      MEERA_APP_PRODUCT_URL_PEOPLEANALYTICS: 'https://peopleanalytics.dev.meeraspace.com/'
+      MEERA_APP_PRODUCT_APP_URL_PSA: 'https://psa.dev.meeraspace.com'
+      MEERA_APP_PRODUCT_APP_URL_REGULATION: 'https://k-regulation.dev.meeraspace.com'
+      MEERA_APP_PRODUCT_APP_URL_PULSE: ''
+      MEERA_APP_PRODUCT_URL_PSA: ''
+      MEERA_APP_PRODUCT_URL_REGULATION: ''
+      MEERA_APP_API_KEYWORD: ''
+    ports:
+      - 80:80
+
+networks:
+  default:
+    external:
+      name: meera

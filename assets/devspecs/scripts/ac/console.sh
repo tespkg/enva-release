@@ -8,5 +8,5 @@ docker run -d --network meera -p 8080:8080 \
     -e VUE_APP_STATE=acconsole \
     -e VUE_APP_TOKEN_URL='${env:// .oidcIssuerTokenURL }' \
     -e VUE_APP_AUTH_URL='${env:// .oidcIssuerAuthURL }' \
-    -e VUE_APP_REDIRECT_URL='${env:// .acConsoleAddr }'/oauth2 \
+    -e VUE_APP_REDIRECT_URL='${env:// .acConsoleAddr }/oauth2' \
     --rm --name acconsole registry.gitlab.com/target-digital-transformation/access-control/console/master
