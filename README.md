@@ -48,7 +48,7 @@ POC: run everything inside one docker, consider:
 - [x] Export & Import Key values APIs 
 - [x] Local app specs for dev purpose
 - [x] Support env/envf with default value, if given default value and the key doesn't existed before, publish to underlying store
-- [ ] enva publish kvs to envs
+- [x] enva publish kvs to envs
 - [ ] Support key watch & restart 
 - [ ] Replace nginx with our own `simple static site service(s4)`
 - [ ] An extensive way to extend the pre-configuration for service startup, e.g, create database if not exist etc.

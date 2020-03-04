@@ -12,23 +12,26 @@ import (
 
 	"github.com/pborman/getopt/v2"
 	"tespkg.in/envs/pkg/api"
+	"tespkg.in/envs/pkg/kvs"
 	"tespkg.in/kit/log"
 )
 
 var (
-	envsAddr         = ""
-	osEnvFiles       = ""
-	registerLocation bool
-	verbose          bool
-	help             bool
+	envsAddr             = ""
+	osEnvFiles           = ""
+	publishedKVs         []string
+	locationRegistration bool
+	verbose              bool
+	help                 bool
 
 	logOptions = log.DefaultOptions()
 )
 
 func init() {
-	getopt.FlagLong(&envsAddr, "envs-addr", 'e', "Optional, envs address, use ENVS_HTTP_ADDR env if not given, e.g, http://localhost:8502/a/bc")
-	getopt.FlagLong(&osEnvFiles, "os-env-files", 'f', `Optional, os env files, use OS_ENV_FILES env if not given, e.g, "path/to/index.html, path/to/config.js"`)
-	getopt.FlagLong(&registerLocation, "location", 'l', "Optional, enable Proc location register")
+	getopt.FlagLong(&envsAddr, "envs-addr", 'a', "Optional, envs address, eg: http://localhost:8502/a/bc")
+	getopt.FlagLong(&osEnvFiles, "os-env-files", 'f', `Optional, os env files, separated by comma, eg: "path/to/index.html, path/to/config.js"`)
+	getopt.FlagLong(&publishedKVs, "publish", 'p', `Optional, publish kvs, eg: --publish k1=v1 publish k2=v2`)
+	getopt.FlagLong(&locationRegistration, "location", 'l', "Optional, enable Proc location registration")
 	getopt.FlagLong(&verbose, "verbose", 'v', "Optional, be verbose")
 	getopt.FlagLong(&help, "help", 'h', "Optional, display usage")
 	getopt.SetUsage(func() {
@@ -49,6 +52,13 @@ func printUsage(s *getopt.Set, w io.Writer) {
 	fmt.Fprintln(w, strings.Join(parts, " "))
 	s.PrintOptions(w)
 	fmt.Fprintln(w)
+	fmt.Fprintln(w, `Apart from the Command Options, there are OS Envs supported as well, 
+ENVS_HTTP_ADDR, equivalent of Option "envs-addr", 
+ENVA_OS_ENV_FILES, equivalent of Option "os-env-files", separated by comma, eg: "path/to/file1, path/to/file2",
+ENVA_PUBLISH, equivalent of Option "publish", separated by comma, eg: "k1=v1, k2=v2",
+ENVA_DEBUG, equivalent of Option "verbose", eg: ENVA_DEBUG=true equal to honor --verbose Command Option.
+If both the command options & env are set at same time, Command Options have priority`)
+	fmt.Fprintln(w)
 }
 
 // waitSignal awaits for SIGINT or SIGTERM
@@ -67,7 +77,7 @@ func main() {
 	}
 
 	// Initiate log facility.
-	if verbose || os.Getenv("ENVA_VERBOSE") == "debug" {
+	if verbose || os.Getenv("ENVA_DEBUG") == "true" {
 		logOptions.SetOutputLevel(log.DefaultScopeName, log.DebugLevel)
 	}
 	if err := log.Configure(logOptions); err != nil {
@@ -76,6 +86,9 @@ func main() {
 	}
 
 	// Initiate envs client.
+	if envsAddr == "" {
+		envsAddr = os.Getenv("ENVS_HTTP_ADDR")
+	}
 	kvsClient, err := api.NewClient(&api.Config{
 		Address: envsAddr,
 	})
@@ -85,7 +98,7 @@ func main() {
 
 	// Analyse os env files
 	if osEnvFiles == "" {
-		osEnvFiles = os.Getenv("OS_ENV_FILES")
+		osEnvFiles = os.Getenv("ENVA_OS_ENV_FILES")
 	}
 	var finalisedOSEnvFiles []string
 	parts := strings.Split(osEnvFiles, ",")
@@ -97,9 +110,38 @@ func main() {
 		finalisedOSEnvFiles = append(finalisedOSEnvFiles, fn)
 	}
 
+	// Analyse publish key value pair
+	if len(publishedKVs) == 0 {
+		osEnvPublishKVs := os.Getenv("ENVA_PUBLISH")
+		if osEnvPublishKVs != "" {
+			parts := strings.Split(osEnvPublishKVs, ",")
+			for _, part := range parts {
+				kv := strings.TrimSpace(part)
+				if kv == "" {
+					continue
+				}
+				publishedKVs = append(publishedKVs, kv)
+			}
+		}
+	}
+	// Publish key value pair to envs
+	for _, kv := range publishedKVs {
+		ii := strings.Split(kv, "=")
+		if len(ii) != 2 {
+			log.Fatalf("invalid ENVA_PUBLISH key value pair, require key=value, got: %v", kv)
+		}
+		// Support publish env value only
+		if err := kvsClient.Set(kvs.Key{
+			Kind: kvs.EnvKind,
+			Name: ii[0],
+		}, ii[2]); err != nil {
+			log.Fatalf("publish key value pair %v failed: %v", kv, err)
+		}
+	}
+
 	// Get Proc options & args from env store and start the Proc.
-	// Name conversion for the options & args, e.g:
-	// enva --env-addr http://localhost:9112 \
+	// Name conversion for the options & args, eg:
+	// enva --envs-addr http://localhost:9112 \
 	// /usr/local/example-svc --oidc ${env:// .sso } --ac ${env:// .ac } --dsn ${env:// .exampleServiceDSN } --config ${envf:// .exampleServiceConfig }
 	args := getopt.Args()
 	if len(args) == 0 {
@@ -136,6 +178,9 @@ func main() {
 	}()
 
 	// TODO: Register Proc location if needed
+	if locationRegistration {
+		log.Warna("location registration is unsupported yet")
+	}
 
 	waitSignal()
 }

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -12,7 +11,6 @@ import (
 	"net/url"
 	"os"
 	"strings"
-	"time"
 
 	"tespkg.in/envs/pkg/kvs"
 )
@@ -117,6 +115,53 @@ func encodeBody(obj interface{}) (io.Reader, error) {
 	return buf, nil
 }
 
+// responseCodeError consumes the rest of the body, closes
+// the body stream and generates an error indicating the status code was unexpected.
+func responseCodeError(resp *http.Response) error {
+	bs, _ := ioutil.ReadAll(resp.Body)
+	resp.Body.Close()
+	message := resp.Status
+	if len(bs) > 0 {
+		var errBody = struct {
+			Error string `json:"error"`
+		}{}
+		_ = json.Unmarshal(bs, &errBody)
+		message += " " + errBody.Error
+	}
+	return fmt.Errorf("unexpected response code: %d (%s)", resp.StatusCode, message)
+}
+
+// requireOK is used to wrap doRequest and check for a 200
+func requireOK(resp *http.Response, e error) (*http.Response, error) {
+	if e != nil {
+		if resp != nil {
+			resp.Body.Close()
+		}
+		return nil, e
+	}
+	if resp.StatusCode != 200 {
+		return nil, responseCodeError(resp)
+	}
+	return resp, nil
+}
+
+func requireNotFoundOrOK(resp *http.Response, e error) (bool, *http.Response, error) {
+	if e != nil {
+		if resp != nil {
+			resp.Body.Close()
+		}
+		return false, nil, e
+	}
+	switch resp.StatusCode {
+	case 200:
+		return true, resp, nil
+	case 404:
+		return false, resp, nil
+	default:
+		return false, nil, responseCodeError(resp)
+	}
+}
+
 // toHTTP converts the request to an HTTP request
 func (r *request) toHTTP() (*http.Request, error) {
 	// Encode the query parameters
@@ -166,37 +211,27 @@ func (c *Client) newRequest(method, path string) *request {
 }
 
 // doRequest runs a request with our client
-func (c *Client) doRequest(r *request) (time.Duration, *http.Response, error) {
+func (c *Client) doRequest(r *request) (*http.Response, error) {
 	req, err := r.toHTTP()
 	if err != nil {
-		return 0, nil, err
+		return nil, err
 	}
-	start := time.Now()
 	resp, err := c.config.HttpClient.Do(req)
-	diff := time.Since(start)
-	return diff, resp, err
+	return resp, err
 }
 
 // Query is used to do a GET request against an endpoint
 // and deserialize the response into an interface.
 func (c *Client) query(endpoint string, out interface{}) error {
 	r := c.newRequest("GET", endpoint)
-	_, resp, err := c.doRequest(r)
+	found, resp, err := requireNotFoundOrOK(c.doRequest(r))
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		bs, _ := ioutil.ReadAll(resp.Body)
-		message := resp.Status
-		if len(bs) > 0 {
-			var errBody = struct {
-				Error string `json:"error"`
-			}{}
-			_ = json.Unmarshal(bs, &errBody)
-			message += " " + errBody.Error
-		}
-		return errors.New(message)
+
+	if !found {
+		return kvs.ErrNotFound
 	}
 
 	if err := decodeBody(resp, out); err != nil {
@@ -216,5 +251,22 @@ func (c *Client) Get(key kvs.Key) (string, error) {
 }
 
 func (c *Client) Set(key kvs.Key, value string) error {
-	panic("implement me")
+	kval := kvs.KeyVal{
+		Key:   key,
+		Value: value,
+	}
+	r := c.newRequest("PUT", "/key")
+
+	b, err := json.Marshal(&kval)
+	if err != nil {
+		return err
+	}
+	r.body = bytes.NewReader(b)
+	resp, err := requireOK(c.doRequest(r))
+	if err != nil {
+		return err
+	}
+	resp.Body.Close()
+
+	return nil
 }

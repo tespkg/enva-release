@@ -10,13 +10,15 @@ import (
 	"os"
 	"regexp"
 	"sync"
-
-	"tespkg.in/envs/pkg/store"
 )
 
 const (
 	EnvKind  = "env"
 	EnvfKind = "envf"
+)
+
+var (
+	ErrNotFound = errors.New("not found")
 )
 
 var (
@@ -167,12 +169,15 @@ func render(s KVStore, ir io.Reader, iw io.Writer, kvS *kvState, tmpFunc tempFun
 
 func valueOf(s KVStore, key Key, defValue string, kvS *kvState, tmpFunc tempFunc, rdFileFunc readFileFunc) (string, error) {
 	value, err := s.Get(key)
-	if err != nil && !errors.As(err, &store.ErrNotFound) {
-		return "", fmt.Errorf("get value of %v failed: %T", key, err)
+	if err != nil && !errors.As(err, &ErrNotFound) {
+		return "", fmt.Errorf("get valueOf %v failed: %v", key, err)
 	}
-	if errors.As(err, &store.ErrNotFound) {
+	if errors.As(err, &ErrNotFound) {
+		if defValue == "" {
+			return "", fmt.Errorf("get valueOf %v failed: %v", key, err)
+		}
 		if err := s.Set(key, defValue); err != nil {
-			return "", err
+			return "", fmt.Errorf("set default valueOf %v failed: %v", key, err)
 		}
 		value = defValue
 	}
@@ -194,7 +199,7 @@ func valueOf(s KVStore, key Key, defValue string, kvS *kvState, tmpFunc tempFunc
 	i := bytes.NewBufferString(value)
 	out := &bytes.Buffer{}
 	if err := render(s, i, out, kvS, tmpFunc, rdFileFunc); err != nil {
-		return "", fmt.Errorf("render nested key: %v failed: %v", value, err)
+		return "", fmt.Errorf("render nested key %v failed: %v", value, err)
 	}
 
 	return out.String(), nil
