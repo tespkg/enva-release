@@ -1,3 +1,3 @@
 #!/bin/bash
 
-docker run -d --network host -p 8500:8500 -p 8502:8502 -p 8600:8600 --rm --name consul consul consul agent -client=0.0.0.0 -dev
+docker run -d --network meera -p 8500:8500 -p 8502:8502 -p 8600:8600 --rm --name consul consul consul agent -client=0.0.0.0 -dev

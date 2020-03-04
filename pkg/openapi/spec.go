@@ -189,6 +189,14 @@ func BuildSuccessResp(schema *spec.Schema) spec.Response {
 	}
 }
 
+func FileSchema() *spec.Schema {
+	return &spec.Schema{
+		SchemaProps: spec.SchemaProps{
+			Type: spec.StringOrArray{"file"},
+		},
+	}
+}
+
 func ArrRefSchema(defName string) *spec.Schema {
 	return &spec.Schema{
 		SchemaProps: spec.SchemaProps{

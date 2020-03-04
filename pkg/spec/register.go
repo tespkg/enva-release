@@ -49,8 +49,8 @@ func (r DefaultRegister) Scan(ir io.Reader) error {
 		if err != nil && !errors.As(err, &store.ErrNotFound) {
 			return fmt.Errorf("check key failed: %T", err)
 		}
-		if errors.As(err, &store.ErrNotFound) {
-			// Ignore the existed key.
+		if !errors.As(err, &store.ErrNotFound) && (key.Kind == kvs.EnvKind || key.Kind == kvs.EnvoKind) {
+			// Ignore the existed env key.
 			continue
 		}
 		if err := r.Set(key, kv.Value); err != nil {

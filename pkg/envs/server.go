@@ -100,6 +100,8 @@ func newServer(a *Args, p *patchTable) (*Server, error) {
 	handler := NewHandler(s)
 	ge.GET("keys", handler.GetKeys)
 	ge.PUT("keys", handler.PutKeys)
+	ge.GET("kvs", handler.ExportKVS)
+	ge.PUT("kvs", handler.ImportKVS)
 	ge.PUT("key", handler.PutKey)
 	ge.GET("key/*fully_qualified_key_name", handler.GetKey)
 	ge.GET("specs", handler.GetSpecs)

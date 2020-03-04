@@ -26,68 +26,68 @@ func TestScan(t *testing.T) {
 	expected := KeyVals{
 		{
 			Key: Key{
-				Kind: envfKind,
+				Kind: EnvfKind,
 				Name: "chapter01",
 			},
 			Value: doc,
 		},
 		{
 			Key: Key{
-				Kind: envKind,
+				Kind: EnvKind,
 				Name: "poet",
 			},
 		},
 		{
 			Key: Key{
-				Kind: envKind,
+				Kind: EnvKind,
 				Name: "title",
 			},
 		},
 		{
 			Key: Key{
-				Kind: envoKind,
+				Kind: EnvoKind,
 				Name: "at",
 			},
 		},
 		{
 			Key: Key{
-				Kind: envofKind,
+				Kind: EnvofKind,
 				Name: "length",
 			},
 		},
 		{
 			Key: Key{
-				Kind: envKind,
+				Kind: EnvKind,
 				Name: "_did",
 			},
 		},
 		{
 			Key: Key{
-				Kind: envKind,
+				Kind: EnvKind,
 				Name: "cRoSs",
 			},
 		},
 		{
 			Key: Key{
-				Kind: envfKind,
+				Kind: EnvfKind,
 				Name: "an",
 			},
 		},
 		{
 			Key: Key{
-				Kind: envKind,
+				Kind: EnvKind,
 				Name: "Albatross",
 			},
 		},
 		{
 			Key: Key{
-				Kind: envoKind,
+				Kind: EnvoKind,
 				Name: "crossbow",
 			},
 		},
 		{
 			Key: Key{
-				Kind: envofKind,
+				Kind: EnvofKind,
 				Name: "ALBATROSS",
 			},
 		},
@@ -103,18 +103,18 @@ func TestRender(t *testing.T) {
 	s := NewMockKVStore(mockCtrl)
 
 	se := s.EXPECT()
-	se.Get(Key{Kind: envfKind, Name: "chapter01"}).Return(doc, nil).AnyTimes()
-	se.Get(Key{Kind: envKind, Name: "poet"}).Return("poet", nil).AnyTimes()
-	se.Get(Key{Kind: envKind, Name: "title"}).Return("title", nil).AnyTimes()
-	se.Get(Key{Kind: envoKind, Name: "at"}).Return("at", nil).AnyTimes()
-	se.Get(Key{Kind: envofKind, Name: "length"}).Return("length", nil).AnyTimes()
-	se.Get(Key{Kind: envKind, Name: "_did"}).Return("did", nil).AnyTimes()
-	se.Get(Key{Kind: envKind, Name: "cRoSs"}).Return("cross", nil).AnyTimes()
-	se.Get(Key{Kind: envfKind, Name: "an"}).Return("an", nil).AnyTimes()
-	se.Get(Key{Kind: envKind, Name: "Albatross"}).Return("${env://.nestedAlbatross}", nil).AnyTimes()
-	se.Get(Key{Kind: envKind, Name: "nestedAlbatross"}).Return("nested Albatross", nil).AnyTimes()
-	se.Get(Key{Kind: envoKind, Name: "crossbow"}).Return("", nil).AnyTimes()
-	se.Get(Key{Kind: envofKind, Name: "ALBATROSS"}).Return("", nil).AnyTimes()
+	se.Get(Key{Kind: EnvfKind, Name: "chapter01"}).Return(doc, nil).AnyTimes()
+	se.Get(Key{Kind: EnvKind, Name: "poet"}).Return("poet", nil).AnyTimes()
+	se.Get(Key{Kind: EnvKind, Name: "title"}).Return("title", nil).AnyTimes()
+	se.Get(Key{Kind: EnvoKind, Name: "at"}).Return("at", nil).AnyTimes()
+	se.Get(Key{Kind: EnvofKind, Name: "length"}).Return("length", nil).AnyTimes()
+	se.Get(Key{Kind: EnvKind, Name: "_did"}).Return("did", nil).AnyTimes()
+	se.Get(Key{Kind: EnvKind, Name: "cRoSs"}).Return("cross", nil).AnyTimes()
+	se.Get(Key{Kind: EnvfKind, Name: "an"}).Return("an", nil).AnyTimes()
+	se.Get(Key{Kind: EnvKind, Name: "Albatross"}).Return("${env://.nestedAlbatross}", nil).AnyTimes()
+	se.Get(Key{Kind: EnvKind, Name: "nestedAlbatross"}).Return("nested Albatross", nil).AnyTimes()
+	se.Get(Key{Kind: EnvoKind, Name: "crossbow"}).Return("", nil).AnyTimes()
+	se.Get(Key{Kind: EnvofKind, Name: "ALBATROSS"}).Return("", nil).AnyTimes()
 
 	idx := 0
 	buf := &bytes.Buffer{}

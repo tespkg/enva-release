@@ -99,7 +99,38 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 		},
 	}
 
-	// 3. key/{fully_qualified_key_name} GET
+	// 3. kvs GET & PUT
+	pathItems["/kvs"] = openspec.PathItem{
+		PathItemProps: openspec.PathItemProps{
+			Get: &openspec.Operation{
+				OperationProps: openspec.OperationProps{
+					ID:          "ExportKVS",
+					Summary:     "Export all env/envo kind key values",
+					Description: "Export all env/envo kind key values",
+					Produces:    []string{"application/json"},
+					Tags:        []string{keyValTag},
+					Responses:   openapi.BuildResp(http.StatusOK, openapi.BuildSuccessResp(openapi.FileSchema())),
+				},
+			},
+			Put: &openspec.Operation{
+				OperationProps: openspec.OperationProps{
+					ID:          "ImportKVS",
+					Summary:     "Import given key values",
+					Description: "Import given key values",
+					Produces:    []string{"application/json"},
+					Consumes:    []string{"multipart/form-data"},
+					Tags:        []string{keyValTag},
+					Parameters: []openspec.Parameter{
+						openapi.BuildParam("formData", "filename.1", "file", "", true, nil).
+							WithParameterDesc("key values file"),
+					},
+					Responses: openapi.BuildResp(http.StatusOK, openapi.BuildSuccessResp(nil)),
+				},
+			},
+		},
+	}
+
+	// 4. key/{fully_qualified_key_name} GET
 	pathItems["/key/{fully_qualified_key_name}"] = openspec.PathItem{
 		PathItemProps: openspec.PathItemProps{
 			Get: &openspec.Operation{
@@ -118,7 +149,7 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 			},
 		},
 	}
-	// 4. specs GET
+	// 5. specs GET
 	pathItems["/specs"] = openspec.PathItem{
 		PathItemProps: openspec.PathItemProps{
 			Get: &openspec.Operation{
@@ -133,7 +164,7 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 			},
 		},
 	}
-	// 5. spec/{name} GET & PUT
+	// 6. spec/{name} GET & PUT
 	pathItems["/spec/{name}"] = openspec.PathItem{
 		PathItemProps: openspec.PathItemProps{
 			Get: &openspec.Operation{

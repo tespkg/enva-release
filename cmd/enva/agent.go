@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"html/template"
 	"io"
 	"io/ioutil"
 	"os"
@@ -14,10 +13,10 @@ import (
 	"reflect"
 	"strings"
 	"syscall"
+	"text/template"
 	"time"
 
 	"golang.org/x/time/rate"
-
 	"tespkg.in/envs/pkg/kvs"
 	"tespkg.in/kit/log"
 )
@@ -217,9 +216,6 @@ func (a *agent) watch(ctx context.Context) error {
 			}
 			// Notify new desiredConfig
 			a.configCh <- c
-
-			// Set a very long timer, cancel it when adding watch feature.
-			renderTimer = time.NewTimer(time.Minute * 30)
 
 		case <-ctx.Done():
 			return nil

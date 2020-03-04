@@ -14,6 +14,7 @@ storage:
     host: ${env:// .postgresHost }
     database: ${env:// .ssoDBName }
     user: ${env:// .ssoDBUser }
+    password: ${env:// .ssoDBPassword }
     ssl:
       mode: disable
 

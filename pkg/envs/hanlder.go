@@ -1,12 +1,17 @@
 package envs
 
 import (
+	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"mime/multipart"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 
+	"github.com/ghodss/yaml"
 	"github.com/gin-gonic/gin"
 	"tespkg.in/envs/pkg/kvs"
 	"tespkg.in/envs/pkg/spec"
@@ -59,6 +64,96 @@ func (h *Handler) PutKeys(c *gin.Context) {
 			return
 		}
 	}
+	c.JSON(http.StatusOK, struct{}{})
+}
+
+func (h *Handler) ExportKVS(c *gin.Context) {
+	envKVals, err := h.GetKindValues(kvs.EnvKind)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("iterate env kind keys failed: %v", err))
+		return
+	}
+	envoKVals, err := h.GetKindValues(kvs.EnvoKind)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("iterate envo kind keys failed: %v", err))
+		return
+	}
+	kvals := envKVals
+	kvals = append(kvals, envoKVals...)
+
+	kvsKVals := storeKVs2kvs(kvals)
+	out, err := yaml.Marshal(kvsKVals)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("marshal kvals failed: %v", err))
+		return
+	}
+
+	c.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="kvs-%s.yaml"`, time.Now().Format("2006-01-02")))
+	c.Header("Content-Type", "application/json")
+	c.Header("Content-Length", strconv.Itoa(len(out)))
+
+	if _, err := io.Copy(c.Writer, bytes.NewBuffer(out)); err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("write file failed: %v", err))
+		return
+	}
+}
+
+func (h *Handler) ImportKVS(c *gin.Context) {
+	multiForm, err := c.MultipartForm()
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("invalid multipart form: %v", err))
+		return
+	}
+
+	var filenames []string
+	var fds []multipart.File
+	defer func() {
+		for _, fd := range fds {
+			fd.Close()
+		}
+	}()
+
+	for _, fs := range multiForm.File {
+		for _, f := range fs {
+			filename := f.Filename
+			filenames = append(filenames, filename)
+			fd, err := f.Open()
+			if err != nil {
+				c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("open file: %v failed: %v", filename, err))
+				return
+			}
+			fds = append(fds, fd)
+		}
+	}
+
+	if len(filenames) == 0 {
+		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("no file was found"))
+		return
+	}
+	if len(filenames) > 1 {
+		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("multiple files unsupported yet"))
+		return
+	}
+
+	out, err := ioutil.ReadAll(fds[0])
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("invalid file content: %v", err))
+		return
+	}
+	kvals := kvs.KeyVals{}
+	if err := yaml.Unmarshal(out, &kvals); err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("invalid file content: %v", err))
+		return
+	}
+
+	storeKVals := kvs2storeKVs(kvals)
+	for _, kval := range storeKVals {
+		if err := h.Set(kval.Key, kval.Value); err != nil {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("set key %v failed: %v", kval.Key, err))
+			return
+		}
+	}
+
 	c.JSON(http.StatusOK, struct{}{})
 }
 

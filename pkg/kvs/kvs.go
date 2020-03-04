@@ -13,10 +13,10 @@ import (
 )
 
 const (
-	envKind   = "env"
-	envfKind  = "envf"
-	envoKind  = "envo"
-	envofKind = "envof"
+	EnvKind   = "env"
+	EnvfKind  = "envf"
+	EnvoKind  = "envo"
+	EnvofKind = "envof"
 )
 
 var (
@@ -74,7 +74,7 @@ func Scan(r io.Reader, scanFilename bool) (KeyVals, error) {
 			fn := fnRes[0][1]
 			kvs = append(kvs, KeyVal{
 				Key: Key{
-					Kind: envfKind,
+					Kind: EnvfKind,
 					Name: fn,
 				},
 				Value: doc,
@@ -86,13 +86,18 @@ func Scan(r io.Reader, scanFilename bool) (KeyVals, error) {
 	keyRes := envKeyRegex.FindAllStringSubmatch(doc, -1)
 	for _, keyMatch := range keyRes {
 		k := keyFromMatchItem(keyMatch)
+		if k.Kind == EnvfKind || k.Kind == EnvofKind {
+			if isFn && k.Name == kvs[0].Name {
+				return nil, errors.New("found cycle reference in envf file")
+			}
+			if scanFilename && !isFn {
+				continue
+			}
+		}
 		kvs = append(kvs, KeyVal{
 			Key:   k,
 			Value: "",
 		})
-		if isFn && (k.Kind == envfKind || k.Kind == envofKind) && k.Name == kvs[0].Name {
-			return nil, errors.New("found cycle reference in envf file")
-		}
 	}
 
 	return kvs, nil
@@ -116,13 +121,13 @@ func render(s KVStore, ir io.Reader, iw io.Writer, kvS *kvState, tmpFunc tempFun
 			return err
 		}
 		switch kv.Kind {
-		case envKind, envoKind:
-			if kv.Kind == envKind && val == "" {
+		case EnvKind, EnvoKind:
+			if kv.Kind == EnvKind && val == "" {
 				return fmt.Errorf("got empty value on required env key: %v", kv.Name)
 			}
 			vars[kv.Name] = val
-		case envfKind, envofKind:
-			if kv.Kind == envfKind && val == "" {
+		case EnvfKind, EnvofKind:
+			if kv.Kind == EnvfKind && val == "" {
 				return fmt.Errorf("got empty value on required envf key: %v", kv.Name)
 			}
 			// Create a tmp file save the val as it's content, and set the file name to the key
@@ -195,7 +200,7 @@ func valueOf(s KVStore, kind, key string, kvS *kvState, tmpFunc tempFunc) (strin
 }
 
 func keyFromMatchItem(math []string) Key {
-	kind, key := envKind+math[1], math[2]
+	kind, key := EnvKind+math[1], math[2]
 	return Key{
 		Kind: kind,
 		Name: key,
