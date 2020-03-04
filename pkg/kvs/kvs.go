@@ -10,27 +10,27 @@ import (
 	"os"
 	"regexp"
 	"sync"
+
+	"tespkg.in/envs/pkg/store"
 )
 
 const (
-	EnvKind   = "env"
-	EnvfKind  = "envf"
-	EnvoKind  = "envo"
-	EnvofKind = "envof"
+	EnvKind  = "env"
+	EnvfKind = "envf"
 )
 
 var (
-	leftDlims  = []string{"${env://", "${envf://", "${envo://", "${envof://"}
+	leftDlims  = []string{"${env://", "${envf://"}
 	rightDlims = []string{"}", "}", "}", "}"}
 )
 
 var (
-	envKeyRegex      = regexp.MustCompile(`\${env(f|o|of)?:// *\.([_a-zA-Z][_a-zA-Z0-9]*) *}`)
-	envFilenameRegex = regexp.MustCompile(`\${envfn: *([-_a-zA-Z0-9]*) *}`)
+	envKeyRegex = regexp.MustCompile(`\${env(f)?:// *\.([_a-zA-Z][_a-zA-Z0-9]*) *(\| *default ([./_a-zA-Z0-9]*))? *}`)
 )
 
 type KVStore interface {
 	Get(key Key) (string, error)
+	Set(key Key, val string) error
 }
 
 type Key struct {
@@ -38,20 +38,34 @@ type Key struct {
 	Name string `json:"name"`
 }
 
+func (k Key) String() string {
+	return k.Kind + "/" + k.Name
+}
+
 type KeyVal struct {
 	Key
 	Value string `json:"value"`
 }
 
+func (kv KeyVal) String() string {
+	return kv.Kind + "/" + kv.Name + "=" + kv.Value
+}
+
 type KeyVals []KeyVal
 
 type tempFunc func(dir, pattern string) (f *os.File, err error)
+type readFileFunc func(filename string) ([]byte, error)
 
 func Render(s KVStore, ir io.Reader, iw io.Writer) error {
-	return render(s, ir, iw, &kvState{}, ioutil.TempFile)
+	return render(s, ir, iw, &kvState{}, ioutil.TempFile, ioutil.ReadFile)
 }
 
-func Scan(r io.Reader, scanFilename bool) (KeyVals, error) {
+// Scan given reader exact all keys & default values
+func Scan(r io.Reader) (KeyVals, error) {
+	return scan(r, ioutil.ReadFile)
+}
+
+func scan(r io.Reader, readFileFunc readFileFunc) (KeyVals, error) {
 	bs, err := ioutil.ReadAll(r)
 	if err != nil {
 		return nil, err
@@ -59,76 +73,51 @@ func Scan(r io.Reader, scanFilename bool) (KeyVals, error) {
 	doc := string(bs)
 
 	var kvs KeyVals
-	var isFn bool
-
-	if scanFilename {
-		// Check if doc is an envf or not
-		fnRes := envFilenameRegex.FindAllStringSubmatch(doc, -1)
-		if len(fnRes) > 1 {
-			return nil, fmt.Errorf("expected only one {envfn: *}, got %v", len(fnRes))
-		}
-
-		// Found a filename annotation
-		if len(fnRes) == 1 {
-			isFn = true
-			fn := fnRes[0][1]
-			kvs = append(kvs, KeyVal{
-				Key: Key{
-					Kind: EnvfKind,
-					Name: fn,
-				},
-				Value: doc,
-			})
-		}
-	}
-
-	// Scan doc, exact all keys
 	keyRes := envKeyRegex.FindAllStringSubmatch(doc, -1)
 	for _, keyMatch := range keyRes {
-		k := keyFromMatchItem(keyMatch)
-		if k.Kind == EnvfKind || k.Kind == EnvofKind {
-			if isFn && k.Name == kvs[0].Name {
-				return nil, errors.New("found cycle reference in envf file")
+		k, value := keyFromMatchItem(keyMatch)
+		if k.Kind == EnvfKind && value != "" {
+			bs, err := readFileFunc(value)
+			if err != nil {
+				return nil, fmt.Errorf("invalid envf: %v with default: %v, err: %v", k.Name, value, err)
 			}
-			if scanFilename && !isFn {
-				continue
-			}
+			value = string(bs)
 		}
 		kvs = append(kvs, KeyVal{
 			Key:   k,
-			Value: "",
+			Value: value,
 		})
 	}
 
 	return kvs, nil
 }
 
-func render(s KVStore, ir io.Reader, iw io.Writer, kvS *kvState, tmpFunc tempFunc) error {
+func render(s KVStore, ir io.Reader, iw io.Writer, kvS *kvState, tmpFunc tempFunc, rdFileFunc readFileFunc) error {
 	bs, err := ioutil.ReadAll(ir)
 	if err != nil {
 		return err
 	}
 
-	kvs, err := Scan(bytes.NewBuffer(bs), false)
+	kvs, err := scan(bytes.NewBuffer(bs), rdFileFunc)
 	if err != nil {
 		return err
 	}
 
 	vars := make(map[string]string)
 	for _, kv := range kvs {
-		val, err := valueOf(s, kv.Kind, kv.Name, kvS, tmpFunc)
+		val, err := valueOf(s, kv.Key, kv.Value, kvS, tmpFunc, rdFileFunc)
 		if err != nil {
 			return err
 		}
 		switch kv.Kind {
-		case EnvKind, EnvoKind:
-			if kv.Kind == EnvKind && val == "" {
-				return fmt.Errorf("got empty value on required env key: %v", kv.Name)
+		case EnvKind:
+			if val == "" {
+				return fmt.Errorf("got empty value on required env key: %v", kv.Key)
 			}
 			vars[kv.Name] = val
-		case EnvfKind, EnvofKind:
-			if kv.Kind == EnvfKind && val == "" {
-				return fmt.Errorf("got empty value on required envf key: %v", kv.Name)
+		case EnvfKind:
+			if val == "" {
+				return fmt.Errorf("got empty value on required envf key: %v", kv.Key)
 			}
 			// Create a tmp file save the val as it's content, and set the file name to the key
 			f, err := tmpFunc("", kv.Kind+"-*")
@@ -147,7 +136,16 @@ func render(s KVStore, ir io.Reader, iw io.Writer, kvS *kvState, tmpFunc tempFun
 		}
 	}
 
-	doc := string(bs)
+	// Remove default value before perform render
+	doc := envKeyRegex.ReplaceAllStringFunc(string(bs), func(s string) string {
+		res := envKeyRegex.FindAllStringSubmatch(s, -1)
+		if len(res) == 0 {
+			return s
+		}
+		return fmt.Sprintf("${env%s:// .%s }", res[0][1], res[0][2])
+	})
+
+	// Render env & envf vars
 	for i := range leftDlims {
 		buf := &bytes.Buffer{}
 		tpl := template.New("")
@@ -167,16 +165,19 @@ func render(s KVStore, ir io.Reader, iw io.Writer, kvS *kvState, tmpFunc tempFun
 	return nil
 }
 
-func valueOf(s KVStore, kind, key string, kvS *kvState, tmpFunc tempFunc) (string, error) {
-	value, err := s.Get(Key{
-		Kind: kind,
-		Name: key,
-	})
-	if err != nil {
-		return "", fmt.Errorf("get value of %v/%v failed: %v", kind, key, err)
+func valueOf(s KVStore, key Key, defValue string, kvS *kvState, tmpFunc tempFunc, rdFileFunc readFileFunc) (string, error) {
+	value, err := s.Get(key)
+	if err != nil && !errors.As(err, &store.ErrNotFound) {
+		return "", fmt.Errorf("get value of %v failed: %T", key, err)
+	}
+	if errors.As(err, &store.ErrNotFound) {
+		if err := s.Set(key, defValue); err != nil {
+			return "", err
+		}
+		value = defValue
 	}
 
-	kvS.set(key)
+	kvS.set(key.Name)
 
 	keyRes := envKeyRegex.FindAllStringSubmatch(value, -1)
 	if len(keyRes) == 0 {
@@ -184,7 +185,7 @@ func valueOf(s KVStore, kind, key string, kvS *kvState, tmpFunc tempFunc) (strin
 	}
 
 	for _, keyMatch := range keyRes {
-		kv := keyFromMatchItem(keyMatch)
+		kv, _ := keyFromMatchItem(keyMatch)
 		if kvS.exists(kv.Name) {
 			return "", fmt.Errorf("cycle key usage found on %v", kv.Name)
 		}
@@ -192,19 +193,16 @@ func valueOf(s KVStore, kind, key string, kvS *kvState, tmpFunc tempFunc) (strin
 
 	i := bytes.NewBufferString(value)
 	out := &bytes.Buffer{}
-	if err := render(s, i, out, kvS, tmpFunc); err != nil {
+	if err := render(s, i, out, kvS, tmpFunc, rdFileFunc); err != nil {
 		return "", fmt.Errorf("render nested key: %v failed: %v", value, err)
 	}
 
 	return out.String(), nil
 }
 
-func keyFromMatchItem(math []string) Key {
-	kind, key := EnvKind+math[1], math[2]
-	return Key{
-		Kind: kind,
-		Name: key,
-	}
+func keyFromMatchItem(match []string) (Key, string) {
+	kind, key, defaultValue := EnvKind+match[1], match[2], match[4]
+	return Key{Kind: kind, Name: key}, defaultValue
 }
 
 type kvState struct {

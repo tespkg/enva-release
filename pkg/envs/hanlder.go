@@ -68,20 +68,13 @@ func (h *Handler) PutKeys(c *gin.Context) {
 }
 
 func (h *Handler) ExportKVS(c *gin.Context) {
-	envKVals, err := h.GetKindValues(kvs.EnvKind)
+	storeKVals, err := h.GetKindValues(kvs.EnvKind)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("iterate env kind keys failed: %v", err))
 		return
 	}
-	envoKVals, err := h.GetKindValues(kvs.EnvoKind)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("iterate envo kind keys failed: %v", err))
-		return
-	}
-	kvals := envKVals
-	kvals = append(kvals, envoKVals...)
 
-	kvsKVals := storeKVs2kvs(kvals)
+	kvsKVals := storeKVs2kvs(storeKVals)
 	out, err := yaml.Marshal(kvsKVals)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("marshal kvals failed: %v", err))

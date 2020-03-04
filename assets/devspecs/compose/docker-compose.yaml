@@ -35,7 +35,7 @@ services:
   sso:
     image: registry.gitlab.com/target-digital-transformation/sso/master
     container_name: sso
-    command: /usr/local/bin/dex serve '$${envf:// .ssoConfig }'
+    command: /usr/local/bin/dex serve '$${envf:// .ssoConfig | default /usr/local/config/sso.yaml }'
     environment:
       ENVS_HTTP_ADDR: http://host.docker.internal:9112
     ports:
@@ -61,6 +61,9 @@ services:
     image: registry.gitlab.com/target-digital-transformation/access-control/ac-be/master
     container_name: ac
     command: |
+      --publish acGRPCAddr=ac:7001
+      --publish acHTTPAddr=http://ac:7001
+      --publish admin-user=admin
       /usr/local/bin/ac-serve serve
       --address=:7001
       --oidc='$${env:// .ssoIssuer }'
@@ -72,6 +75,7 @@ services:
     environment:
       ENVS_HTTP_ADDR: http://host.docker.internal:9112
       TARGET_SYS_ADMIN: CiQwOGE4Njg0Yi1kYjg4LTRiNzMtOTBhOS0zY2QxNjYxZjU0NjYSBWxvY2Fs
+      ENVA_PUBLISTH: acGRPCAddr=ac:7001, acHTTPAddr=http://ac:7001
     ports:
       - 7001:7001
 
@@ -157,7 +161,7 @@ services:
     environment:
       ENVS_HTTP_ADDR: http://host.docker.internal:9112
       MEERA_APP_OAUTH_HOST: '$${env:// .ssoIssuer }'
-      MEERA_APP_OAUTH_CLIENT_ID: configurator
+      MEERA_APP_OAUTH_CLIENT_ID: '$${env:// .configuratorClientID }'
       MEERA_APP_OAUTH_CLIENT_SECRET: DzXZxyDObSpsnR7qLqQ4p1LEVoIiE49e
       MEERA_APP_OAUTH_CALLBACK_HOST: '$${env:// .configuratorWebAddr }'
       MEERA_APP_ENV_VAR_ME_TO: '$${env:// .profileAddr }'

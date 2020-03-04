@@ -76,7 +76,7 @@ func main() {
 	}
 
 	// Initiate envs client.
-	kvs, err := api.NewClient(&api.Config{
+	kvsClient, err := api.NewClient(&api.Config{
 		Address: envsAddr,
 	})
 	if err != nil {
@@ -105,7 +105,7 @@ func main() {
 	if len(args) == 0 {
 		log.Fatala("Proc name is missing")
 	}
-	a, err := newAgent(kvs, args, finalisedOSEnvFiles, defaultRetry, defaultPatchTable())
+	a, err := newAgent(kvsClient, args, finalisedOSEnvFiles, defaultRetry, defaultPatchTable())
 	if err != nil {
 		log.Fatala(err)
 	}

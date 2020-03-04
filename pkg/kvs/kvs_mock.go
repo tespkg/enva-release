@@ -44,3 +44,15 @@ func (m *MockKVStore) Get(key Key) (string, error) {
 func (mr *MockKVStoreMockRecorder) Get(key interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockKVStore)(nil).Get), key)
 }
+
+// Set mocks base method
+func (m *MockKVStore) Set(key Key, val string) error {
+	ret := m.ctrl.Call(m, "Set", key, val)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Set indicates an expected call of Set
+func (mr *MockKVStoreMockRecorder) Set(key, val interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Set", reflect.TypeOf((*MockKVStore)(nil).Set), key, val)
+}

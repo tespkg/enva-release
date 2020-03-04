@@ -55,9 +55,17 @@ func TestRegister(t *testing.T) {
 		}
 	}()
 
+	// create envf default filename
+	defaultFilename := "/tmp/path/to/length/file"
+	err := os.MkdirAll(filepath.Dir(defaultFilename), 0755)
+	require.Nil(t, err)
+	f, err := os.Create("/tmp/path/to/length/file")
+	require.Nil(t, err)
+	f.Close()
+
 	h := NewHandler(newStore(t))
 	specName := "app"
-	err := h.RegisterSpec(specName, true, filenames, rds...)
+	err = h.RegisterSpec(specName, true, filenames, rds...)
 	require.Nil(t, err)
 
 	hdrs, err := h.GetSpecHeaders()

@@ -30,11 +30,7 @@ POC: run everything inside one docker, consider:
 ## Conventions
 1. Required key `${env:// .key }`
 1. Required file key `${envf:// .keyf }`
-1. Optional key `${envo:// .key }`
-1. Optional file key `${envof:// .keyf }`
-1. Filename annotation `${envfn: filename}` 
-1. Allowed key name pattern `\${env(f|o|of)?:// *\.([_a-zA-Z][_a-zA-Z0-9]*) *}`
-1. Allowed filename annotation `\${envfn: *([-_a-zA-Z0-9]*) *}`
+1. Allowed key name pattern `\${env(f)?:// *\.([_a-zA-Z][_a-zA-Z0-9]*) *(\| *default ([./_a-zA-Z0-9]*))? *}`
 
 ## TODO
 - [x] enva start application/service
@@ -51,6 +47,7 @@ POC: run everything inside one docker, consider:
 - [x] ~~Serve front end with s4~~, [continue to use nginx to serve front end](#Keep-using-nginx-as-the-frontend-site-server)
 - [x] Export & Import Key values APIs 
 - [x] Local app specs for dev purpose
+- [x] Support env/envf with default value, if given default value and the key doesn't existed before, publish to underlying store
 - [ ] enva publish kvs to envs
 - [ ] Support key watch & restart 
 - [ ] Replace nginx with our own `simple static site service(s4)`

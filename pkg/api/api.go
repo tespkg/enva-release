@@ -214,3 +214,7 @@ func (c *Client) Get(key kvs.Key) (string, error) {
 	}
 	return kval.Value, nil
 }
+
+func (c *Client) Set(key kvs.Key, value string) error {
+	panic("implement me")
+}

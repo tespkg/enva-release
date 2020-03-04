@@ -86,7 +86,7 @@ staticClients:
     - client_credentials
     - password_credentials
 
-- id: configurator
+- id: ${env:// .configuratorClientID | default configurator}
   redirectURIs:
     - '${env:// .configuratorWebAddr }/sso/callback'
   name: 'Configurator'

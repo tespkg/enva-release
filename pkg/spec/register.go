@@ -28,9 +28,9 @@ type DefaultRegister struct {
 	store.Store
 }
 
+// Scan keys in the spec and save them into underlying store.
 func (r DefaultRegister) Scan(spec, filename string, ir io.Reader) error {
-	// Scan keys in the spec and save them into underlying store.
-	keyVals, err := kvs.Scan(ir, true)
+	keyVals, err := kvs.Scan(ir)
 	if err != nil {
 		return err
 	}
@@ -43,14 +43,14 @@ func (r DefaultRegister) Scan(spec, filename string, ir io.Reader) error {
 		}
 		_, err := r.Get(key)
 		if err != nil && !errors.As(err, &store.ErrNotFound) {
-			return fmt.Errorf("check key failed: %T", err)
+			return fmt.Errorf("check key %v failed: %T", kv.Key, err)
 		}
-		if !errors.As(err, &store.ErrNotFound) && (key.Kind == kvs.EnvKind || key.Kind == kvs.EnvoKind) {
+		if !errors.As(err, &store.ErrNotFound) && key.Kind == kvs.EnvKind {
 			// Ignore the existed env key.
 			continue
 		}
 		if err := r.Set(key, kv.Value); err != nil {
-			return fmt.Errorf("set key failed: %T", err)
+			return fmt.Errorf("set key %v failed: %T", kv.Key, err)
 		}
 	}
 	return nil
