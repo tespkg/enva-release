@@ -2,6 +2,7 @@ package envs
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -178,7 +179,11 @@ func (h *Handler) GetKey(c *gin.Context) {
 		Name:      name,
 	})
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("get key: %v failed: %v", rawKey, err))
+		if errors.As(err, &store.ErrNotFound) {
+			c.AbortWithStatusJSON(http.StatusNotFound, jsonErrorf("%v not found", rawKey))
+			return
+		}
+		c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("get key: %v failed: %v", rawKey, err))
 		return
 	}
 
@@ -210,6 +215,10 @@ func (h *Handler) GetSpec(c *gin.Context) {
 
 	s, err := h.Handler.GetSpec(name)
 	if err != nil {
+		if errors.As(err, &store.ErrNotFound) {
+			c.AbortWithStatusJSON(http.StatusNotFound, jsonErrorf("%v not found", name))
+			return
+		}
 		c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("get spec failed: %v", err))
 		return
 	}

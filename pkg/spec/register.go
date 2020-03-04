@@ -43,7 +43,7 @@ func (r DefaultRegister) Scan(spec, filename string, ir io.Reader) error {
 		}
 		_, err := r.Get(key)
 		if err != nil && !errors.As(err, &store.ErrNotFound) {
-			return fmt.Errorf("check key %v failed: %T", kv.Key, err)
+			return fmt.Errorf("check key %v failed: %v", kv.Key, err)
 		}
 		if !errors.As(err, &store.ErrNotFound) && key.Kind == kvs.EnvKind {
 			// Ignore the existed env key.
