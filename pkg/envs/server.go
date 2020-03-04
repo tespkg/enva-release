@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"tespkg.in/envs/pkg/spec"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
@@ -111,6 +113,11 @@ func newServer(a *Args, p *patchTable) (*Server, error) {
 	ge.GET("/", func(c *gin.Context) {
 		c.Redirect(http.StatusFound, a.StaticAssetPath)
 	})
+
+	// Migrate the specs
+	if err := spec.Migrate(a.SpecsMigrationPath, handler.Handler.Register); err != nil {
+		return nil, err
+	}
 
 	return &Server{
 		ginEngine: ge,

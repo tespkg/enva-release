@@ -23,6 +23,7 @@ func cmd() *cobra.Command {
 
 	cmd.Flags().StringVar(&a.ListenAddr, "address", a.ListenAddr, "The address which server will serve at")
 	cmd.Flags().StringVar(&a.Dsn, "dsn", a.Dsn, "Data source name, support etcd & consul, e.g, consul: http://localhost:8502/envs, etcd: etcd://localhost:2379")
+	cmd.Flags().StringVar(&a.SpecsMigrationPath, "specs-path", "", "Pre-configured application/service specs")
 	a.LoggingOptions.AttachCobraFlags(cmd)
 
 	return cmd

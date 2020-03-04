@@ -25,10 +25,14 @@ type Specs []Spec
 
 type Handler struct {
 	store.Store
+	Register
 }
 
 func NewHandler(s store.Store) Handler {
-	return Handler{Store: s}
+	return Handler{
+		Store:    s,
+		Register: &DefaultRegister{Store: s},
+	}
 }
 
 func (h Handler) GetSpecHeaders() (Headers, error) {
@@ -68,7 +72,7 @@ func (h Handler) GetSpec(name string) (Spec, error) {
 	}, nil
 }
 
-func (h Handler) Register(specName string, prune bool, filenames []string, irs ...io.ReadSeeker) error {
+func (h Handler) RegisterSpec(specName string, prune bool, filenames []string, irs ...io.ReadSeeker) error {
 	if specName == "" {
 		return errors.New("empty spec name")
 	}
@@ -93,9 +97,7 @@ func (h Handler) Register(specName string, prune bool, filenames []string, irs .
 	for i := range filenames {
 		fn := strings.TrimPrefix(filenames[i], "/")
 		ir := irs[i]
-		register := DefaultRegister{spec: specName, Store: h.Store, filename: fn}
-
-		if err := register.Scan(ir); err != nil {
+		if err := h.Scan(specName, fn, ir); err != nil {
 			return fmt.Errorf("scan file: %v failed: %v", fn, err)
 		}
 
@@ -105,7 +107,7 @@ func (h Handler) Register(specName string, prune bool, filenames []string, irs .
 			return err
 		}
 
-		if err := register.Save(ir); err != nil {
+		if err := h.Save(specName, fn, ir); err != nil {
 			return fmt.Errorf("save spec failed: %v", err)
 		}
 	}

@@ -20,19 +20,15 @@ const (
 
 // Register save the application spec itself and keys in it to underlying storage.
 type Register interface {
-	Scan(r io.Reader) error
-	Save(r io.Reader) error
+	Scan(spec, filename string, r io.Reader) error
+	Save(spec, filename string, r io.Reader) error
 }
 
 type DefaultRegister struct {
 	store.Store
-
-	// Represent a project.
-	spec     string
-	filename string
 }
 
-func (r DefaultRegister) Scan(ir io.Reader) error {
+func (r DefaultRegister) Scan(spec, filename string, ir io.Reader) error {
 	// Scan keys in the spec and save them into underlying store.
 	keyVals, err := kvs.Scan(ir, true)
 	if err != nil {
@@ -60,8 +56,8 @@ func (r DefaultRegister) Scan(ir io.Reader) error {
 	return nil
 }
 
-func (r DefaultRegister) Save(ir io.Reader) error {
-	return saveSpecElement(r.Store, r.spec, r.filename, ir)
+func (r DefaultRegister) Save(spec, filename string, ir io.Reader) error {
+	return saveSpecElement(r.Store, spec, filename, ir)
 }
 
 func saveSpecElement(s store.Store, spec, fn string, ir io.Reader) error {

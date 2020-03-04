@@ -55,9 +55,9 @@ func TestRegister(t *testing.T) {
 		}
 	}()
 
-	h := Handler{Store: newStore(t)}
+	h := NewHandler(newStore(t))
 	specName := "app"
-	err := h.Register(specName, true, filenames, rds...)
+	err := h.RegisterSpec(specName, true, filenames, rds...)
 	require.Nil(t, err)
 
 	hdrs, err := h.GetSpecHeaders()

@@ -256,7 +256,7 @@ func (h *Handler) PutSpec(c *gin.Context) {
 		irs[i] = fds[i]
 	}
 
-	if err := h.Handler.Register(name, true, filenames, irs...); err != nil {
+	if err := h.Handler.RegisterSpec(name, true, filenames, irs...); err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("register spec: %v failed: %v", name, err))
 		return
 	}

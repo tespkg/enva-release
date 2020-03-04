@@ -14,6 +14,9 @@ type Args struct {
 
 	Dsn string
 
+	// Specs migration path
+	SpecsMigrationPath string
+
 	// Static site asset location
 	StaticAssetDir string
 	// Static site asset access endpoint
@@ -36,6 +39,8 @@ func DefaultArgs() *Args {
 	return &Args{
 		ListenAddr: ":9112",
 		Dsn:        "http://localhost:8500/envs",
+
+		SpecsMigrationPath: "",
 
 		StaticAssetDir:  "static",
 		StaticAssetPath: "/_/static",
