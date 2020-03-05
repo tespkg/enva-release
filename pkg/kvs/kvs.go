@@ -169,15 +169,15 @@ func render(s KVStore, ir io.Reader, iw io.Writer, kvS *kvState, tmpFunc tempFun
 
 func valueOf(s KVStore, key Key, defValue string, kvS *kvState, tmpFunc tempFunc, rdFileFunc readFileFunc) (string, error) {
 	value, err := s.Get(key)
-	if err != nil && !errors.As(err, &ErrNotFound) {
-		return "", fmt.Errorf("get valueOf %v failed: %v", key, err)
+	if err != nil && !errors.Is(err, ErrNotFound) {
+		return "", fmt.Errorf("get valueOf %v failed: %w", key, err)
 	}
-	if errors.As(err, &ErrNotFound) {
+	if errors.Is(err, ErrNotFound) {
 		if defValue == "" {
-			return "", fmt.Errorf("get valueOf %v failed: %v", key, err)
+			return "", fmt.Errorf("get valueOf %v failed: %w", key, err)
 		}
 		if err := s.Set(key, defValue); err != nil {
-			return "", fmt.Errorf("set default valueOf %v failed: %v", key, err)
+			return "", fmt.Errorf("set default valueOf %v failed: %w", key, err)
 		}
 		value = defValue
 	}
@@ -199,7 +199,7 @@ func valueOf(s KVStore, key Key, defValue string, kvS *kvState, tmpFunc tempFunc
 	i := bytes.NewBufferString(value)
 	out := &bytes.Buffer{}
 	if err := render(s, i, out, kvS, tmpFunc, rdFileFunc); err != nil {
-		return "", fmt.Errorf("render nested key %v failed: %v", value, err)
+		return "", fmt.Errorf("render nested key %v failed: %w", value, err)
 	}
 
 	return out.String(), nil

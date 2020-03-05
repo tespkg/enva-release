@@ -63,39 +63,39 @@ oauth2:
 #
 # If this option isn't chosen clients may be added through the gRPC API.
 staticClients:
-- id: example-app
+- id: ${env:// .ssoClientID | default example-app }
+  secret: ${env:// .ssoClientSecret | default ZXhhbXBsZS1hcHAtc2VjcmV0 }
   redirectURIs:
-    - '${env:// .ssoClientAddr }/callback'
+    - ${env:// .ssoWebAddr }/callback
+  allowedAuthTypes:
+    - authorization_code
+    - implicit
+    - client_credentials
+    - password_credentials
   name: 'Example App'
-  secret: ZXhhbXBsZS1hcHAtc2VjcmV0
+
+- id: ${env:// .acClientID | default access-control }
+  secret: ${env:// .acClientSecret | default DzXZxyDObSpsnR7qLqQ4p1LEVoIiE49e }
+  redirectURIs:
+    - ${env:// .acHTTPAddr }/oauth2
+    - ${env:// .acConsoleAddr }/oauth2
   allowedAuthTypes:
     - authorization_code
     - implicit
     - client_credentials
     - password_credentials
-
-- id: access-control
-  redirectURIs:
-    - '${env:// .acRESTAddr }/oauth2'
-    - '${env:// .acConsoleAddr }/oauth2'
   name: 'Access-control'
-  secret: DzXZxyDObSpsnR7qLqQ4p1LEVoIiE49e
-  allowedAuthTypes:
-    - authorization_code
-    - implicit
-    - client_credentials
-    - password_credentials
 
-- id: ${env:// .configuratorClientID | default configurator}
+- id: ${env:// .configuratorClientID | default configurator }
+  secret: ${env:// .configuratorClientSecret | default DzXZxyDObSpsnR7qLqQ4p1LEVoIiE49e }
   redirectURIs:
-    - '${env:// .configuratorWebAddr }/sso/callback'
-  name: 'Configurator'
-  secret: DzXZxyDObSpsnR7qLqQ4p1LEVoIiE49e
+    - ${env:// .configuratorWebAddr }/sso/callback
   allowedAuthTypes:
     - authorization_code
     - implicit
     - client_credentials
     - password_credentials
+  name: 'Configurator'
 
 #defaultConnectorID: "ldap"
 

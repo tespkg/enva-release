@@ -2,7 +2,7 @@
 
 docker run -d --network meera -p 9301:9301 \
     -e ENVS_HTTP_ADDR=http://host.docker.internal:9112 \
-    --rm --name profile-graphql registry.gitlab.com/target-digital-transformation/profile-be/master \
+    --rm --name profile-graphql registry.tespkg.in/profile-be/master \
     /usr/local/bin/profile-serve profile graphql \
     --address=:9301 \
     --oidc='${env:// .ssoIssuer }' \

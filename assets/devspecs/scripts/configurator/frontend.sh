@@ -37,4 +37,4 @@ docker run -d --network meera -p 80:80 \
     -e MEERA_APP_PRODUCT_URL_PSA='' \
     -e MEERA_APP_PRODUCT_URL_REGULATION='' \
     -e MEERA_APP_API_KEYWORD='' \
-    --rm --name configurator-fe registry.gitlab.com/target-digital-transformation/workspace-configurator-fe/release
+    --rm --name configurator-fe registry.tespkg.in/workspace-configurator-fe/release

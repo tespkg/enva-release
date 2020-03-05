@@ -136,7 +136,7 @@ func main() {
 		if err := kvsClient.Set(kvs.Key{
 			Kind: kvs.EnvKind,
 			Name: ii[0],
-		}, ii[2]); err != nil {
+		}, ii[1]); err != nil {
 			log.Fatalf("publish key value pair %v failed: %v", kv, err)
 		}
 	}

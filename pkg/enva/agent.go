@@ -24,6 +24,7 @@ import (
 )
 
 const (
+	pollingWatchInterval       = time.Second * 3
 	gracefullyTerminateTimeout = time.Second * 5
 	hold                       = -1
 	success                    = 0
@@ -97,6 +98,10 @@ type config struct {
 	osEnvVars []string
 }
 
+func isEnvfArg(arg string) bool {
+	return strings.Contains(arg, "envf-")
+}
+
 func isConfigDeepEqual(a, b config) bool {
 	if !reflect.DeepEqual(a.osEnvVars, b.osEnvVars) {
 		return false
@@ -108,19 +113,35 @@ func isConfigDeepEqual(a, b config) bool {
 		aArg := a.args[i]
 		bArg := b.args[i]
 
-		isAArgFile, isBArgFile := strings.Contains(aArg, "envf-"), strings.Contains(bArg, "envf-")
-		if isAArgFile != isBArgFile {
-			return false
+		isAArgFile, isBArgFile := isEnvfArg(aArg), isEnvfArg(bArg)
+
+		// If both are envf file
+		if isAArgFile && isBArgFile {
+			aDoc, _ := ioutil.ReadFile(aArg)
+			bDoc, _ := ioutil.ReadFile(bArg)
+			if !reflect.DeepEqual(aDoc, bDoc) {
+				return false
+			}
+			continue
 		}
 
-		// Check file content
-		aDoc, _ := ioutil.ReadFile(aArg)
-		bDoc, _ := ioutil.ReadFile(bArg)
-		if !reflect.DeepEqual(aDoc, bDoc) {
+		// Not envf file
+		if aArg != bArg {
 			return false
 		}
 	}
 	return true
+}
+
+func removeEnvfFile(c config) {
+	for _, arg := range c.args {
+		if !isEnvfArg(arg) {
+			continue
+		}
+		if err := os.RemoveAll(arg); err != nil {
+			log.Warnf("Remove %v failed: %v", arg, err)
+		}
+	}
 }
 
 type Agent struct {
@@ -230,7 +251,7 @@ func (a *Agent) Run(ctx context.Context) error {
 				continue
 			}
 			if status.err != nil {
-				log.Warnf("%v got unexpected err %v", a.currentConfig.args, err)
+				log.Warnf("%v got unexpected err %v", a.currentConfig.args, status.err)
 			}
 
 			// Schedule a retry for an error.
@@ -252,12 +273,7 @@ func (a *Agent) Run(ctx context.Context) error {
 		case <-reconcileTimer.C:
 			a.reconcile()
 
-		case _, ok := <-ctx.Done():
-			isClosed := false
-			if !ok {
-				isClosed = true
-			}
-			log.Debuga("Getting ctx done event isClosed: ", isClosed)
+		case <-ctx.Done():
 			// It might have multiple notifications, if ctx canceled and we didn't return immediately.
 			// introduce the once to make sure only trigger terminate operation once.
 			once.Do(func() {
@@ -281,24 +297,38 @@ func (a *Agent) Watch(ctx context.Context) error {
 		case <-renderTimer.C:
 			// Render args, osEnvs to new config
 			c, err := render(a.kvs, a.rawArgs, a.rawOSEnvs, a.osEnvTplFiles, a.pt)
-			if err != nil {
+			if err != nil && !errors.Is(err, kvs.ErrNotFound) {
 				return err
+			}
+			if errors.Is(err, kvs.ErrNotFound) {
+				log.Infoa(err)
 			}
 
 			if !isConfigDeepEqual(a.currentConfig, c) {
+				// Render OSEnvFiles from the saved template osEnvFiles by using os.env vars
+				osEnvsVars := make(map[string]string)
+				for _, osEnv := range c.osEnvVars {
+					ii := strings.Split(osEnv, "=")
+					osEnvsVars[ii[0]] = ii[1]
+				}
+				if err := renderOSEnvFiles(a.osEnvTplFiles, osEnvsVars, a.pt); err != nil {
+					log.Warna("render os env file failed ", err)
+				}
+
 				// Notify new desiredConfig
 				a.configCh <- c
+			} else {
+				// Remove useless generated envf file
+				removeEnvfFile(c)
 			}
 
 			renderTimer.Stop()
 			// Polling might is not good enough,
 			// Assume there are 500 Proc(include replica) under the control of enva in total
 			// And each Proc have about 10 keys need to be rendered from envs
-			// Then the query qps to envs would be 500 * 10 / 5 = 1000 in average, which is acceptable
+			// If polling interval is 5 seconds, the readonly qps to envs would be 500 * 10 / 5 = 1000 in average, which is acceptable
 			// We might need to introduce stream watching later.
-			next := time.Second * 5
-			log.Debuga("reschedule next render in ", next)
-			renderTimer = time.NewTimer(next)
+			renderTimer = time.NewTimer(pollingWatchInterval)
 
 		case <-ctx.Done():
 			return nil
@@ -398,7 +428,6 @@ end:
 func render(kvStore kvs.KVStore, rawArgs, rawOSEnvs, osEnvTplFiles []string, pt PatchTable) (config, error) {
 	// Render os.env
 	osEnvs := make([]string, len(rawOSEnvs))
-	osEnvsVars := make(map[string]string)
 	for i, osEnv := range rawOSEnvs {
 		out := bytes.Buffer{}
 		err := kvs.Render(kvStore, bytes.NewBufferString(osEnv), &out)
@@ -410,13 +439,6 @@ func render(kvStore kvs.KVStore, rawArgs, rawOSEnvs, osEnvTplFiles []string, pt 
 			log.Debugf("render %v to %v", osEnv, newOSEnv)
 		}
 		osEnvs[i] = newOSEnv
-		ii := strings.Split(newOSEnv, "=")
-		osEnvsVars[ii[0]] = ii[1]
-	}
-
-	// Render OSEnvFiles from the saved template osEnvFiles by using os.env vars
-	if err := renderOSEnvFiles(osEnvTplFiles, osEnvsVars, pt); err != nil {
-		return config{}, err
 	}
 
 	// Render args
@@ -437,6 +459,12 @@ func render(kvStore kvs.KVStore, rawArgs, rawOSEnvs, osEnvTplFiles []string, pt 
 }
 
 func renderOSEnvFiles(osTplFiles []string, vars map[string]string, pt PatchTable) error {
+	var fds []io.Closer
+	defer func() {
+		for _, fd := range fds {
+			fd.Close()
+		}
+	}()
 	for _, fn := range osTplFiles {
 		b, err := ioutil.ReadFile(fn)
 		if err != nil {
@@ -449,10 +477,12 @@ func renderOSEnvFiles(osTplFiles []string, vars map[string]string, pt PatchTable
 		if len(dirPrefix) > 0 {
 			dstFn = fn[len(dirPrefix):]
 		}
+		log.Debugf("render os env vars from %v to %v", fn, dstFn)
 		f, err := pt.create(dstFn)
 		if err != nil {
 			return err
 		}
+		fds = append(fds, f)
 
 		tpl := template.New(dstFn)
 		tpl, err = tpl.Parse(string(b))
