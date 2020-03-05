@@ -12,6 +12,7 @@ import (
 
 	"github.com/pborman/getopt/v2"
 	"tespkg.in/envs/pkg/api"
+	"tespkg.in/envs/pkg/enva"
 	"tespkg.in/envs/pkg/kvs"
 	"tespkg.in/kit/log"
 )
@@ -78,6 +79,7 @@ func main() {
 
 	// Initiate log facility.
 	if verbose || os.Getenv("ENVA_DEBUG") == "true" {
+		logOptions.SetLogCallers("default", true)
 		logOptions.SetOutputLevel(log.DefaultScopeName, log.DebugLevel)
 	}
 	if err := log.Configure(logOptions); err != nil {
@@ -147,7 +149,7 @@ func main() {
 	if len(args) == 0 {
 		log.Fatala("Proc name is missing")
 	}
-	a, err := newAgent(kvsClient, args, finalisedOSEnvFiles, defaultRetry, defaultPatchTable())
+	a, err := enva.NewAgent(kvsClient, args, finalisedOSEnvFiles, enva.DefaultRetry, enva.DefaultPatchTable())
 	if err != nil {
 		log.Fatala(err)
 	}
@@ -162,19 +164,20 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		if err := a.run(ctx); err != nil {
+		if err := a.Run(ctx); err != nil {
 			log.Fatala(err)
 		}
-		raise(syscall.SIGTERM)
+		log.Debuga("exit from run")
 	}()
 
 	// Watch Proc options & args change and restart when the values changed.
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		if err := a.watch(ctx); err != nil {
+		if err := a.Watch(ctx); err != nil {
 			log.Fatala(err)
 		}
+		log.Debuga("exit from watch")
 	}()
 
 	// TODO: Register Proc location if needed
@@ -183,12 +186,4 @@ func main() {
 	}
 
 	waitSignal()
-}
-
-func raise(sig os.Signal) error {
-	p, err := os.FindProcess(os.Getpid())
-	if err != nil {
-		return err
-	}
-	return p.Signal(sig)
 }

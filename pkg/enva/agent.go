@@ -1,4 +1,4 @@
-package main
+package enva
 
 import (
 	"bytes"
@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"syscall"
 	"text/template"
 	"time"
@@ -23,19 +25,22 @@ import (
 
 const (
 	gracefullyTerminateTimeout = time.Second * 5
+	hold                       = -1
+	success                    = 0
+	configUpdated              = 1
 )
 
 type createFunc func(name string) (*os.File, error)
 type templateDirFunc func() string
 
 // Replaceable set of functions for test & fault injection
-type patchTable struct {
+type PatchTable struct {
 	create createFunc
 	tplDir templateDirFunc
 }
 
-func defaultPatchTable() patchTable {
-	return patchTable{
+func DefaultPatchTable() PatchTable {
+	return PatchTable{
 		create: os.Create,
 		tplDir: func() string {
 			dir, err := os.UserConfigDir()
@@ -64,19 +69,35 @@ type retry struct {
 }
 
 var (
-	// defaultRetry configuration for Procs
-	defaultRetry = retry{
+	// DefaultRetry configuration for Procs
+	DefaultRetry = retry{
 		maxRetries:      10,
 		initialInterval: 200 * time.Millisecond,
 	}
+
+	// used for the none-daemon Proc,
+	// so that enva will be able to exist gracefully even there is no statusCh event received.
+	isProcRunning int64
 )
+
+type exitStatus struct {
+	code int
+	err  error
+}
+
+func newExitStatus(code int, err error) exitStatus {
+	return exitStatus{
+		code: code,
+		err:  err,
+	}
+}
 
 type config struct {
 	args      []string
 	osEnvVars []string
 }
 
-type agent struct {
+type Agent struct {
 	// KV store
 	kvs kvs.KVStore
 
@@ -90,7 +111,7 @@ type agent struct {
 	osEnvTplFiles []string
 
 	// Replaceable set of functions for test & fault injection
-	pt patchTable
+	pt PatchTable
 
 	// retry configuration
 	retry retry
@@ -105,23 +126,23 @@ type agent struct {
 	configCh chan config
 
 	// Channel for process exit notifications
-	statusCh chan error
+	statusCh chan exitStatus
 
 	// channel for terminate running process
-	terminateCh chan struct{}
+	terminateCh chan exitStatus
 
 	// channel for abort running process
 	abortCh chan struct{}
 }
 
-func newAgent(kvs kvs.KVStore, args, osEnvFiles []string, retry retry, pt patchTable) (*agent, error) {
+func NewAgent(kvs kvs.KVStore, args, osEnvFiles []string, retry retry, pt PatchTable) (*Agent, error) {
 	// Template osEnvFiles if this is any and use it later.
 	osEnvTplFiles, err := templateOSEnvFiles(osEnvFiles, pt.tplDir())
 	if err != nil {
 		return nil, err
 	}
 
-	return &agent{
+	return &Agent{
 		kvs:           kvs,
 		rawArgs:       args,
 		rawOSEnvs:     os.Environ(),
@@ -129,22 +150,20 @@ func newAgent(kvs kvs.KVStore, args, osEnvFiles []string, retry retry, pt patchT
 		osEnvTplFiles: osEnvTplFiles,
 		retry:         retry,
 		configCh:      make(chan config),
-		statusCh:      make(chan error),
-		terminateCh:   make(chan struct{}, 1),
-		abortCh:       make(chan struct{}, 1),
+		statusCh:      make(chan exitStatus),
 	}, nil
 }
 
-func (a *agent) run(ctx context.Context) error {
+func (a *Agent) Run(ctx context.Context) error {
 	log.Infoa("Starting ", a.rawArgs)
 
 	rateLimiter := rate.NewLimiter(1, 10)
 	var reconcileTimer *time.Timer
+	once := &sync.Once{}
 
 	for {
-		err := rateLimiter.Wait(ctx)
+		err := rateLimiter.Wait(context.Background())
 		if err != nil {
-			a.terminate()
 			return err
 		}
 
@@ -166,14 +185,24 @@ func (a *agent) run(ctx context.Context) error {
 
 				// reset retry budget if and only if the desired config changes
 				a.retry.budget = a.retry.maxRetries
+				log.Debugf("triggering the termination caused by config updated")
+				a.terminate(newExitStatus(configUpdated, nil))
 				a.reconcile()
 			}
 
-		case statusErr := <-a.statusCh:
-			if statusErr == nil {
+		case status := <-a.statusCh:
+			log.Debugf("status changed, code: %v, err: %v", status.code, status.err)
+			if status.code == success {
 				log.Infoa("enva has finished ", a.currentConfig.args)
 				return nil
 			}
+			if status.code == configUpdated {
+				continue
+			}
+			if status.err != nil {
+				log.Warnf("%v got unexpected err %v", a.currentConfig.args, err)
+			}
+
 			// Schedule a retry for an error.
 			// skip retrying twice by checking retry restart delay
 			if a.retry.restart == nil {
@@ -182,9 +211,9 @@ func (a *agent) run(ctx context.Context) error {
 					restart := time.Now().Add(delayDuration)
 					a.retry.restart = &restart
 					a.retry.budget--
-					log.Infof("Set retry delay to %v, budget to %d, caused by: %v", delayDuration, a.retry.budget, statusErr)
+					log.Infof("Set retry delay to %v, budget to %d", delayDuration, a.retry.budget)
 				} else {
-					return fmt.Errorf("permanent error: budget exhausted trying to fulfill the desired configuration, latest status: %v", statusErr)
+					return fmt.Errorf("permanent error: budget exhausted trying to fulfill the desired configuration")
 				}
 			} else {
 				log.Debugf("Restart already scheduled")
@@ -194,15 +223,24 @@ func (a *agent) run(ctx context.Context) error {
 			a.reconcile()
 
 		case <-ctx.Done():
-			a.terminate()
-			log.Infoa("enva has successfully terminated")
-			return nil
+			// It might have multiple notifications, if ctx canceled and we didn't return immediately.
+			// introduce the once to make sure only trigger terminate operation once.
+			once.Do(func() {
+				a.terminate(newExitStatus(success, nil))
+			})
+
+			// For none-daemon Proc there might no status event from status channel,
+			// Check isProcRunning here and see if need to exit from here.
+			if atomic.LoadInt64(&isProcRunning) == 0 {
+				log.Debugf("ctx done exit")
+				return nil
+			}
 		}
 	}
 }
 
-// TODO: watch env store for key changes...
-func (a *agent) watch(ctx context.Context) error {
+// TODO: Watch env store for key changes...
+func (a *Agent) Watch(ctx context.Context) error {
 	_ = ctx
 
 	renderTimer := time.NewTimer(time.Millisecond * 100)
@@ -223,7 +261,7 @@ func (a *agent) watch(ctx context.Context) error {
 	}
 }
 
-func (a *agent) reconcile() {
+func (a *Agent) reconcile() {
 	log.Infof("Reconciling retry (budget %d)", a.retry.budget)
 
 	// check that the config is current
@@ -234,27 +272,30 @@ func (a *agent) reconcile() {
 	// cancel any scheduled restart
 	a.retry.restart = nil
 
+	if a.terminateCh != nil {
+		close(a.terminateCh)
+	}
+	a.terminateCh = make(chan exitStatus, 1)
+
 	a.currentConfig = a.desiredConfig
-
-	go a.runWait(a.desiredConfig.args, a.desiredConfig.osEnvVars, a.terminateCh, a.abortCh)
+	go a.runWait(a.desiredConfig.args, a.desiredConfig.osEnvVars, a.terminateCh)
 }
 
-func (a *agent) terminate() {
-	a.terminateCh <- struct{}{}
-	log.Infof("Graceful termination period is %v, starting...", gracefullyTerminateTimeout)
-	time.Sleep(gracefullyTerminateTimeout)
-	log.Infof("Graceful termination period complete, terminating remaining process.")
-	a.abortCh <- struct{}{}
+func (a *Agent) terminate(status exitStatus) {
+	if a.terminateCh == nil {
+		return
+	}
+	a.terminateCh <- status
 }
 
-func (a *agent) runWait(nameArgs, osEnvs []string, terminate, abort <-chan struct{}) {
-	err := runProc(nameArgs, osEnvs, terminate, abort)
-	a.statusCh <- err
+func (a *Agent) runWait(nameArgs, osEnvs []string, terminate chan exitStatus) {
+	extStatus := runProc(nameArgs, osEnvs, terminate)
+	a.statusCh <- extStatus
 }
 
-func runProc(nameArgs, osEnvs []string, terminate, abort <-chan struct{}) error {
+func runProc(nameArgs, osEnvs []string, terminate chan exitStatus) exitStatus {
 	if len(nameArgs) == 0 {
-		return errors.New("require at least proc name")
+		return newExitStatus(-1, errors.New("require at least proc name"))
 	}
 	log.Infoa("Running ", nameArgs)
 
@@ -268,26 +309,43 @@ func runProc(nameArgs, osEnvs []string, terminate, abort <-chan struct{}) error 
 	cmd.Stderr = os.Stderr
 	cmd.Env = osEnvs
 	if err := cmd.Start(); err != nil {
-		return err
+		return newExitStatus(-1, errors.New("require at least proc name"))
 	}
 	done := make(chan error, 1)
 	go func() {
 		done <- cmd.Wait()
 	}()
 
-	select {
-	case <-abort:
-		log.Warnf("Aborting %v", name)
-		return cmd.Process.Signal(syscall.SIGKILL)
-	case <-terminate:
-		log.Infof("Gracefully terminate %v", name)
-		return cmd.Process.Signal(syscall.SIGTERM)
-	case err := <-done:
-		return err
+	atomic.StoreInt64(&isProcRunning, 1)
+
+	var err error
+	abort := make(chan struct{})
+	status := newExitStatus(hold, nil)
+	for {
+		select {
+		case <-abort:
+			log.Infoa("Aborting ", name)
+			cmd.Process.Signal(syscall.SIGKILL)
+		case status = <-terminate:
+			cmd.Process.Signal(syscall.SIGTERM)
+			go func() {
+				log.Infoa("Gracefully terminate ", name)
+				time.Sleep(gracefullyTerminateTimeout)
+				abort <- struct{}{}
+			}()
+		case err = <-done:
+			log.Infof("%v done", name)
+			status.err = err
+			goto end
+		}
 	}
+
+end:
+	atomic.StoreInt64(&isProcRunning, 0)
+	return status
 }
 
-func render(kvStore kvs.KVStore, rawArgs, rawOSEnvs, osEnvTplFiles []string, pt patchTable) (config, error) {
+func render(kvStore kvs.KVStore, rawArgs, rawOSEnvs, osEnvTplFiles []string, pt PatchTable) (config, error) {
 	// Render os.env
 	osEnvs := make([]string, len(rawOSEnvs))
 	osEnvsVars := make(map[string]string)
@@ -329,7 +387,7 @@ func render(kvStore kvs.KVStore, rawArgs, rawOSEnvs, osEnvTplFiles []string, pt 
 	}, nil
 }
 
-func renderOSEnvFiles(osTplFiles []string, vars map[string]string, pt patchTable) error {
+func renderOSEnvFiles(osTplFiles []string, vars map[string]string, pt PatchTable) error {
 	for _, fn := range osTplFiles {
 		b, err := ioutil.ReadFile(fn)
 		if err != nil {
