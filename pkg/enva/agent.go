@@ -97,6 +97,32 @@ type config struct {
 	osEnvVars []string
 }
 
+func isConfigDeepEqual(a, b config) bool {
+	if !reflect.DeepEqual(a.osEnvVars, b.osEnvVars) {
+		return false
+	}
+	if len(a.args) != len(b.args) {
+		return false
+	}
+	for i := 0; i < len(a.args); i++ {
+		aArg := a.args[i]
+		bArg := b.args[i]
+
+		isAArgFile, isBArgFile := strings.Contains(aArg, "envf-"), strings.Contains(bArg, "envf-")
+		if isAArgFile != isBArgFile {
+			return false
+		}
+
+		// Check file content
+		aDoc, _ := ioutil.ReadFile(aArg)
+		bDoc, _ := ioutil.ReadFile(bArg)
+		if !reflect.DeepEqual(aDoc, bDoc) {
+			return false
+		}
+	}
+	return true
+}
+
 type Agent struct {
 	// KV store
 	kvs kvs.KVStore
@@ -179,12 +205,16 @@ func (a *Agent) Run(ctx context.Context) error {
 
 		select {
 		case config := <-a.configCh:
-			if !reflect.DeepEqual(a.desiredConfig, config) {
+			if !isConfigDeepEqual(a.currentConfig, config) {
 				log.Infof("Received new config, resetting budget")
 				a.desiredConfig = config
 
-				// reset retry budget if and only if the desired config changes
+				// Reset retry budget if and only if the desired config changes
 				a.retry.budget = a.retry.maxRetries
+
+				// For most of the daemon service which will listen & serve on a TCP port,
+				// There is a race condition, which is when the first new desired Proc start occurred before the previous Proc stopped take placed,
+				// might cause the restart operation failed and starting to retry start
 				log.Debugf("triggering the termination caused by config updated")
 				a.terminate(newExitStatus(configUpdated, nil))
 				a.reconcile()
@@ -222,7 +252,12 @@ func (a *Agent) Run(ctx context.Context) error {
 		case <-reconcileTimer.C:
 			a.reconcile()
 
-		case <-ctx.Done():
+		case _, ok := <-ctx.Done():
+			isClosed := false
+			if !ok {
+				isClosed = true
+			}
+			log.Debuga("Getting ctx done event isClosed: ", isClosed)
 			// It might have multiple notifications, if ctx canceled and we didn't return immediately.
 			// introduce the once to make sure only trigger terminate operation once.
 			once.Do(func() {
@@ -239,10 +274,7 @@ func (a *Agent) Run(ctx context.Context) error {
 	}
 }
 
-// TODO: Watch env store for key changes...
 func (a *Agent) Watch(ctx context.Context) error {
-	_ = ctx
-
 	renderTimer := time.NewTimer(time.Millisecond * 100)
 	for {
 		select {
@@ -252,8 +284,21 @@ func (a *Agent) Watch(ctx context.Context) error {
 			if err != nil {
 				return err
 			}
-			// Notify new desiredConfig
-			a.configCh <- c
+
+			if !isConfigDeepEqual(a.currentConfig, c) {
+				// Notify new desiredConfig
+				a.configCh <- c
+			}
+
+			renderTimer.Stop()
+			// Polling might is not good enough,
+			// Assume there are 500 Proc(include replica) under the control of enva in total
+			// And each Proc have about 10 keys need to be rendered from envs
+			// Then the query qps to envs would be 500 * 10 / 5 = 1000 in average, which is acceptable
+			// We might need to introduce stream watching later.
+			next := time.Second * 5
+			log.Debuga("reschedule next render in ", next)
+			renderTimer = time.NewTimer(next)
 
 		case <-ctx.Done():
 			return nil
@@ -265,16 +310,13 @@ func (a *Agent) reconcile() {
 	log.Infof("Reconciling retry (budget %d)", a.retry.budget)
 
 	// check that the config is current
-	if reflect.DeepEqual(a.desiredConfig, a.currentConfig) {
+	if isConfigDeepEqual(a.desiredConfig, a.currentConfig) {
 		log.Infof("Reapplying same desired & current configuration")
 	}
 
 	// cancel any scheduled restart
 	a.retry.restart = nil
 
-	if a.terminateCh != nil {
-		close(a.terminateCh)
-	}
 	a.terminateCh = make(chan exitStatus, 1)
 
 	a.currentConfig = a.desiredConfig
@@ -285,6 +327,7 @@ func (a *Agent) terminate(status exitStatus) {
 	if a.terminateCh == nil {
 		return
 	}
+	log.Debuga("sending terminate signal ", status)
 	a.terminateCh <- status
 }
 
@@ -297,7 +340,6 @@ func runProc(nameArgs, osEnvs []string, terminate chan exitStatus) exitStatus {
 	if len(nameArgs) == 0 {
 		return newExitStatus(-1, errors.New("require at least proc name"))
 	}
-	log.Infoa("Running ", nameArgs)
 
 	name := nameArgs[0]
 	var args []string
@@ -316,25 +358,33 @@ func runProc(nameArgs, osEnvs []string, terminate chan exitStatus) exitStatus {
 		done <- cmd.Wait()
 	}()
 
+	log.Infoa("Running ", cmd.Process.Pid, nameArgs)
 	atomic.StoreInt64(&isProcRunning, 1)
 
 	var err error
+	var ok bool
 	abort := make(chan struct{})
 	status := newExitStatus(hold, nil)
+	once := sync.Once{}
 	for {
 		select {
 		case <-abort:
-			log.Infoa("Aborting ", name)
+			log.Infoa("Aborting ", cmd.Process.Pid, name)
 			cmd.Process.Signal(syscall.SIGKILL)
-		case status = <-terminate:
-			cmd.Process.Signal(syscall.SIGTERM)
-			go func() {
-				log.Infoa("Gracefully terminate ", name)
-				time.Sleep(gracefullyTerminateTimeout)
-				abort <- struct{}{}
-			}()
+		case status, ok = <-terminate:
+			if !ok {
+				// Channel got closed, but ignore here.
+			}
+			once.Do(func() {
+				log.Infoa("Gracefully terminate ", cmd.Process.Pid, nameArgs, status)
+				cmd.Process.Signal(syscall.SIGTERM)
+				go func() {
+					time.Sleep(gracefullyTerminateTimeout)
+					abort <- struct{}{}
+				}()
+			})
 		case err = <-done:
-			log.Infof("%v done", name)
+			log.Infof("%v %v done", cmd.Process.Pid, name)
 			status.err = err
 			goto end
 		}
@@ -370,7 +420,6 @@ func render(kvStore kvs.KVStore, rawArgs, rawOSEnvs, osEnvTplFiles []string, pt 
 	}
 
 	// Render args
-	log.Debuga("rawArgs ", rawArgs, " len ", len(rawArgs))
 	argsStr := strings.Join(rawArgs, "#")
 	log.Debuga("argsStr ", argsStr)
 	out := bytes.Buffer{}

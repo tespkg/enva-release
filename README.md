@@ -30,7 +30,7 @@ POC: run everything inside one docker, consider:
 ## Conventions
 1. Required key `${env:// .key }`
 1. Required file key `${envf:// .keyf }`
-1. Allowed key name pattern `\${env(f)?:// *\.([_a-zA-Z][_a-zA-Z0-9]*) *(\| *default ([./_a-zA-Z0-9]*))? *}`
+1. Allowed key name pattern `\${env(f)?:// *\.([_a-zA-Z][_a-zA-Z0-9]*) *(\| *default ([\-./_a-zA-Z0-9]*))? *}`
 
 ## TODO
 - [x] enva start application/service
@@ -49,7 +49,7 @@ POC: run everything inside one docker, consider:
 - [x] Local app specs for dev purpose
 - [x] Support env/envf with default value, if given default value and the key doesn't existed before, publish to underlying store
 - [x] enva publish kvs to envs
-- [ ] Support key watch & restart 
+- [x] Support key watch & restart 
 - [ ] Replace nginx with our own `simple static site service(s4)`
 - [ ] An extensive way to extend the pre-configuration for service startup, e.g, create database if not exist etc.
 - [ ] ~~Migrate specs at startup~~

@@ -165,7 +165,7 @@ func TestRegex(t *testing.T) {
 		`Hi, this is ${env://.config|default value/of/config }, I'm speaking to ${env:// .clientID | default alice }'`,
 		`Hi, this is ${env://.config|default value/of/config}, I'm speaking to ${env:// .clientID | default alice }'`,
 		`Hi, this is ${env:// .config }, I'm speaking to ${env:// .clientID | default alice }'`,
-		`Hi, this is ${envf:// .config | default /usr/local/config/config.yaml }, I'm speaking to ${env:// .clientID | default alice }'`,
+		`Hi, this is ${envf:// .config | default /usr/local/config/config-dev.yaml }, I'm speaking to ${env:// .clientID | default alice }'`,
 		`Hi, this is ${envf:// .config| default /usr/local/config/config.yaml }, I'm speaking to ${env:// .clientID | default alice }'`,
 		`Hi, this is ${envf:// .config|default /usr/local/config/config.yaml }, I'm speaking to ${env:// .clientID | default alice }'`,
 		`Hi, this is ${envf://.config|default /usr/local/config/config.yaml }, I'm speaking to ${env:// .clientID | default alice }'`,
