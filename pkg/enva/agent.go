@@ -179,9 +179,6 @@ type Agent struct {
 
 	// channel for terminate running process
 	terminateCh chan exitStatus
-
-	// channel for abort running process
-	abortCh chan struct{}
 }
 
 func NewAgent(kvs kvs.KVStore, args, osEnvFiles []string, retry retry, pt PatchTable) (*Agent, error) {
