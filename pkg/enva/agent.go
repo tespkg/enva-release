@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	pollingWatchInterval       = time.Second * 3
+	pollingWatchInterval       = time.Second * 5
 	gracefullyTerminateTimeout = time.Second * 5
 	hold                       = -1
 	success                    = 0
@@ -102,12 +102,13 @@ func isEnvfArg(arg string) bool {
 	return strings.Contains(arg, "envf-")
 }
 
-func isConfigDeepEqual(a, b config) bool {
-	if !reflect.DeepEqual(a.osEnvVars, b.osEnvVars) {
-		return false
+func isConfigDeepEqual(a, b config) (isOSEnvsEq, isArgsEq bool) {
+	if reflect.DeepEqual(a.osEnvVars, b.osEnvVars) {
+		isOSEnvsEq = true
 	}
+
 	if len(a.args) != len(b.args) {
-		return false
+		return isOSEnvsEq, false
 	}
 	for i := 0; i < len(a.args); i++ {
 		aArg := a.args[i]
@@ -120,17 +121,18 @@ func isConfigDeepEqual(a, b config) bool {
 			aDoc, _ := ioutil.ReadFile(aArg)
 			bDoc, _ := ioutil.ReadFile(bArg)
 			if !reflect.DeepEqual(aDoc, bDoc) {
-				return false
+				return isOSEnvsEq, false
 			}
 			continue
 		}
 
 		// Not envf file
 		if aArg != bArg {
-			return false
+			return isOSEnvsEq, false
 		}
 	}
-	return true
+
+	return isOSEnvsEq, true
 }
 
 func removeEnvfFile(c config) {
@@ -226,7 +228,29 @@ func (a *Agent) Run(ctx context.Context) error {
 
 		select {
 		case config := <-a.configCh:
-			if !isConfigDeepEqual(a.currentConfig, config) {
+			// There are two kinds of config update
+			// The first one is the values in OS env vars got changed, it will not trigger the Proc restart flow in our current use case,
+			// The second one is the values in Proc's args/options got changed, the Proc restart flow should been triggered.
+			isOSEnvsEq, isArgsEq := isConfigDeepEqual(a.currentConfig, config)
+			if !isOSEnvsEq {
+				log.Infof("Received new os envs, re-rendering them")
+				log.Debuga("current os envs ", a.currentConfig.osEnvVars)
+				log.Debuga("new os envs ", config.osEnvVars)
+				osEnvsVars := make(map[string]string)
+				for _, osEnv := range config.osEnvVars {
+					ii := strings.Split(osEnv, "=")
+					osEnvsVars[ii[0]] = ii[1]
+				}
+				// Render OSEnvFiles from the saved template osEnvFiles by using new os.env vars
+				if err := renderOSEnvFiles(a.osEnvTplFiles, osEnvsVars, a.pt); err != nil {
+					log.Warna("render os env file failed ", err)
+				}
+
+				// Since there might have no restart required, set current osEnvVars directly
+				a.currentConfig.osEnvVars = config.osEnvVars
+			}
+
+			if !isArgsEq {
 				log.Infof("Received new config, resetting budget")
 				a.desiredConfig = config
 
@@ -239,6 +263,10 @@ func (a *Agent) Run(ctx context.Context) error {
 				log.Debugf("triggering the termination caused by config updated")
 				a.terminate(newExitStatus(configUpdated, nil))
 				a.reconcile()
+			} else {
+				// Remove useless generated envf file
+				removeEnvfFile(config)
+				continue
 			}
 
 		case status := <-a.statusCh:
@@ -296,30 +324,16 @@ func (a *Agent) Watch(ctx context.Context) error {
 		select {
 		case <-renderTimer.C:
 			// Render args, osEnvs to new config
-			c, err := render(a.kvs, a.rawArgs, a.rawOSEnvs, a.osEnvTplFiles, a.pt)
+			c, err := render(a.kvs, a.rawArgs, a.rawOSEnvs)
 			if err != nil && !errors.Is(err, kvs.ErrNotFound) {
 				return err
 			}
 			if errors.Is(err, kvs.ErrNotFound) {
 				log.Infoa(err)
 			}
-
-			if !isConfigDeepEqual(a.currentConfig, c) {
-				// Render OSEnvFiles from the saved template osEnvFiles by using os.env vars
-				osEnvsVars := make(map[string]string)
-				for _, osEnv := range c.osEnvVars {
-					ii := strings.Split(osEnv, "=")
-					osEnvsVars[ii[0]] = ii[1]
-				}
-				if err := renderOSEnvFiles(a.osEnvTplFiles, osEnvsVars, a.pt); err != nil {
-					log.Warna("render os env file failed ", err)
-				}
-
-				// Notify new desiredConfig
+			if err == nil {
+				// Notify config periodically
 				a.configCh <- c
-			} else {
-				// Remove useless generated envf file
-				removeEnvfFile(c)
 			}
 
 			renderTimer.Stop()
@@ -340,7 +354,7 @@ func (a *Agent) reconcile() {
 	log.Infof("Reconciling retry (budget %d)", a.retry.budget)
 
 	// check that the config is current
-	if isConfigDeepEqual(a.desiredConfig, a.currentConfig) {
+	if isEnvsEq, isArgsEq := isConfigDeepEqual(a.desiredConfig, a.currentConfig); isEnvsEq && isArgsEq {
 		log.Infof("Reapplying same desired & current configuration")
 	}
 
@@ -425,7 +439,7 @@ end:
 	return status
 }
 
-func render(kvStore kvs.KVStore, rawArgs, rawOSEnvs, osEnvTplFiles []string, pt PatchTable) (config, error) {
+func render(kvStore kvs.KVStore, rawArgs, rawOSEnvs []string) (config, error) {
 	// Render os.env
 	osEnvs := make([]string, len(rawOSEnvs))
 	for i, osEnv := range rawOSEnvs {

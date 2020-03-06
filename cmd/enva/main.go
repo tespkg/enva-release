@@ -31,7 +31,7 @@ var (
 func init() {
 	getopt.FlagLong(&envsAddr, "envs-addr", 'a', "Optional, envs address, eg: http://localhost:8502/a/bc")
 	getopt.FlagLong(&osEnvFiles, "os-env-files", 'f', `Optional, os env files, separated by comma, eg: "path/to/index.html, path/to/config.js"`)
-	getopt.FlagLong(&publishedKVs, "publish", 'p', `Optional, publish kvs, eg: --publish k1=v1 publish k2=v2`)
+	getopt.FlagLong(&publishedKVs, "publish", 'p', `Optional, publish kvs, eg: --publish k1=v1 --publish k2=v2`)
 	getopt.FlagLong(&locationRegistration, "location", 'l', "Optional, enable Proc location registration")
 	getopt.FlagLong(&verbose, "verbose", 'v', "Optional, be verbose")
 	getopt.FlagLong(&help, "help", 'h', "Optional, display usage")

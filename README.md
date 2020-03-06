@@ -49,7 +49,10 @@ POC: run everything inside one docker, consider:
 - [x] Local app specs for dev purpose
 - [x] Support env/envf with default value, if given default value and the key doesn't existed before, publish to underlying store
 - [x] enva publish kvs to envs
-- [x] Support key watch & restart 
+- [x] Support key watch & restart
+- [ ] Decouple oidc client & callback register flow 
+- [ ] Minimize the required env vars
+- [ ] Tutorial documentation
 - [ ] Replace nginx with our own `simple static site service(s4)`
 - [ ] An extensive way to extend the pre-configuration for service startup, e.g, create database if not exist etc.
 - [ ] ~~Migrate specs at startup~~

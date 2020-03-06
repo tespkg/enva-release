@@ -85,10 +85,10 @@ services:
     environment:
       ENVS_HTTP_ADDR: http://host.docker.internal:9112
       VUE_APP_API_ENDPOINT: '$${env:// .acHTTPAddr }'
+      VUE_APP_TOKEN_URL: '$${env:// .ssoIssuer }/token'
+      VUE_APP_AUTH_URL: '$${env:// .ssoIssuer }/auth'
       VUE_APP_CLIENT_ID: '$${env:// .acClientID }'
       VUE_APP_CLIENT_SECRET: '$${env:// .acClientSecret }'
-      VUE_APP_TOKEN_URL: '$${env:// .oidcIssuerTokenURL }'
-      VUE_APP_AUTH_URL: '$${env:// .oidcIssuerAuthURL }'
       VUE_APP_REDIRECT_URL: '$${env:// .acConsoleAddr }/oauth2'
       VUE_APP_STATE: acconsole
     ports:

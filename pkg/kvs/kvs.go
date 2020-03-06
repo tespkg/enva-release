@@ -15,6 +15,8 @@ import (
 const (
 	EnvKind  = "env"
 	EnvfKind = "envf"
+
+	briefMaxLen = 50
 )
 
 var (
@@ -199,10 +201,17 @@ func valueOf(s KVStore, key Key, defValue string, kvS *kvState, tmpFunc tempFunc
 	i := bytes.NewBufferString(value)
 	out := &bytes.Buffer{}
 	if err := render(s, i, out, kvS, tmpFunc, rdFileFunc); err != nil {
-		return "", fmt.Errorf("render nested key %v failed: %w", value, err)
+		return "", fmt.Errorf(`render nested key "%v" failed: %w`, briefOf(value), err)
 	}
 
 	return out.String(), nil
+}
+
+func briefOf(value string) string {
+	if len(value) > briefMaxLen {
+		return value[:briefMaxLen] + "..."
+	}
+	return value
 }
 
 func keyFromMatchItem(match []string) (Key, string) {
