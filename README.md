@@ -57,6 +57,59 @@ Based on different service/application we are trying to use, there are different
 1. Create docker network `docker network create meera`
 1. Start the interested services by following the [minimized steps](#Minimized-steps)
 
+## Minimized steps
+
+1. Check the service/application logs we started & set the missing values into env store one by one via `envs` API call 
+1. Or import the [minimized values](assets/devspecs/minimized-kvs.yaml) into env store via `envs` API call directly
+
+### Vendor services
+1. postgres
+1. rabbitstomp
+1. redis
+
+### SSO  
+1. Set ssoIssuer value
+1. Set postgresHost value
+1. Set ssoDBUser value
+1. Set ssoDBPassword value
+1. echo "create database sso;" | psql -h localhost -p 5432 -U postgres 
+
+### Register OAuth2 clients
+
+1. Whenever we want to start a web site that has OAuth2 integrated, we need to make sure OAuth2 client has been registered & published into env store with our name conventions.
+1. For Convenience, we can use `oidcr` CLI tool to do the registration
+1. Add our new OAuth2 params into `registration request` 
+1. `docker-compose up oidcr`
+
+### SSO client
+1. Register ssoOAuth2 client
+
+### AC
+1. Set acDSN value
+
+### AC console
+1. Register acOAuth2 client
+1. Set acHTTPAddr value
+
+### Profile gRPC
+1. Set profileDSN value
+1. Set rabbitMQAddr value
+
+### Profile GraphQL
+1. Set profileCORS value
+1. Set redisAddr value
+1. Set sesGRPCAddr value
+1. Set msgPusherGRPCAddr value
+1. Set notificationAddr value
+
+### Configurator-be
+1. Set configuratorDSN value
+
+### Configurator-fe
+1. Register configuratorOAuth2 client
+1. Set configuratorHTTPAddr value
+1. Set profileHTTPAddr value
+
 ## FAQs
 
 ### Keep using nginx as the frontend site server
@@ -65,55 +118,3 @@ Based on different service/application we are trying to use, there are different
 1. It's a full featured & lightweight web server
 1. Will replace nginx with our own site service `s4` eventually
 
-### Minimized steps
-
-1. Check the service/application logs we started & set the missing values into env store one by one via `envs` API call 
-1. Or import the [minimized values](assets/devspecs/minimized-kvs.yaml) into env store via `envs` API call directly
-
-#### Vendor services
-1. postgres
-1. rabbitstomp
-1. redis
-
-#### SSO  
-1. Set ssoIssuer value
-1. Set postgresHost value
-1. Set ssoDBUser value
-1. Set ssoDBPassword value
-1. echo "create database sso;" | psql -h localhost -p 5432 -U postgres 
-
-#### Register OAuth2 clients
-
-1. Whenever we want to start a web site that has OAuth2 integrated, we need to make sure OAuth2 client has been registered & published into env store with our name conventions.
-1. For Convenience, we can use `oidcr` CLI tool to do the registration
-1. Add our new OAuth2 params into `registration request` 
-1. `docker-compose up oidcr`
-
-#### SSO client
-1. Register ssoOAuth2 client
-
-### AC
-1. Set acDSN value
-
-#### AC console
-1. Register acOAuth2 client
-1. Set acHTTPAddr value
-
-#### Profile gRPC
-1. Set profileDSN value
-1. Set rabbitMQAddr value
-
-#### Profile GraphQL
-1. Set profileCORS value
-1. Set redisAddr value
-1. Set sesGRPCAddr value
-1. Set msgPusherGRPCAddr value
-1. Set notificationAddr value
-
-#### Configurator-be
-1. Set configuratorDSN value
-
-#### Configurator-fe
-1. Register configuratorOAuth2 client
-1. Set configuratorHTTPAddr value
-1. Set profileHTTPAddr value
