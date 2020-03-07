@@ -1,10 +1,10 @@
-FROM registry.tespkg.in/library/envs:alpine3.10 as basis
+FROM registry.tespkg.in/library/enva:alpine3.10 as basis
 
 FROM alpine:3.10
 
 RUN apk add --update ca-certificates openssl bash
 
-COPY --from=basis /usr/local/envs/ /usr/local/envs/
+COPY --from=basis /usr/local/envs/bin/enva /usr/local/envs/bin/enva
 COPY --from=basis /docker-entrypoint.sh /docker-entrypoint.sh
 
 # Create minimal nsswitch.conf file to prioritize the usage of /etc/hosts over DNS queries.

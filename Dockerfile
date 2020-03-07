@@ -11,6 +11,7 @@ FROM alpine:3.10
 RUN apk add --update ca-certificates openssl busybox-extras bash
 
 COPY --from=builder /build/bin/enva /usr/local/envs/bin/enva
+COPY --from=builder /build/bin/oidcr /usr/local/envs/bin/oidcr
 COPY --from=builder /build/docker-entrypoint.sh /docker-entrypoint.sh
 
 # Create minimal nsswitch.conf file to prioritize the usage of /etc/hosts over DNS queries.

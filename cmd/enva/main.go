@@ -21,6 +21,7 @@ var (
 	envsAddr             = ""
 	osEnvFiles           = ""
 	publishedKVs         []string
+	isRunOnlyOnce        bool
 	locationRegistration bool
 	verbose              bool
 	help                 bool
@@ -32,6 +33,7 @@ func init() {
 	getopt.FlagLong(&envsAddr, "envs-addr", 'a', "Optional, envs address, eg: http://localhost:8502/a/bc")
 	getopt.FlagLong(&osEnvFiles, "os-env-files", 'f', `Optional, os env files, separated by comma, eg: "path/to/index.html, path/to/config.js"`)
 	getopt.FlagLong(&publishedKVs, "publish", 'p', `Optional, publish kvs, eg: --publish k1=v1 --publish k2=v2`)
+	getopt.FlagLong(&isRunOnlyOnce, "run-only-once", 'r', "Optional, run Proc only one and exit")
 	getopt.FlagLong(&locationRegistration, "location", 'l', "Optional, enable Proc location registration")
 	getopt.FlagLong(&verbose, "verbose", 'v', "Optional, be verbose")
 	getopt.FlagLong(&help, "help", 'h', "Optional, display usage")
@@ -57,6 +59,7 @@ func printUsage(s *getopt.Set, w io.Writer) {
 ENVS_HTTP_ADDR, equivalent of Option "envs-addr", 
 ENVA_OS_ENV_FILES, equivalent of Option "os-env-files", separated by comma, eg: "path/to/file1, path/to/file2",
 ENVA_PUBLISH, equivalent of Option "publish", separated by comma, eg: "k1=v1, k2=v2",
+ENVA_RUN_ONLY_ONCE, equivalent of Option "run-only-once", eg: ENVA_RUN_ONLY_ONCE=true equal to honor --run-only-once Option.
 ENVA_DEBUG, equivalent of Option "verbose", eg: ENVA_DEBUG=true equal to honor --verbose Command Option.
 If both the command options & env are set at same time, Command Options have priority`)
 	fmt.Fprintln(w)
@@ -85,6 +88,10 @@ func main() {
 	if err := log.Configure(logOptions); err != nil {
 		fmt.Fprintln(os.Stderr, "initiate log failed: ", err)
 		os.Exit(-1)
+	}
+
+	if !isRunOnlyOnce && os.Getenv("ENVA_RUN_ONLY_ONCE") == "true" {
+		isRunOnlyOnce = true
 	}
 
 	// Initiate envs client.
@@ -149,7 +156,7 @@ func main() {
 	if len(args) == 0 {
 		log.Fatala("Proc name is missing")
 	}
-	a, err := enva.NewAgent(kvsClient, args, finalisedOSEnvFiles, enva.DefaultRetry, enva.DefaultPatchTable())
+	a, err := enva.NewAgent(kvsClient, args, finalisedOSEnvFiles, isRunOnlyOnce, enva.DefaultRetry, enva.DefaultPatchTable())
 	if err != nil {
 		log.Fatala(err)
 	}
@@ -168,6 +175,9 @@ func main() {
 			log.Fatala(err)
 		}
 		log.Debuga("exit from run")
+
+		// If run got finished, exit the main Proc directly.
+		raise(syscall.SIGTERM)
 	}()
 
 	// Watch Proc options & args change and restart when the values changed.
@@ -186,4 +196,12 @@ func main() {
 	}
 
 	waitSignal()
+}
+
+func raise(sig os.Signal) error {
+	p, err := os.FindProcess(os.Getpid())
+	if err != nil {
+		return err
+	}
+	return p.Signal(sig)
 }

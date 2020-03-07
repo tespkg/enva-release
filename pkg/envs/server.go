@@ -90,7 +90,7 @@ func newServer(a *Args, p *patchTable) (*Server, error) {
 		return nil, err
 	}
 	ge.Static(a.StaticAssetPath, finalisedAssetsDir(a.StaticAssetDir))
-	ge.GET(a.SpecPath, gzip.Gzip(gzip.DefaultCompression), func(c *gin.Context) {
+	ge.GET(a.OpenAPISpecPath, gzip.Gzip(gzip.DefaultCompression), func(c *gin.Context) {
 		c.Header("Content-Type", "text/plain; charset=utf-8")
 		if err := GenerateSpec(c.Writer, a.SpecArgs); err != nil {
 			c.AbortWithStatusJSON(http.StatusBadRequest, err.Error())

@@ -22,9 +22,9 @@ type Args struct {
 	// Static site asset access endpoint
 	StaticAssetPath string
 	// Spec URI access endpoint
-	SpecPath string
+	OpenAPISpecPath string
 	// Where to put the generated swagger json.
-	// Default value is: KnownHost/SpecPath/swagger.yaml
+	// Default value is: KnownHost/OpenAPISpecPath/swagger.yaml
 	// Used for static html render.
 	SwaggerJSONURI     string
 	SwaggerCallbackURL string
@@ -44,7 +44,7 @@ func DefaultArgs() *Args {
 
 		StaticAssetDir:  "static",
 		StaticAssetPath: "/_/static",
-		SpecPath:        "/_/openapi/swagger.yaml",
+		OpenAPISpecPath: "/_/openapi/swagger.yaml",
 
 		// Spec options
 		SpecArgs: openapi.SpecArgs{
@@ -65,7 +65,7 @@ func (a *Args) validate() error {
 		return fmt.Errorf("unsupported schema, accept http or https only")
 	}
 
-	a.SwaggerJSONURI = a.Schema + "://" + filepath.Join(a.KnownHost, a.SpecPath)
+	a.SwaggerJSONURI = a.Schema + "://" + filepath.Join(a.KnownHost, a.OpenAPISpecPath)
 	a.SwaggerCallbackURL = a.Schema + "://" + filepath.Join(a.KnownHost, a.StaticAssetPath, "oauth2-redirect.html")
 
 	return nil

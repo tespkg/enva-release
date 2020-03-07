@@ -27,7 +27,7 @@ const (
 	pollingWatchInterval       = time.Second * 5
 	gracefullyTerminateTimeout = time.Second * 5
 	hold                       = -1
-	success                    = 0
+	finished                   = 0
 	configUpdated              = 1
 )
 
@@ -159,6 +159,9 @@ type Agent struct {
 	// Template files
 	osEnvTplFiles []string
 
+	// Indicate if Proc will run only once or run as a daemon service
+	isRunOnlyOnce bool
+
 	// Replaceable set of functions for test & fault injection
 	pt PatchTable
 
@@ -181,8 +184,8 @@ type Agent struct {
 	terminateCh chan exitStatus
 }
 
-func NewAgent(kvs kvs.KVStore, args, osEnvFiles []string, retry retry, pt PatchTable) (*Agent, error) {
-	// Template osEnvFiles if this is any and use it later.
+func NewAgent(kvs kvs.KVStore, args, osEnvFiles []string, isRunOnlyOnce bool, retry retry, pt PatchTable) (*Agent, error) {
+	// Templating osEnvFiles if this is any and use it later.
 	osEnvTplFiles, err := templateOSEnvFiles(osEnvFiles, pt.tplDir())
 	if err != nil {
 		return nil, err
@@ -194,6 +197,7 @@ func NewAgent(kvs kvs.KVStore, args, osEnvFiles []string, retry retry, pt PatchT
 		rawOSEnvs:     os.Environ(),
 		pt:            pt,
 		osEnvTplFiles: osEnvTplFiles,
+		isRunOnlyOnce: isRunOnlyOnce,
 		retry:         retry,
 		configCh:      make(chan config),
 		statusCh:      make(chan exitStatus),
@@ -268,7 +272,7 @@ func (a *Agent) Run(ctx context.Context) error {
 
 		case status := <-a.statusCh:
 			log.Debugf("status changed, code: %v, err: %v", status.code, status.err)
-			if status.code == success {
+			if status.code == finished {
 				log.Infoa("enva has finished ", a.currentConfig.args)
 				return nil
 			}
@@ -302,7 +306,7 @@ func (a *Agent) Run(ctx context.Context) error {
 			// It might have multiple notifications, if ctx canceled and we didn't return immediately.
 			// introduce the once to make sure only trigger terminate operation once.
 			once.Do(func() {
-				a.terminate(newExitStatus(success, nil))
+				a.terminate(newExitStatus(finished, nil))
 			})
 
 			// For none-daemon Proc there might no status event from status channel,
@@ -361,7 +365,7 @@ func (a *Agent) reconcile() {
 	a.terminateCh = make(chan exitStatus, 1)
 
 	a.currentConfig = a.desiredConfig
-	go a.runWait(a.desiredConfig.args, a.desiredConfig.osEnvVars, a.terminateCh)
+	go a.runWait(a.desiredConfig.args, a.desiredConfig.osEnvVars, a.isRunOnlyOnce, a.terminateCh)
 }
 
 func (a *Agent) terminate(status exitStatus) {
@@ -372,12 +376,12 @@ func (a *Agent) terminate(status exitStatus) {
 	a.terminateCh <- status
 }
 
-func (a *Agent) runWait(nameArgs, osEnvs []string, terminate chan exitStatus) {
-	extStatus := runProc(nameArgs, osEnvs, terminate)
+func (a *Agent) runWait(nameArgs, osEnvs []string, isRunOnlyOnce bool, terminate chan exitStatus) {
+	extStatus := runProc(nameArgs, osEnvs, isRunOnlyOnce, terminate)
 	a.statusCh <- extStatus
 }
 
-func runProc(nameArgs, osEnvs []string, terminate chan exitStatus) exitStatus {
+func runProc(nameArgs, osEnvs []string, isRunOnlyOnce bool, terminate chan exitStatus) exitStatus {
 	if len(nameArgs) == 0 {
 		return newExitStatus(-1, errors.New("require at least proc name"))
 	}
@@ -388,6 +392,7 @@ func runProc(nameArgs, osEnvs []string, terminate chan exitStatus) exitStatus {
 		args = nameArgs[1:]
 	}
 	cmd := exec.Command(name, args...)
+	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Env = osEnvs
@@ -402,10 +407,15 @@ func runProc(nameArgs, osEnvs []string, terminate chan exitStatus) exitStatus {
 	log.Infoa("Running ", cmd.Process.Pid, nameArgs)
 	atomic.StoreInt64(&isProcRunning, 1)
 
+	defaultExtStatusCode := hold
+	if isRunOnlyOnce {
+		defaultExtStatusCode = finished
+	}
+	status := newExitStatus(defaultExtStatusCode, nil)
+
 	var err error
 	var ok bool
 	abort := make(chan struct{})
-	status := newExitStatus(hold, nil)
 	once := sync.Once{}
 	for {
 		select {

@@ -18,11 +18,11 @@ func TestTermRunProc(t *testing.T) {
 	timer := time.NewTicker(time.Second * 2)
 	go func() {
 		<-timer.C
-		terminate <- newExitStatus(success, nil)
+		terminate <- newExitStatus(finished, nil)
 	}()
 
 	extStatus := runProc([]string{"tail", "-f", "agent_test.go"}, os.Environ(), terminate)
-	require.Equal(t, success, extStatus.code)
+	require.Equal(t, finished, extStatus.code)
 }
 
 func TestAgentRun(t *testing.T) {
@@ -32,7 +32,7 @@ func TestAgentRun(t *testing.T) {
 	se := s.EXPECT()
 	se.Get(kvs.Key{Kind: "env", Name: "tailFilename"}).Return("agent_test.go", nil).AnyTimes()
 
-	a, err := NewAgent(s, []string{"tail", "-n", "5", "-f", "${env:// .tailFilename }"}, []string{}, DefaultRetry, DefaultPatchTable())
+	a, err := NewAgent(s, []string{"tail", "-n", "5", "-f", "${env:// .tailFilename }"}, []string{}, false, DefaultRetry, DefaultPatchTable())
 	require.Nil(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())

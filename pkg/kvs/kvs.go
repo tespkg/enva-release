@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"html/template"
 	"io"
 	"io/ioutil"
 	"os"
 	"regexp"
 	"sync"
+	"text/template"
 )
 
 const (
@@ -29,7 +29,7 @@ var (
 )
 
 var (
-	envKeyRegex = regexp.MustCompile(`\${env(f)?:// *\.([_a-zA-Z][_a-zA-Z0-9]*) *(\| *default ([\-./_a-zA-Z0-9]*))? *}`)
+	envKeyRegex = regexp.MustCompile(`\${env(f)?:// *\.([_a-zA-Z][_a-zA-Z0-9]*) *(\| *default ([\-./:*,@_a-zA-Z0-9]*))? *}`)
 )
 
 type KVStore interface {

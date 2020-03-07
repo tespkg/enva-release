@@ -1,19 +1,5 @@
 # environtment store
 
-0. start all db instances
-1. start env store (register db instances)
-2. start e.g. sso, retrieve db connection etc, publish sso issuer URL
-3. start e.g. access-control..
-...
-10. start front-end workspace, retrieve service endpoints, publish workspace url
-...
-
-POC: run everything inside one docker, consider:
-1. Consul as env store, 
-2. Wrap every service or front-end as start script or 
-3. Front-end start should use a Go file server
-
-## Goal
 1. Service start command line args, options and configs in the yaml files(equal to `application/service spec` in future context) will not need to change at most time.
 1. Move changeable command line args, options and configs from application/service spec to env store.
 
@@ -50,15 +36,26 @@ POC: run everything inside one docker, consider:
 - [x] Support env/envf with default value, if given default value and the key doesn't existed before, publish to underlying store
 - [x] enva publish kvs to envs
 - [x] Support key watch & restart
-- [ ] Decouple oidc client & callback register flow 
-- [ ] Minimize the required env vars
-- [ ] Tutorial documentation
+- [x] Decouple oidc client & callback registration flow 
+- [x] Minimize the required env vars
+- [x] Tutorial documentation
+- [ ] Push new service/application docker images to registry
 - [ ] Replace nginx with our own `simple static site service(s4)`
 - [ ] An extensive way to extend the pre-configuration for service startup, e.g, create database if not exist etc.
 - [ ] ~~Migrate specs at startup~~
 - [ ] Kubernetes operator...
 - [ ] API for starting service
 - [ ] env store on k8s, istio
+
+## Tutorials
+
+There is an `all-in-one` docker-compose.yaml for our service/application start specs, we can choose/select the services we wish to use and start them separately via `docker-compose up -d s1 s2`.
+Based on different service/application we are trying to use, there are different key values pairs we need to set into `env store` to have the service/application start/works as expected.
+
+1. Start underlying env store storage service `docker-compose up -d consul`, go to `http://localhost:8500/ui` & check if consul works
+1. Start env store service `docker-compose up -d envs`, go go `http://localhost:9112` & check if envs works.
+1. Create docker network `docker network create meera`
+1. Start the interested services by following the [minimized steps](#Minimized service/app steps)
 
 ## FAQs
 
@@ -67,3 +64,56 @@ POC: run everything inside one docker, consider:
 1. It will require only very little changes to adopt to `envs` management flow
 1. It's a full featured & lightweight web server
 1. Will replace nginx with our own site service `s4` eventually
+
+### Minimized service/app steps
+
+1. Check the service/application logs we started & set the missing values into env store one by one via `envs` API call 
+1. Or import the [minimized values](assets/devspecs/minimized-kvs.yaml) into env store via `envs` API call directly
+
+#### Vendor services
+1. postgres
+1. rabbitstomp
+1. redis
+
+#### SSO  
+1. Set ssoIssuer value
+1. Set postgresHost value
+1. Set ssoDBUser value
+1. Set ssoDBPassword value
+1. echo "create database sso;" | psql -h localhost -p 5432 -U postgres 
+
+#### Register OAuth2 clients
+
+1. Whenever we want to start a web site that has OAuth2 integrated, we need to make sure OAuth2 client has been registered & published into env store with our name conventions.
+1. For Convenience, we can use `oidcr` CLI tool to do the registration
+1. Add our new OAuth2 params into `registration request` 
+1. `docker-compose up oidcr`
+
+#### SSO client
+1. Register ssoOAuth2 client
+
+### AC
+1. Set acDSN value
+
+#### AC console
+1. Register acOAuth2 client
+1. Set acHTTPAddr value
+
+#### Profile gRPC
+1. Set profileDSN value
+1. Set rabbitMQAddr value
+
+#### Profile GraphQL
+1. Set profileCORS value
+1. Set redisAddr value
+1. Set sesGRPCAddr value
+1. Set msgPusherGRPCAddr value
+1. Set notificationAddr value
+
+#### Configurator-be
+1. Set configuratorDSN value
+
+#### Configurator-fe
+1. Register configuratorOAuth2 client
+1. Set configuratorHTTPAddr value
+1. Set profileHTTPAddr value
