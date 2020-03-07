@@ -21,7 +21,7 @@ func TestTermRunProc(t *testing.T) {
 		terminate <- newExitStatus(finished, nil)
 	}()
 
-	extStatus := runProc([]string{"tail", "-f", "agent_test.go"}, os.Environ(), terminate)
+	extStatus := runProc([]string{"tail", "-f", "agent_test.go"}, os.Environ(), false, terminate)
 	require.Equal(t, finished, extStatus.code)
 }
 
