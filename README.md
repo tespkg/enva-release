@@ -55,7 +55,7 @@ Based on different service/application we are trying to use, there are different
 1. Start underlying env store storage service `docker-compose up -d consul`, go to `http://localhost:8500/ui` & check if consul works
 1. Start env store service `docker-compose up -d envs`, go go `http://localhost:9112` & check if envs works.
 1. Create docker network `docker network create meera`
-1. Start the interested services by following the [minimized steps](#Minimized service/app steps)
+1. Start the interested services by following the [minimized steps](#Minimized-steps)
 
 ## FAQs
 
@@ -65,7 +65,7 @@ Based on different service/application we are trying to use, there are different
 1. It's a full featured & lightweight web server
 1. Will replace nginx with our own site service `s4` eventually
 
-### Minimized service/app steps
+### Minimized steps
 
 1. Check the service/application logs we started & set the missing values into env store one by one via `envs` API call 
 1. Or import the [minimized values](assets/devspecs/minimized-kvs.yaml) into env store via `envs` API call directly
