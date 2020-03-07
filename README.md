@@ -16,7 +16,7 @@
 ## Conventions
 1. Required key `${env:// .key }`
 1. Required file key `${envf:// .keyf }`
-1. Allowed key name pattern `\${env(f)?:// *\.([_a-zA-Z][_a-zA-Z0-9]*) *(\| *default ([\-./_a-zA-Z0-9]*))? *}`
+1. Allowed key name pattern `\${env(f)?:// *\.([_a-zA-Z][_a-zA-Z0-9]*) *(\| *default ([\-./:*,@_a-zA-Z0-9]*))? *}`
 
 ## TODO
 - [x] enva start application/service
