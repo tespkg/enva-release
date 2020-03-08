@@ -29,6 +29,18 @@
   name: rabbitMQAddr
   value: amqp://guest:guest@rabbitstomp:5672/
 - kind: env
+  name: mongoDBAddr
+  value: mongodb://root:password@mongodb:27017
+- kind: env
+  name: minioAddr
+  value: minio:9000
+- kind: env
+  name: minioSecret
+  value: minio_secret
+- kind: env
+  name: minioAccess
+  value: minio_access
+- kind: env
   name: redisAddr
   value: redis:6379
 - kind: env

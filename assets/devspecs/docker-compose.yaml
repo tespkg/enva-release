@@ -24,6 +24,25 @@ services:
       - 15672:15672
       - 61613:61613
 
+  minio:
+    image: minio/minio
+    restart: on-failure
+    ports:
+      - "9000:9000"
+    environment:
+      MINIO_ACCESS_KEY: minio_access
+      MINIO_SECRET_KEY: minio_secret
+    command: server /data
+
+  mongodb:
+    image: mongo:4.1.5
+    restart: on-failure
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: password
+    ports:
+      - 27017:27017
+
   consul:
     image: consul
     container_name: consul

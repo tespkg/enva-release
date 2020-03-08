@@ -52,6 +52,7 @@
 There is an `all-in-one` docker-compose.yaml for our service/application start specs, we can choose/select the services we wish to use and start them separately via `docker-compose up -d s1 s2`.
 Based on different service/application we are trying to use, there are different key values pairs we need to set into `env store` to have the service/application start/works as expected.
 
+1. Add `docekr.host.internal` into `/etc/hosts` and point to `127.0.0.1`
 1. Start underlying env store storage service `docker-compose up -d consul`, go to `http://localhost:8500/ui` & check if consul works
 1. Start env store service `docker-compose up -d envs`, go go `http://localhost:9112` & check if envs works.
 1. Create docker network `docker network create meera`
