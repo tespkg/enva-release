@@ -16,6 +16,7 @@ help:
 	@echo ""
 	@echo "    vendor                      Create/Update vendor packages"
 	@echo "    build                       Build the binary"
+	@echo "    build-images                Build docker images with/without push option"
 	@echo ""
 
 .PHONY: generate-mock
@@ -53,3 +54,7 @@ build:
 build-s4:
 	@mkdir -p bin
 	@go build -mod vendor -o bin/s4 tespkg.in/envs/cmd/s4
+
+.PHONY: build-images
+build-images:
+	@scripts/build-docker.sh $(PUSH)

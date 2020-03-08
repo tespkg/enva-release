@@ -39,7 +39,7 @@
 - [x] Decouple oidc client & callback registration flow 
 - [x] Minimize the required env vars
 - [x] Tutorial documentation
-- [ ] Push new service/application docker images to registry
+- [x] Push new service/application docker images to registry
 - [ ] Replace nginx with our own `simple static site service(s4)`
 - [ ] An extensive way to extend the pre-configuration for service startup, e.g, create database if not exist etc.
 - [ ] ~~Migrate specs at startup~~

@@ -47,7 +47,7 @@ services:
       - consul
 
   sso:
-    image: registry.tespkg.in/sso/master
+    image: registry.tespkg.in/sso/service
     container_name: sso
     command: >
       --publish ssoGRPCAddr=sso:5557
@@ -59,7 +59,7 @@ services:
       - 5557:5557
 
   sso-client:
-    image: registry.tespkg.in/sso/client
+    image: registry.tespkg.in/sso/example-app
     container_name: sso-client
     command: >
       /usr/local/bin/dex-client
@@ -74,7 +74,7 @@ services:
       - 5555:5555
 
   ac:
-    image: registry.tespkg.in/access-control/ac-be/master
+    image: registry.tespkg.in/ac/service
     container_name: ac
     command: |
       --publish acGRPCAddr=ac:7001
@@ -90,7 +90,7 @@ services:
       - 7001:7001
 
   acconsole:
-    image: registry.tespkg.in/access-control/console/master
+    image: registry.tespkg.in/ac/console
     container_name: acconsole
     environment:
       ENVS_HTTP_ADDR: http://host.docker.internal:9112
@@ -105,7 +105,7 @@ services:
       - 8080:8080
 
   profile-grpc:
-    image: registry.tespkg.in/profile-be/master
+    image: registry.tespkg.in/profile/service
     container_name: profile-grpc
     command: >
       --publish profileGRPCAddr=profile-grpc:50051
@@ -122,7 +122,7 @@ services:
       - 50051:50051
 
   profile-graphql:
-    image: registry.tespkg.in/profile-be/master
+    image: registry.tespkg.in/profile/service
     container_name: profile-graphql
     command: >
       /usr/local/bin/profile-serve profile graphql
@@ -144,7 +144,7 @@ services:
       - 9301:9301
 
   configurator-be:
-    image: registry.tespkg.in/subscription-store/master
+    image: registry.tespkg.in/configurator/service
     container_name: configurator-be
     command: >
       --publish configuratorGRPCAddr=configurator-be:9302
@@ -168,7 +168,7 @@ services:
       - 9303:9303
 
   configurator-fe:
-    image: registry.tespkg.in/workspace-configurator-fe/release
+    image: registry.tespkg.in/configurator/web
     container_name: configurator-fe
     environment:
       ENVS_HTTP_ADDR: http://host.docker.internal:9112

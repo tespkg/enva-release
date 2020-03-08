@@ -51,25 +51,9 @@ test-coverage:
     - make run-test
 
 build:
-  extends: .build_single_image
   stage: build
+  script:
+    make PUSH=true build-images
   only:
     - master
     - tags
-
-deploy_to_dev:
-  extends: .deploy_to_dev
-  only:
-    - master
-  except:
-    - tags
-  when: manual
-
-push_incubator_chart:
-  extends: .push_incubator_chart
-
-deploy_to_test:
-  extends: .deploy_to_test
-
-push_stable_chart:
-  extends: .push_stable_chart
