@@ -1,7 +1,8 @@
 # environtment store
 
-1. Service start command line args, options and configs in the yaml files(equal to `application/service spec` in future context) will not need to change at most time.
-1. Move changeable command line args, options and configs from application/service spec to env store.
+1. Service start command line args, options and configs in the yaml files(use `application/service spec` in the next context) will not need to change at most time.
+1. Move changeable command line args, options and configs from `application/service spec` to env store.
+1. Auto restart service when any of args, options or configs changed.
 
 ## Key register & setup flow
 1. (DevOps) Start envs + state
@@ -49,7 +50,7 @@
 
 ## Tutorials
 
-There is an `all-in-one` docker-compose.yaml for our service/application start specs, we can choose/select the services we wish to use and start them separately via `docker-compose up -d s1 s2`.
+There is an `all-in-one` [docker-compose.yaml](assets/devspecs/docker-compose.yaml) for our service/application start specs, we can choose/select the services we wish to use and start them separately via `docker-compose up -d s1 s2`.
 Based on different service/application we are trying to use, there are different key values pairs we need to set into `env store` to have the service/application start/works as expected.
 
 1. Add `docekr.host.internal` into `/etc/hosts` and point to `127.0.0.1`
