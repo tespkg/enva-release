@@ -41,6 +41,9 @@
 - [x] Minimize the required env vars
 - [x] Tutorial documentation
 - [x] Push new service/application docker images to registry
+- [ ] Frontend use envs to render index.html directly instead of putting env key into OSEnv and render OSEnv then render index.html via OSEnv
+- [ ] Create a `init` CLI for db's kv publish & merge `oidcr` into it. 
+- [ ] Health check endpoint for enva
 - [ ] Replace nginx with our own `simple static site service(s4)`
 - [ ] An extensive way to extend the pre-configuration for service startup, e.g, create database if not exist etc.
 - [ ] ~~Migrate specs at startup~~
@@ -55,7 +58,7 @@ Based on different service/application we are trying to use, there are different
 
 1. Add `docekr.host.internal` into `/etc/hosts` and point to `127.0.0.1`
 1. Start underlying env store storage service `docker-compose up -d consul`, go to `http://localhost:8500/ui` & check if consul works
-1. Start env store service `docker-compose up -d envs`, go go `http://localhost:9112` & check if envs works.
+1. Start env store service `docker-compose up -d envs`, go `http://localhost:9112` & check if envs works.
 1. Create docker network `docker network create meera`
 1. Start the interested services by following the [minimized steps](#Minimized-steps)
 
