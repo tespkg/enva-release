@@ -71,6 +71,8 @@ Based on different service/application we are trying to use, there are different
 1. postgres
 1. rabbitstomp
 1. redis
+1. mongodb
+1. minio
 
 ### SSO  
 1. Set ssoIssuer value
@@ -123,3 +125,10 @@ Based on different service/application we are trying to use, there are different
 1. It's a full featured & lightweight web server
 1. Will replace nginx with our own site service `s4` eventually
 
+### Use cases
+1. (Security)Add another isolated layer to configure the credentials instead config it in k8s/helm yamls directly.
+1. (DevOps)Change config value & restart automatically.
+1. (Dev)Centralise/Unify vendor/fundamental service/images version.
+1. (BackendDev)Spilt fundamental dependent services and application service into two start-up phase.
+1. (BackendDev)Share same fundamental dependent service during develop multiple service at same time.
+1. (FrontendDev)Minimised steps to setup local fundamental services for development.

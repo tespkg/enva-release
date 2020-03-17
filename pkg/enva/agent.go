@@ -231,7 +231,7 @@ func (a *Agent) Run(ctx context.Context) error {
 		case config := <-a.configCh:
 			// There are two kinds of config update
 			// The first one is the values in OS env vars got changed, it will not trigger the Proc restart flow in our current use case,
-			// The second one is the values in Proc's args/options got changed, the Proc restart flow should been triggered.
+			// The second one is the values in Proc's args/options got changed, the Proc restart flow should be triggered.
 			isOSEnvsEq, isArgsEq := isConfigDeepEqual(a.currentConfig, config)
 			if !isOSEnvsEq {
 				log.Infof("Received new os envs, re-rendering them")

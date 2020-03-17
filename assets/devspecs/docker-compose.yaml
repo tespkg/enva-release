@@ -76,6 +76,8 @@ services:
     ports:
       - 5556:5556
       - 5557:5557
+    depends_on:
+      - consul
 
   sso-client:
     image: registry.tespkg.in/sso/example-app
@@ -91,6 +93,8 @@ services:
       ENVS_HTTP_ADDR: http://host.docker.internal:9112
     ports:
       - 5555:5555
+    depends_on:
+      - consul
 
   ac:
     image: registry.tespkg.in/ac/service
@@ -107,6 +111,8 @@ services:
       TARGET_SYS_ADMIN: CiQwOGE4Njg0Yi1kYjg4LTRiNzMtOTBhOS0zY2QxNjYxZjU0NjYSBWxvY2Fs
     ports:
       - 7001:7001
+    depends_on:
+      - consul
 
   acconsole:
     image: registry.tespkg.in/ac/console
@@ -122,6 +128,8 @@ services:
       VUE_APP_STATE: acconsole
     ports:
       - 8080:8080
+    depends_on:
+      - consul
 
   profile-grpc:
     image: registry.tespkg.in/profile/service
@@ -139,6 +147,8 @@ services:
       ENVS_HTTP_ADDR: http://host.docker.internal:9112
     ports:
       - 50051:50051
+    depends_on:
+      - consul
 
   profile-graphql:
     image: registry.tespkg.in/profile/service
@@ -161,6 +171,8 @@ services:
       ENVS_HTTP_ADDR: http://host.docker.internal:9112
     ports:
       - 9301:9301
+    depends_on:
+      - consul
 
   configurator-be:
     image: registry.tespkg.in/configurator/service
@@ -185,6 +197,8 @@ services:
     ports:
       - 9302:9302
       - 9303:9303
+    depends_on:
+      - consul
 
   configurator-fe:
     image: registry.tespkg.in/configurator/web
@@ -228,6 +242,8 @@ services:
       MEERA_APP_API_KEYWORD: ''
     ports:
       - 80:80
+    depends_on:
+      - consul
 
   # oidc/oauth2 clients registration
   oidcr:
@@ -269,6 +285,8 @@ services:
     environment:
       ENVS_HTTP_ADDR: http://host.docker.internal:9112
       ENVA_RUN_ONLY_ONCE: 'true'
+    depends_on:
+      - consul
 
 networks:
   default:
