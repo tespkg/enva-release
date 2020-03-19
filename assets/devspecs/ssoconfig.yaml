@@ -11,12 +11,7 @@ issuer: ${env:// .ssoIssuer }
 storage:
   type: postgres
   config:
-    host: ${env:// .postgresHost }
-    user: ${env:// .ssoDBUser }
-    password: ${env:// .ssoDBPassword }
-    database: ${env:// .ssoDBName | default sso}
-    ssl:
-      mode: disable
+    dsn: ${env:// .ssoDSN }
 
 # Configuration for the HTTP endpoints.
 web:
@@ -63,21 +58,21 @@ oauth2:
 #
 # If this option isn't chosen clients may be added through the gRPC API.
 staticClients:
-- id: ${env:// .internalAppClientID | default internal-app }
-  secret: ${env:// .internalAppClientSecret | default ZXhhbXBsZS1hcHAtc2VjcmV0 }
-  allowedAuthTypes:
-    - authorization_code
-    - implicit
-    - client_credentials
-    - password_credentials
-  name: "Internal App"
+  - id: ${env:// .internalAppClientID | default internal-app }
+    secret: ${env:// .internalAppClientSecret | default ZXhhbXBsZS1hcHAtc2VjcmV0 }
+    allowedAuthTypes:
+      - authorization_code
+      - implicit
+      - client_credentials
+      - password_credentials
+    name: "Internal App"
 
 #defaultConnectorID: "ldap"
 
 connectors:
-- type: mockCallback
-  id: mock
-  name: Example
+  - type: mockCallback
+    id: mock
+    name: Example
 # - type: oidc
 #   id: google
 #   name: Google
@@ -147,16 +142,16 @@ enablePasswordDB: true
 #
 # If this option isn't chosen users may be added through the gRPC API.
 staticPasswords:
-- email: ${env:// .internalAppUsername | default admin@example.com }
-  # bcrypt hash of the string "${env:// .internalAppPassword | default password }"
-  hash: "$2a$10$2b2cU8CPhOTaGrs1HRQuAueS7JTT5ZHsHSzYiFPm1leZck7Mc8T4W"
-  username: "admin"
-  userID: "08a8684b-db88-4b73-90a9-3cd1661f5466"
+  - email: ${env:// .internalAppUsername | default admin@example.com }
+    # bcrypt hash of the string "${env:// .internalAppPassword | default password }"
+    hash: "$2a$10$2b2cU8CPhOTaGrs1HRQuAueS7JTT5ZHsHSzYiFPm1leZck7Mc8T4W"
+    username: "admin"
+    userID: "08a8684b-db88-4b73-90a9-3cd1661f5466"
 
 
 mailManager:
   grpcAddr: "localhost:6000"
-  sender: "no-reply-dev@target-energysolutions.com"
+  sender: "no-reply@target-energysolutions.com"
   issuer: "Meera DX"
 #  caPath: examples/grpc-client/ca.crt
 #  clientKey: examples/grpc-client/client.key
@@ -166,21 +161,61 @@ mailManager:
 enableSignup: true
 
 accessControl:
-    enable: true
-    grpcAddr: ${env:// .acGRPCAddr }
+  enable: true
+  grpcAddr: ${env:// .acGRPCAddr }
 
-#profile:
-#  enable: true
-#  httpAddr: "http://profile-graphql:9301"
-#  grpcAddr: "profile-grpc:50051"
+profile:
+  enable: true
+  httpAddr: ${env:// .profileInternalHTTPAddr }
+  grpcAddr: ${env:// .profileGRPCAddr }
 #  caPath: examples/grpc-client/ca.crt
 #  clientKey: examples/grpc-client/client.key
 #  clientCrt: examples/grpc-client/client.crt
 #  cnameOverride: ""
 
-#licenseManager:
-#  enable: true
-#  addr: "lm-server:6000"
-#  caPath: examples/grpc-client/ca.crt
-#  clientKey: examples/grpc-client/client.key
-#  clientCrt: examples/grpc-client/client.crt
+logger:
+  level: debug
+
+scanExpiredInvitationPeriod: 1
+
+# to set expired time of token when the user clicks the remember me button. the default value is 24h.
+# such as "300ms", "-1.5h" or "2h45m". Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+rememberToPostpone: 21600m
+
+# user needs to accept the system terms of service when they do:
+#  1. on the sign up procedure
+#  2. and on the first login (they could be created by admin).
+# termsOfServicePath: "./examples/terms-of-service.html"
+termsOfServicePath: ""
+# to set mode of terms of service
+#  1. "": show the term on the sign up procedure and on the first login (they could be created by admin).
+#  2. "loop": show the term on the sign up procedure and on login every time.
+#termsOfServiceMode: "loop"
+
+passwordManager:
+  # to set minimum length of password. the default value is 6.
+  minLength: 6
+  # to set password check rules.
+  #  - (?=.*[A-Z]): at least one capital letter
+  #  - (?=.*[0-9]): at least one decimal digit
+  checkRule: "(?=.*[A-Z])(?=.*[0-9])"
+  # to set a checking rule error message.
+  errMsg : "combination of numbers and characters with at least ONE capital letter"
+  # is allowed the same/different password. The default value is false
+  isAllowedSamePassword: false
+  # is allowed the expired password login. The default value is false
+  isAllowedExpiredPasswordLogin: false
+  # the next expiration date will be set [expiredPeriod] after user updating the password.
+  # when the value is "", there is no notification to send.
+  # must to be set an integer "m" (minute) or "h" (hour). such as "0h", "24h".
+  # users are blocked to send email:
+  #   - users are deleted
+  #   - users are locked
+  #   - unverified emails
+  expiredPeriod: 1344h
+  # notification will be sent by email [reminderPeriod] before the expiration date
+  # must to be set an integer "m" (minute) or "h" (hour). such as "0h", "24h".
+  reminderPeriod: 168h
+  # notification every [reminderInterval] within the beginning reminder date and the expiration date
+  # must to be set an integer "m" (minute) or "h" (hour). such as "0h", "24h".
+  reminderInterval: 24h

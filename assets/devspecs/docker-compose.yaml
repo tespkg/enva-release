@@ -26,9 +26,8 @@ services:
 
   minio:
     image: minio/minio
-    restart: on-failure
     ports:
-      - "9000:9000"
+      - 9000:9000
     environment:
       MINIO_ACCESS_KEY: minio_access
       MINIO_SECRET_KEY: minio_secret
@@ -36,12 +35,19 @@ services:
 
   mongodb:
     image: mongo:4.1.5
-    restart: on-failure
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: password
     ports:
       - 27017:27017
+
+  oracle:
+    image: maxnilz/oracle-ee:12.2.0.1
+    container_name: oracle
+    ports:
+    - 1521:1521
+    volumes:
+      - db-oracle-data:/opt/oracle/oradata
 
   consul:
     image: consul
@@ -77,7 +83,7 @@ services:
       - 5556:5556
       - 5557:5557
     depends_on:
-      - consul
+      - envs
 
   sso-client:
     image: registry.tespkg.in/sso/example-app
@@ -94,7 +100,7 @@ services:
     ports:
       - 5555:5555
     depends_on:
-      - consul
+      - envs
 
   ac:
     image: registry.tespkg.in/ac/service
@@ -112,7 +118,7 @@ services:
     ports:
       - 7001:7001
     depends_on:
-      - consul
+      - envs
 
   acconsole:
     image: registry.tespkg.in/ac/console
@@ -129,7 +135,7 @@ services:
     ports:
       - 8080:8080
     depends_on:
-      - consul
+      - envs
 
   profile-grpc:
     image: registry.tespkg.in/profile/service
@@ -148,12 +154,13 @@ services:
     ports:
       - 50051:50051
     depends_on:
-      - consul
+      - envs
 
   profile-graphql:
     image: registry.tespkg.in/profile/service
     container_name: profile-graphql
     command: >
+      --publish profileInternalHTTPAddr=http://profile-graphql:9301
       /usr/local/bin/profile-serve profile graphql
       --address=:9301
       --oidc='$${env:// .ssoIssuer }'
@@ -172,7 +179,7 @@ services:
     ports:
       - 9301:9301
     depends_on:
-      - consul
+      - envs
 
   configurator-be:
     image: registry.tespkg.in/configurator/service
@@ -198,7 +205,7 @@ services:
       - 9302:9302
       - 9303:9303
     depends_on:
-      - consul
+      - envs
 
   configurator-fe:
     image: registry.tespkg.in/configurator/web
@@ -243,7 +250,7 @@ services:
     ports:
       - 80:80
     depends_on:
-      - consul
+      - envs
 
   # oidc/oauth2 clients registration
   oidcr:
@@ -286,9 +293,13 @@ services:
       ENVS_HTTP_ADDR: http://host.docker.internal:9112
       ENVA_RUN_ONLY_ONCE: 'true'
     depends_on:
-      - consul
+      - envs
 
 networks:
   default:
     external:
       name: meera
+
+volumes:
+  db-oracle-data:
+    external: true
