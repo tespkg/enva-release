@@ -162,12 +162,12 @@ enableSignup: true
 
 accessControl:
   enable: true
-  grpcAddr: ${env:// .acGRPCAddr }
+  grpcAddr: ${envo:// .acGRPCAddr }
 
 profile:
   enable: true
-  httpAddr: ${env:// .profileInternalHTTPAddr }
-  grpcAddr: ${env:// .profileGRPCAddr }
+  httpAddr: ${envo:// .profileInternalHTTPAddr }
+  grpcAddr: ${envo:// .profileGRPCAddr }
 #  caPath: examples/grpc-client/ca.crt
 #  clientKey: examples/grpc-client/client.key
 #  clientCrt: examples/grpc-client/client.crt

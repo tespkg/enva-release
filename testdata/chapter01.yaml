@@ -1,5 +1,5 @@
 poet: "{${env://.poet}}"
-title: "${env:// .title }"
+title: "${envo:// .title }"
 stanza:
   - "${env:// .at | default atAT}"
   - "${envf://.length | default /tmp/path/to/length/file }"

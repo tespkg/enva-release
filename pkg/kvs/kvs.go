@@ -16,6 +16,10 @@ const (
 	EnvKind  = "env"
 	EnvfKind = "envf"
 
+	// Optional env ONLY used for checking if the value is required or not when rendering
+	// The underlying kind is always env for env & envo cases.
+	EnvoKind = "envo"
+
 	briefMaxLen = 50
 )
 
@@ -24,12 +28,12 @@ var (
 )
 
 var (
-	leftDlims  = []string{"${env://", "${envf://"}
-	rightDlims = []string{"}", "}", "}", "}"}
+	leftDlims  = []string{"${env://", "${envo://", "${envf://"}
+	rightDlims = []string{"}", "}", "}"}
 )
 
 var (
-	envKeyRegex = regexp.MustCompile(`\${env(f)?:// *\.([_a-zA-Z][_a-zA-Z0-9]*) *(\| *default ([\-./:*,@_a-zA-Z0-9]*))? *}`)
+	envKeyRegex = regexp.MustCompile(`\${env([of])?:// *\.([_a-zA-Z][_a-zA-Z0-9]*) *(\| *default ([\-./:*,@_a-zA-Z0-9]*))? *}`)
 )
 
 type KVStore interface {
@@ -119,6 +123,8 @@ func render(s KVStore, ir io.Reader, iw io.Writer, kvS *kvState, tmpFunc tempFun
 				return fmt.Errorf("got empty value on required env key: %v", kv.Key)
 			}
 			vars[kv.Name] = val
+		case EnvoKind:
+			vars[kv.Name] = val
 		case EnvfKind:
 			if val == "" {
 				return fmt.Errorf("got empty value on required envf key: %v", kv.Key)
@@ -170,6 +176,11 @@ func render(s KVStore, ir io.Reader, iw io.Writer, kvS *kvState, tmpFunc tempFun
 }
 
 func valueOf(s KVStore, key Key, defValue string, kvS *kvState, tmpFunc tempFunc, rdFileFunc readFileFunc) (string, error) {
+	if key.Kind == EnvoKind {
+		// Optional env ONLY used for checking if the value is required or not when rendering
+		// The underlying kind is always env for env & envo cases.
+		key.Kind = EnvKind
+	}
 	value, err := s.Get(key)
 	if err != nil && !errors.Is(err, ErrNotFound) {
 		return "", fmt.Errorf("get valueOf %v failed: %w", key, err)

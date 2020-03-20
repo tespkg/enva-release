@@ -34,7 +34,7 @@ func TestScan(t *testing.T) {
 		},
 		{
 			Key: Key{
-				Kind: EnvKind,
+				Kind: EnvoKind,
 				Name: "title",
 			},
 		},
@@ -101,7 +101,7 @@ func TestRender(t *testing.T) {
 
 	se := s.EXPECT()
 	se.Get(Key{Kind: EnvKind, Name: "poet"}).Return("poet", nil).AnyTimes()
-	se.Get(Key{Kind: EnvKind, Name: "title"}).Return("title", nil).AnyTimes()
+	se.Get(Key{Kind: EnvoKind, Name: "title"}).Return("title", nil).AnyTimes()
 	se.Get(Key{Kind: EnvKind, Name: "at"}).Return("", ErrNotFound).AnyTimes()
 	se.Set(Key{Kind: EnvKind, Name: "at"}, "atAT").Return(nil).AnyTimes()
 	se.Get(Key{Kind: EnvfKind, Name: "length"}).Return("", ErrNotFound).AnyTimes()
