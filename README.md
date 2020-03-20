@@ -53,7 +53,7 @@ Based on different service/application we are trying to use, there are different
 There are three components in environment store lifecycle
 
 1. envs, core service of environment store, accept kv get/set.
-1. website, iteractive with envs via REST APIs
+1. website, interactive with envs via REST APIs
 1. enva, agent of envs which act as the bridge between envs & service/application, publish & render/watch service/application key value pairs
 
 ![envs-arch](assets/images/envs-arch.png)
