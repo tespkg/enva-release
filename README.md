@@ -42,6 +42,7 @@
 - [x] Tutorial documentation
 - [x] Push new service/application docker images to registry
 - [x] Expose OAuth2.0 Client registration via envs API
+- [x] Keep enva running if envs stopped
 - [ ] Frontend use envs to render index.html directly instead of putting env key into OSEnv and render OSEnv then render index.html via OSEnv
 - [ ] ~~Create a `init` CLI for db's kv publish & merge `oidcr` into it.~~
 - [ ] Health check endpoint for enva

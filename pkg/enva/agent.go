@@ -327,7 +327,7 @@ func (a *Agent) Watch(ctx context.Context) error {
 			// Render args, osEnvs to new config
 			c, err := render(a.kvs, a.rawArgs, a.rawOSEnvs)
 			if err != nil && !errors.Is(err, kvs.ErrNotFound) {
-				return err
+				log.Warna("Watch failed ", err)
 			}
 			if errors.Is(err, kvs.ErrNotFound) {
 				log.Infoa(err)
