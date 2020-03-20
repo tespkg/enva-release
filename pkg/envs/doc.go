@@ -133,7 +133,7 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 					Consumes:    []string{"multipart/form-data"},
 					Tags:        []string{keyValTag},
 					Parameters: []openspec.Parameter{
-						openapi.BuildParam("formData", "filename.1", "file", "", true, nil).
+						openapi.BuildParam("formData", "", "file", "", true, nil).
 							WithParameterDesc("key values file"),
 					},
 					Responses: openapi.BuildResp(http.StatusOK, openapi.BuildSuccessResp(nil)),
@@ -174,8 +174,20 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 					Consumes:    []string{"multipart/form-data"},
 					Tags:        []string{addOnsTag},
 					Parameters: []openspec.Parameter{
-						openapi.BuildParam("formData", "filename.1", "file", "", true, nil).
-							WithParameterDesc(fmt.Sprintf(`OAuth2.0 Registration file, accept env key usage, example file %s`,
+						openapi.BuildParam("formData", "", "file", "", true, nil).
+							WithParameterDesc(fmt.Sprintf(`
+OAuth2.0 Registration file, accept env key usage, example file %s
+
+There are two steps for the OAuth2.0 client registration, 
+The first one is, Register client with the given parameters in the file to oidc provider,
+And the second step is, Create OAuth2.0 client-related key & value pairs that come from oidc provider registration response, such as client-id, client-secret, redirect-uri, etc. by following the name conventions described below
+1. client-id would be: "\<RegistrationName\>ClientID=****"
+2. client-secret would be: "\<RegistrationName\>ClientSecret=****"
+3. redirect-uri would be: "\<RegistrationName\>RedirectURI=ValueOfRedirectURI"
+4. host, which added for front-end compatibility, would be: "\<RegistrationName\>Host=ValueOfHost"
+
+It is IMPORTANT to know clients.name in the registration file is the RegistrationName in this context, which is the key prefix to store the key & value pairs in env store.
+`,
 								sa.Schema+"://"+filepath.Join(sa.KnownHost, sa.BasePath, "example/oidcr")),
 							),
 					},
@@ -228,13 +240,13 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 					Parameters: []openspec.Parameter{
 						openapi.BuildParam("path", "name", "string", "", true, nil).
 							WithParameterDesc("Service/application spec name"),
-						openapi.BuildParam("formData", "filename.1", "file", "", true, nil).
+						openapi.BuildParam("formData", "file-1", "file", "", true, nil).
 							WithParameterDesc("First file to upload, please change filename key in the request if needed"),
-						openapi.BuildParam("formData", "filename.2", "file", "", false, nil).
+						openapi.BuildParam("formData", "file-2", "file", "", false, nil).
 							WithParameterDesc("Second file to upload, please change filename key in the request if needed"),
-						openapi.BuildParam("formData", "filename...", "file", "", false, nil).
+						openapi.BuildParam("formData", "file-...", "file", "", false, nil).
 							WithParameterDesc("Mth file to upload, please change filename key in the request if needed"),
-						openapi.BuildParam("formData", "filename.N", "file", "", false, nil).
+						openapi.BuildParam("formData", "file-N", "file", "", false, nil).
 							WithParameterDesc("Nth file to upload, please change filename key in the request if needed"),
 					},
 					Responses: openapi.BuildResp(http.StatusOK, openapi.BuildSuccessResp(nil)),
@@ -268,6 +280,30 @@ func AddOnsExample(c *gin.Context) {
 	case "", "oidcr":
 		filename = "oidcr-example.yaml"
 		out = `
+# Oidc registration example file
+#
+# 
+# It is IMPORTANT to know the clients.name is the key prefix to store the key & value pairs in env store
+# And the allowed name pattern is "[\-_a-zA-Z0-9]*".
+# For example, If the following oidc client was registered via oidcr API:
+# 
+# clients:
+# - name: ssoOAuth2
+#   OAuth2Host: http://localhost:5555
+#   redirectURIs:
+#   - http://localhost:5555/callback
+#   allowedAuthTypes:
+#   - authorization_code
+#   - implicit
+#   - client_credentials
+#   - password_credentials
+#
+# These key & value pairs will stored in env store:
+# 1. ssoOAuth2ClientID=GeneratedClientID
+# 2. ssoOAuth2ClientSecret=GeneratedSecret
+# 3. ssoOAuth2RedirectURI=http://localhost:5555/callback
+# 4. ssoOAuth2Host=http://localhost:5555
+# 
 # Configs for oidc issuer, ie, sso
 provider-config:
   issuer: ${env:// .ssoIssuer }
@@ -294,9 +330,10 @@ clients:
   - password_credentials
 - name: configuratorOAuth2
   # OAuth2Host Added for front-end compatibility.
-  # The way of frontend doing oauth redirect is:
-  # They expose an oauth2 host to DevOps for customizing and use a
-  # fix/hardcoded redirect path(prefixed with the oauth2 host), which is "sso/callback", to serve the oidc redirect URI callback,
+  # because the way of frontend doing oauth redirect is:
+  # frontend expose an oauth2 host to DevOps for customizing and use a
+  # fix/hardcoded redirect path(prefixed with the oauth2 host), 
+  # which is "sso/callback", to serve the oidc redirect URI callback,
   # instead of exposing oauth2 redirect URI option to the DevOps explicitly.
   OAuth2Host: http://localhost
   redirectURIs:

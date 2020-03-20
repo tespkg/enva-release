@@ -32,34 +32,35 @@ type ClientReq struct {
 	// requested to redirect to MUST match one of these values, unless the client is "public".
 	RedirectURIs []string `json:"redirectURIs" yaml:"redirectURIs"`
 
-	// Name fully qualified oidc client name, allowed name pattern `[\-_a-zA-Z0-9]*`.
-	// Use as the prefix for clientID, clientSecret and redirectURI in env store
-	// Eg, If the following oidc client registered in oidc provider:
-	//	{
-	//		Name:  "example-app",
-	//		Secret: secret,
-	//		RedirectUris: []string{
-	//			"http://localhost:8080/oauth2",
-	//		},
-	//		AllowedAuthTypes: []string{
-	//			"authorization_code",
-	//			"implicit",
-	//			"client_credentials",
-	//			"password_credentials",
-	//		},
-	//	}
-	// These key & value pairs will stored in envs
-	// example-appClientID=example-app
-	// example-appClientSecret=secret
-	// example-appRedirectURI=http://localhost8080/oauth2
-	Name string `json:"name" yaml:"name"`
-
 	// OAuth2Host Added for front-end compatibility.
-	// The way of frontend doing oauth redirect is:
-	// They expose an oauth2 host to DevOps for customizing and use a
-	// fix/hardcoded redirect path(prefixed with the oauth2 host), which is "sso/callback", to serve the oidc redirect URI callback,
+	// because the way of frontend doing oauth redirect is:
+	// frontend expose an oauth2 host to DevOps for customizing and use a
+	// fix/hardcoded redirect path(prefixed with the oauth2 host),
+	// which is "sso/callback", to serve the oidc redirect URI callback,
 	// instead of exposing oauth2 redirect URI option to the DevOps explicitly.
 	OAuth2Host string `json:"OAuth2Host"`
+
+	// It is IMPORTANT to know the clients.name is the key prefix to store the key & value pairs in env store
+	// And the allowed name pattern is "[\-_a-zA-Z0-9]*".
+	// For example, If the following oidc client was registered via oidcr API:
+	//
+	// clients:
+	// - name: ssoOAuth2
+	//   OAuth2Host: http://localhost:5555
+	//   redirectURIs:
+	//   - http://localhost:5555/callback
+	//   allowedAuthTypes:
+	//   - authorization_code
+	//   - implicit
+	//   - client_credentials
+	//   - password_credentials
+	//
+	// These key & value pairs will stored in env store:
+	// 1. ssoOAuth2ClientID=GeneratedClientID
+	// 2. ssoOAuth2ClientSecret=GeneratedSecret
+	// 3. ssoOAuth2RedirectURI=http://localhost:5555/callback
+	// 4. ssoOAuth2Host=http://localhost:5555
+	Name string `json:"name" yaml:"name"`
 }
 
 type ClientReqs []ClientReq
@@ -180,7 +181,7 @@ func registerOAuthClients(s kvs.KVStore, provider OAuthProviderConfig, reqs Clie
 			return fmt.Errorf("publish %v RedirectURI failed %v", client.Name, err)
 		}
 		if client.OAuth2Host != "" {
-			if err := publishOIDCClient(s, client.Name+"OauthHost", client.OAuth2Host); err != nil {
+			if err := publishOIDCClient(s, client.Name+"Host", client.OAuth2Host); err != nil {
 				return fmt.Errorf("publish %v RedirectURI failed %v", client.Name, err)
 			}
 		}
