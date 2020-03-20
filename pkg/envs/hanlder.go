@@ -37,13 +37,13 @@ func (h *Handler) GetKeys(c *gin.Context) {
 	var kvals store.KeyVals
 	var err error
 	if kind == "" {
-		kvals, err = h.GetNsValues(spec.DefaultKVNs)
+		kvals, err = h.GetNsValues(store.DefaultKVNs)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("get ns values failed: %v", err))
 			return
 		}
 	} else {
-		kvals, err = h.GetNsKindValues(spec.DefaultKVNs, kind)
+		kvals, err = h.GetNsKindValues(store.DefaultKVNs, kind)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("get ns kind values failed: %v", err))
 			return
@@ -174,7 +174,7 @@ func (h *Handler) GetKey(c *gin.Context) {
 	}
 	kind, name := parts[0], parts[1]
 	val, err := h.Get(store.Key{
-		Namespace: spec.DefaultKVNs,
+		Namespace: store.DefaultKVNs,
 		Kind:      kind,
 		Name:      name,
 	})
@@ -266,7 +266,70 @@ func (h *Handler) PutSpec(c *gin.Context) {
 	c.JSON(http.StatusOK, struct{}{})
 }
 
-func (h *Handler) PostDeployment(c *gin.Context) {}
+func (h *Handler) OAuthRegistration(c *gin.Context) {
+	multiForm, err := c.MultipartForm()
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("invalid multipart form: %v", err))
+		return
+	}
+
+	var filenames []string
+	var fds []multipart.File
+	defer func() {
+		for _, fd := range fds {
+			fd.Close()
+		}
+	}()
+
+	for _, fs := range multiForm.File {
+		for _, f := range fs {
+			filename := f.Filename
+			filenames = append(filenames, filename)
+			fd, err := f.Open()
+			if err != nil {
+				c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("open file: %v failed: %v", filename, err))
+				return
+			}
+			fds = append(fds, fd)
+		}
+	}
+
+	if len(filenames) == 0 {
+		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("no file was found"))
+		return
+	}
+	if len(filenames) > 1 {
+		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("multiple files unsupported yet"))
+		return
+	}
+
+	kvStore := newKVStore(h.Store)
+	// Render the imported file content if there is any env key need to render from envs
+	out := bytes.Buffer{}
+	if err := kvs.Render(kvStore, fds[0], &out); err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("invalid file content: %v", err))
+		return
+	}
+
+	req := OAuthRegistrationReq{}
+	if err := yaml.Unmarshal(out.Bytes(), &req); err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("invalid file content: %v", err))
+		return
+	}
+
+	provider := req.ProviderConfig
+	if provider.Issuer == "" {
+		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("empty oidc issuer"))
+		return
+	}
+
+	if err := registerOAuthClients(kvStore, req.ProviderConfig, req.Requests); err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("register OAuth client failed: %v", err))
+		return
+	}
+
+	c.JSON(http.StatusOK, struct{}{})
+}
 
 func storeKVs2kvs(kvals store.KeyVals) kvs.KeyVals {
 	specKVals := kvs.KeyVals{}
@@ -297,7 +360,7 @@ func kvs2storeKVs(kvals kvs.KeyVals) store.KeyVals {
 func kv2storeKV(kval kvs.KeyVal) store.KeyVal {
 	return store.KeyVal{
 		Key: store.Key{
-			Namespace: spec.DefaultKVNs,
+			Namespace: store.DefaultKVNs,
 			Kind:      kval.Kind,
 			Name:      kval.Name,
 		},

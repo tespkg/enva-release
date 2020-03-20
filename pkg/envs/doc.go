@@ -1,10 +1,16 @@
 package envs
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net/http"
+	"path/filepath"
 	"reflect"
+	"strconv"
+	"strings"
+
+	"github.com/gin-gonic/gin"
 
 	"tespkg.in/envs/pkg/kvs"
 	"tespkg.in/envs/pkg/openapi"
@@ -15,6 +21,7 @@ import (
 
 const (
 	keyValTag  = "keyval"
+	addOnsTag  = "add-ons"
 	specTag    = "spec"
 	specHdrDef = "spechdr"
 )
@@ -34,6 +41,11 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 		{
 			TagProps: openspec.TagProps{
 				Name: keyValTag,
+			},
+		},
+		{
+			TagProps: openspec.TagProps{
+				Name: addOnsTag,
 			},
 		},
 		{
@@ -149,7 +161,31 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 			},
 		},
 	}
-	// 5. specs GET
+
+	// 5. oidc registration
+	pathItems["/oidcr"] = openspec.PathItem{
+		PathItemProps: openspec.PathItemProps{
+			Put: &openspec.Operation{
+				OperationProps: openspec.OperationProps{
+					ID:          "PutOIDCClients",
+					Summary:     "Register OAuth2.0 Client",
+					Description: "Register OAuth2.0 Client",
+					Produces:    []string{"application/json"},
+					Consumes:    []string{"multipart/form-data"},
+					Tags:        []string{addOnsTag},
+					Parameters: []openspec.Parameter{
+						openapi.BuildParam("formData", "filename.1", "file", "", true, nil).
+							WithParameterDesc(fmt.Sprintf(`OAuth2.0 Registration file, accept env key usage, example file %s`,
+								sa.Schema+"://"+filepath.Join(sa.KnownHost, sa.BasePath, "example/oidcr")),
+							),
+					},
+					Responses: openapi.BuildResp(http.StatusOK, openapi.BuildSuccessResp(nil)),
+				},
+			},
+		},
+	}
+
+	// 6. specs GET
 	pathItems["/specs"] = openspec.PathItem{
 		PathItemProps: openspec.PathItemProps{
 			Get: &openspec.Operation{
@@ -164,7 +200,7 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 			},
 		},
 	}
-	// 6. spec/{name} GET & PUT
+	// 7. spec/{name} GET & PUT
 	pathItems["/spec/{name}"] = openspec.PathItem{
 		PathItemProps: openspec.PathItemProps{
 			Get: &openspec.Operation{
@@ -221,4 +257,67 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 	}
 
 	return nil
+}
+
+func AddOnsExample(c *gin.Context) {
+	var filename string
+	var out string
+
+	typ := strings.TrimPrefix(c.Param("typ"), "/")
+	switch typ {
+	case "", "oidcr":
+		filename = "oidcr-example.yaml"
+		out = `
+# Configs for oidc issuer, ie, sso
+provider-config:
+  issuer: ${env:// .ssoIssuer }
+  client-id: ${env:// .internalAppClientID }
+  client-secret: ${env:// .internalAppClientSecret }
+  username: ${env:// .internalAppUsername }
+  password: ${env:// .internalAppPassword }
+clients:
+- name: ssoOAuth2
+  redirectURIs:
+  - http://localhost:5555/callback
+  allowedAuthTypes:
+  - authorization_code
+  - implicit
+  - client_credentials
+  - password_credentials
+- name: acOAuth2
+  redirectURIs:
+  - http://localhost:8080/oauth2
+  allowedAuthTypes:
+  - authorization_code
+  - implicit
+  - client_credentials
+  - password_credentials
+- name: configuratorOAuth2
+  # OAuth2Host Added for front-end compatibility.
+  # The way of frontend doing oauth redirect is:
+  # They expose an oauth2 host to DevOps for customizing and use a
+  # fix/hardcoded redirect path(prefixed with the oauth2 host), which is "sso/callback", to serve the oidc redirect URI callback,
+  # instead of exposing oauth2 redirect URI option to the DevOps explicitly.
+  OAuth2Host: default http://localhost
+  redirectURIs:
+  - default http://localhost/sso/callback
+  allowedAuthTypes:
+  - authorization_code
+  - implicit
+  - client_credentials
+  - password_credentials
+`
+	default:
+		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("unsupported typ: %v", typ))
+		return
+	}
+
+	c.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+	c.Header("Content-Type", "application/yaml")
+	c.Header("Content-Length", strconv.Itoa(len(out)))
+
+	if _, err := io.Copy(c.Writer, bytes.NewBufferString(out)); err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("write file failed: %v", err))
+		return
+	}
 }

@@ -23,7 +23,6 @@ func cmd() *cobra.Command {
 
 	cmd.Flags().StringVar(&a.ListenAddr, "address", a.ListenAddr, "The address which server will serve at")
 	cmd.Flags().StringVar(&a.Dsn, "dsn", a.Dsn, "Data source name, support etcd & consul, e.g, consul: http://localhost:8502/envs, etcd: etcd://localhost:2379")
-	cmd.Flags().StringVar(&a.SpecsMigrationPath, "specs-path", "", "Pre-configured application/service specs")
 
 	cmd.Flags().StringVar(&a.StaticAssetDir, "asset-dir", a.StaticAssetDir, "the static site asset dir")
 	cmd.Flags().StringVar(&a.StaticAssetPath, "asset-path", a.StaticAssetPath, "asset path which can be access publicly")

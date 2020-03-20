@@ -82,8 +82,6 @@ services:
     ports:
       - 5556:5556
       - 5557:5557
-    depends_on:
-      - envs
 
   sso-client:
     image: registry.tespkg.in/sso/example-app
@@ -99,8 +97,6 @@ services:
       ENVS_HTTP_ADDR: http://host.docker.internal:9112
     ports:
       - 5555:5555
-    depends_on:
-      - envs
 
   ac:
     image: registry.tespkg.in/ac/service
@@ -117,8 +113,6 @@ services:
       TARGET_SYS_ADMIN: CiQwOGE4Njg0Yi1kYjg4LTRiNzMtOTBhOS0zY2QxNjYxZjU0NjYSBWxvY2Fs
     ports:
       - 7001:7001
-    depends_on:
-      - envs
 
   acconsole:
     image: registry.tespkg.in/ac/console
@@ -134,8 +128,6 @@ services:
       VUE_APP_STATE: acconsole
     ports:
       - 8080:8080
-    depends_on:
-      - envs
 
   profile-grpc:
     image: registry.tespkg.in/profile/service
@@ -153,8 +145,6 @@ services:
       ENVS_HTTP_ADDR: http://host.docker.internal:9112
     ports:
       - 50051:50051
-    depends_on:
-      - envs
 
   profile-graphql:
     image: registry.tespkg.in/profile/service
@@ -178,8 +168,6 @@ services:
       ENVS_HTTP_ADDR: http://host.docker.internal:9112
     ports:
       - 9301:9301
-    depends_on:
-      - envs
 
   configurator-be:
     image: registry.tespkg.in/configurator/service
@@ -204,8 +192,6 @@ services:
     ports:
       - 9302:9302
       - 9303:9303
-    depends_on:
-      - envs
 
   configurator-fe:
     image: registry.tespkg.in/configurator/web
@@ -249,51 +235,6 @@ services:
       MEERA_APP_API_KEYWORD: ''
     ports:
       - 80:80
-    depends_on:
-      - envs
-
-  # oidc/oauth2 clients registration
-  oidcr:
-    image: registry.tespkg.in/library/enva:alpine3.10
-    container_name: oidcr
-    command: >-
-      sh -c '/usr/local/envs/bin/oidcr \
-            --oidc="$${env:// .ssoIssuer }" \
-            --client-id="$${env:// .internalAppClientID }" \
-            --client-secret="$${env:// .internalAppClientSecret }" \
-            --username="$${env:// .internalAppUsername }" \
-            --password="$${env:// .internalAppPassword }" <<-EOF
-      - name: ssoOAuth2
-        redirectURIs:
-          - $${env:// .ssoOAuth2RedirectURI | default http://localhost:5555/callback }
-        allowedAuthTypes:
-          - authorization_code
-          - implicit
-          - client_credentials
-          - password_credentials
-      - name: acOAuth2
-        redirectURIs:
-          - $${env:// .acOauth2RedirectURI | default http://localhost:8080/oauth2 }
-        allowedAuthTypes:
-          - authorization_code
-          - implicit
-          - client_credentials
-          - password_credentials
-      - name: configuratorOAuth2
-        OAuth2Host: $${env:// .configuratorOAuth2Host | default http://localhost }
-        redirectURIs:
-          - $${env:// .configuratorOauth2RedirectURI | default http://localhost/sso/callback }
-        allowedAuthTypes:
-          - authorization_code
-          - implicit
-          - client_credentials
-          - password_credentials
-      EOF'
-    environment:
-      ENVS_HTTP_ADDR: http://host.docker.internal:9112
-      ENVA_RUN_ONLY_ONCE: 'true'
-    depends_on:
-      - envs
 
 networks:
   default:

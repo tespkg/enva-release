@@ -105,7 +105,7 @@ func main() {
 		log.Fatala("Initiate envs client failed", err)
 	}
 
-	// Analyse os env files
+	// Analyze os env files
 	if osEnvFiles == "" {
 		osEnvFiles = os.Getenv("ENVA_OS_ENV_FILES")
 	}
@@ -119,7 +119,7 @@ func main() {
 		finalisedOSEnvFiles = append(finalisedOSEnvFiles, fn)
 	}
 
-	// Analyse publish key value pair
+	// Analyze publish key value pair
 	if len(publishedKVs) == 0 {
 		osEnvPublishKVs := os.Getenv("ENVA_PUBLISH")
 		if osEnvPublishKVs != "" {
@@ -177,7 +177,7 @@ func main() {
 		log.Debuga("exit from run")
 
 		// If run got finished, exit the main Proc directly.
-		raise(syscall.SIGTERM)
+		_ = raise(syscall.SIGTERM)
 	}()
 
 	// Watch Proc options & args change and restart when the values changed.

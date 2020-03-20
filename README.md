@@ -41,8 +41,9 @@
 - [x] Minimize the required env vars
 - [x] Tutorial documentation
 - [x] Push new service/application docker images to registry
+- [x] Expose OAuth2.0 Client registration via envs API
 - [ ] Frontend use envs to render index.html directly instead of putting env key into OSEnv and render OSEnv then render index.html via OSEnv
-- [ ] Create a `init` CLI for db's kv publish & merge `oidcr` into it. 
+- [ ] ~~Create a `init` CLI for db's kv publish & merge `oidcr` into it.~~
 - [ ] Health check endpoint for enva
 - [ ] Replace nginx with our own `simple static site service(s4)`
 - [ ] An extensive way to extend the pre-configuration for service startup, e.g, create database if not exist etc.
@@ -83,10 +84,12 @@ Based on different service/application we are trying to use, there are different
 
 ### Register OAuth2 clients
 
-1. Whenever we want to start a web site that has OAuth2 integrated, we need to make sure OAuth2 client has been registered & published into env store with our name conventions.
-1. For Convenience, we can use `oidcr` CLI tool to do the registration
-1. Add our new OAuth2 params into `registration request` 
-1. `docker-compose up oidcr`
+1. Whenever we want to start a web site that has OAuth2 integrated, 
+we need to make sure OAuth2 client has been registered & published into env store with our name conventions.
+1. Go `http://localhost:9112` `add-ons` section, Use envs API `oidcr` to register the new OAuth2 clients
+1. Check example file from `http://localhost:9112/example/oidcr`
+1. Follow the example, add our new OAuth2 params into `clients` array 
+1. Send registration request to envs
 
 ### SSO client
 1. Register ssoOAuth2 client
@@ -125,10 +128,19 @@ Based on different service/application we are trying to use, there are different
 1. It's a full featured & lightweight web server
 1. Will replace nginx with our own site service `s4` eventually
 
+### enva position in k8s use case
+
+- enva is located in the k8s pod and inside the service/application's container
+- It works as a supervisor process of the service/application process.
+- The k8s position of enva was described as follows
+
+![enva-k8s-positioning](assets/images/enva-k8s-positioning.png)
+
 ### Use cases
-1. (Security)Add another isolated layer to configure the credentials instead config it in k8s/helm yamls directly.
+1. (Security)Add another isolated layer to configure the credentials instead config it in compose/k8s/helm yaml files directly.
 1. (DevOps)Change config value & restart automatically.
-1. (Dev)Centralise/Unify vendor/fundamental service/images version.
-1. (BackendDev)Spilt fundamental dependent services and application service into two start-up phase.
-1. (BackendDev)Share same fundamental dependent service during develop multiple service at same time.
+1. (Dev/DevOps)Centralise/Unify vendor images version.
+1. (BackendDev)Spilt fundamental/basic services and application service into two start-up phase.
+1. (BackendDev)Share same fundamental/basic services during develop multiple service at same time.
+1. (BackendDev)Setup the basic frontend website, such as sso-example-app, acconsole, configurator.
 1. (FrontendDev)Minimised steps to setup local fundamental services for development.

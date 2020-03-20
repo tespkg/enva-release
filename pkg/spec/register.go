@@ -12,7 +12,6 @@ import (
 )
 
 const (
-	DefaultKVNs     = "kvs"
 	specFileKind    = "spec-file"
 	specMetaKind    = "spec-meta"
 	specMetaKeyName = "meta"
@@ -37,7 +36,7 @@ func (r DefaultRegister) Scan(spec, filename string, ir io.Reader) error {
 	for _, kv := range keyVals {
 		// TODO: find a way to do check & set automatically
 		key := store.Key{
-			Namespace: DefaultKVNs,
+			Namespace: store.DefaultKVNs,
 			Kind:      kv.Kind,
 			Name:      kv.Name,
 		}

@@ -47,7 +47,7 @@ func typeFields(rv reflect.Value) (fields Fields) {
 		if tag == "-" {
 			continue
 		}
-		name, opts := parseTag(string(tag))
+		name, opts := parseTag(tag)
 		if !isValidTag(name) {
 			name = ""
 		}

@@ -26,6 +26,7 @@ run:
   skip-files:
     - ".*\\.pb\\.go"
     - ".*\\.gen\\.go"
+    - ".*\\_test\\.go"
 
 linters:
   enable-all: true
@@ -103,6 +104,10 @@ linters-settings:
     # if it's called for subdir of a project it can't find external interfaces. All text editor integrations
     # with golangci-lint call it on a directory with the changed file.
     check-exported: false
+  gocognit:
+    # minimal code complexity to report, 30 by default (but we recommend 10-20)
+    min-complexity: 45
+
   gocritic:
     enabled-checks:
       - appendCombine

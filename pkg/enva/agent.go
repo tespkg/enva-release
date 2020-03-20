@@ -421,14 +421,14 @@ func runProc(nameArgs, osEnvs []string, isRunOnlyOnce bool, terminate chan exitS
 		select {
 		case <-abort:
 			log.Infoa("Aborting ", cmd.Process.Pid, name)
-			cmd.Process.Signal(syscall.SIGKILL)
+			_ = cmd.Process.Signal(syscall.SIGKILL)
 		case status, ok = <-terminate:
-			if !ok {
+			if !ok { // nolint
 				// Channel got closed, but ignore here.
 			}
 			once.Do(func() {
 				log.Infoa("Gracefully terminate ", cmd.Process.Pid, nameArgs, status)
-				cmd.Process.Signal(syscall.SIGTERM)
+				_ = cmd.Process.Signal(syscall.SIGTERM)
 				go func() {
 					time.Sleep(gracefullyTerminateTimeout)
 					abort <- struct{}{}
@@ -519,14 +519,11 @@ func renderOSEnvFiles(osTplFiles []string, vars map[string]string, pt PatchTable
 
 // templateOSEnvFiles Copy all the os env files to template dir, use them as the templates files
 func templateOSEnvFiles(files []string, tplDir string) ([]string, error) {
-	var templateFiles []string
 	if tplDir == "" {
-		for _, fn := range files {
-			templateFiles = append(templateFiles, fn)
-		}
-		return templateFiles, nil
+		return files, nil
 	}
 
+	var templateFiles []string
 	var opendFds []io.Closer
 	defer func() {
 		for _, closer := range opendFds {

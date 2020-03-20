@@ -2,6 +2,10 @@ package store
 
 import "errors"
 
+const (
+	DefaultKVNs = "kvs"
+)
+
 var (
 	ErrNotFound             = errors.New("not found")
 	ErrUnsupportedValueType = errors.New("unsupported value type")

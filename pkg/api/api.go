@@ -29,9 +29,9 @@ type Config struct {
 	// Scheme is the URI scheme for the envs
 	Scheme string
 
-	// HttpClient is the client to use. Default will be
+	// HTTPClient is the client to use. Default will be
 	// used if not provided.
-	HttpClient *http.Client
+	HTTPClient *http.Client
 }
 
 // defaultConfig returns the default configuration for the client, using the
@@ -67,8 +67,8 @@ func NewClient(config *Config) (*Client, error) {
 		config.Scheme = defConfig.Scheme
 	}
 
-	if config.HttpClient == nil {
-		config.HttpClient = http.DefaultClient
+	if config.HTTPClient == nil {
+		config.HTTPClient = http.DefaultClient
 	}
 
 	parts := strings.SplitN(config.Address, "://", 2)
@@ -216,7 +216,7 @@ func (c *Client) doRequest(r *request) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
-	resp, err := c.config.HttpClient.Do(req)
+	resp, err := c.config.HTTPClient.Do(req)
 	return resp, err
 }
 
