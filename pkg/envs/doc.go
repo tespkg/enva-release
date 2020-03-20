@@ -180,13 +180,15 @@ OAuth2.0 Registration file, accept env key usage, example file %s
 
 There are two steps for the OAuth2.0 client registration, 
 The first one is, Register client with the given parameters in the file to oidc provider,
-And the second step is, Create OAuth2.0 client-related key & value pairs that come from oidc provider registration response, such as client-id, client-secret, redirect-uri, etc. by following the name conventions described below
+And the second step is, Create OAuth2.0 client-related key & value pairs that come from oidc provider registration response, 
+such as client-id, client-secret, redirect-uri, etc. by following the name conventions described below:
 1. client-id would be: "\<RegistrationName\>ClientID=****"
 2. client-secret would be: "\<RegistrationName\>ClientSecret=****"
 3. redirect-uri would be: "\<RegistrationName\>RedirectURI=ValueOfRedirectURI"
 4. host, which added for front-end compatibility, would be: "\<RegistrationName\>Host=ValueOfHost"
 
-It is IMPORTANT to know clients.name in the registration file is the RegistrationName in this context, which is the key prefix to store the key & value pairs in env store.
+It is IMPORTANT to know clients.name in the registration file is the RegistrationName in this context, 
+which is the key prefix to store the key & value pairs in env store.
 `,
 								sa.Schema+"://"+filepath.Join(sa.KnownHost, sa.BasePath, "example/oidcr")),
 							),
