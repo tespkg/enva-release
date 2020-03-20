@@ -4,6 +4,17 @@
 1. Move changeable command line args, options and configs from `application/service spec` to env store.
 1. Auto restart service when any of args, options or configs changed.
 
+In this README:
+
+- [Use cases](#use-cases)
+- [Workflow](#workflow)
+- [Conventions](#conventions)
+- [Tutorials](#Tutorials)
+- [Architecture](#architecture)
+- [Minimized steps for different services](#minimized-steps)
+- [FAQs](#faqs)
+- [TODOs](#todo)
+
 ## Use cases
 1. (Security)Add another isolated layer to configure the credentials instead config it in compose/k8s/helm yaml files directly.
 1. (DevOps)Change config value & restart automatically.
@@ -35,7 +46,17 @@ Based on different service/application we are trying to use, there are different
 1. Add `docekr.host.internal` into `/etc/hosts` and point to `127.0.0.1`
 1. Start env store service `docker-compose up -d envs`, go `http://localhost:9112` & check if envs works.
 1. Create docker network `docker network create meera`
-1. Start the interested services by following the [minimized steps](#Minimized-steps)
+1. Start the interested services by following the [minimized steps](#Minimized-steps) before using `docker-compose up -d svc`
+
+## Architecture
+
+There are three components in environment store lifecycle
+
+1. envs, core service of environment store, accept kv get/set.
+1. website, iteractive with envs via REST APIs
+1. enva, agent of envs which act as the bridge between envs & service/application, publish & render/watch service/application key value pairs
+
+![envs-arch](assets/images/envs-arch.png)
 
 ## Minimized steps
 
@@ -43,17 +64,13 @@ Based on different service/application we are trying to use, there are different
 1. Or import the [minimized values](assets/devspecs/minimized-kvs.yaml) into env store via `envs` API call directly
 
 ### Vendor services
+1. redis
+1. minio
 1. postgres
 1. rabbitstomp
-1. redis
 1. mongodb
-1. minio
 
-### SSO  
-1. Set ssoIssuer value
-1. Set ssoDSN value
-
-### Register OAuth2 clients
+### OAuth2 clients Registration
 
 1. Whenever we want to start a web site that has OAuth2 integrated, 
 we need to make sure OAuth2 client has been registered & published into env store with our name conventions.
@@ -61,6 +78,10 @@ we need to make sure OAuth2 client has been registered & published into env stor
 1. Check example file from `http://localhost:9112/example/oidcr`
 1. Follow the example, add our new OAuth2 params into `clients` array 
 1. Send registration request to envs
+
+### SSO  
+1. Set ssoIssuer value
+1. Set ssoDSN value
 
 ### SSO client
 1. Register ssoOAuth2 client
@@ -78,6 +99,7 @@ we need to make sure OAuth2 client has been registered & published into env stor
 
 ### Profile GraphQL
 1. Set profileCORS value
+1. Set rabbitMQAddr value
 1. Set redisAddr value
 1. Set sesGRPCAddr value
 1. Set msgPusherGRPCAddr value
