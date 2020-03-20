@@ -298,9 +298,9 @@ clients:
   # They expose an oauth2 host to DevOps for customizing and use a
   # fix/hardcoded redirect path(prefixed with the oauth2 host), which is "sso/callback", to serve the oidc redirect URI callback,
   # instead of exposing oauth2 redirect URI option to the DevOps explicitly.
-  OAuth2Host: default http://localhost
+  OAuth2Host: http://localhost
   redirectURIs:
-  - default http://localhost/sso/callback
+  - http://localhost/sso/callback
   allowedAuthTypes:
   - authorization_code
   - implicit
