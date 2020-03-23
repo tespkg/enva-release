@@ -23,7 +23,7 @@ var (
 	publishedKVs         []string
 	isRunOnlyOnce        bool
 	locationRegistration bool
-	verbose              bool
+	logLevel             string
 	help                 bool
 
 	logOptions = log.DefaultOptions()
@@ -33,9 +33,9 @@ func init() {
 	getopt.FlagLong(&envsAddr, "envs-addr", 'a', "Optional, envs address, eg: http://localhost:8502/a/bc")
 	getopt.FlagLong(&osEnvFiles, "os-env-files", 'f', `Optional, os env files, separated by comma, eg: "path/to/index.html, path/to/config.js"`)
 	getopt.FlagLong(&publishedKVs, "publish", 'p', `Optional, publish kvs, eg: --publish k1=v1 --publish k2=v2`)
-	getopt.FlagLong(&isRunOnlyOnce, "run-only-once", 'r', "Optional, run Proc only one and exit")
+	getopt.FlagLong(&isRunOnlyOnce, "run-only-once", 'r', "Optional, run Proc only once then exit")
 	getopt.FlagLong(&locationRegistration, "location", 'l', "Optional, enable Proc location registration")
-	getopt.FlagLong(&verbose, "verbose", 'v', "Optional, be verbose")
+	getopt.FlagLong(&logLevel, "log-level", 'v', "Optional, log level, can be one of debug, info, warn, error, fatal, none")
 	getopt.FlagLong(&help, "help", 'h', "Optional, display usage")
 	getopt.SetUsage(func() {
 		s := getopt.CommandLine
@@ -60,7 +60,7 @@ ENVS_HTTP_ADDR, equivalent of Option "envs-addr",
 ENVA_OS_ENV_FILES, equivalent of Option "os-env-files", separated by comma, eg: "path/to/file1, path/to/file2",
 ENVA_PUBLISH, equivalent of Option "publish", separated by comma, eg: "k1=v1, k2=v2",
 ENVA_RUN_ONLY_ONCE, equivalent of Option "run-only-once", eg: ENVA_RUN_ONLY_ONCE=true equal to honor --run-only-once Option.
-ENVA_DEBUG, equivalent of Option "verbose", eg: ENVA_DEBUG=true equal to honor --verbose Command Option.
+ENVA_LOG_LEVEL, equivalent of Option "log-level", eg: ENVA_LOG_LEVEL=debug equal to honor --log-level=debug Command Option.
 If both the command options & env are set at same time, Command Options have priority`)
 	fmt.Fprintln(w)
 }
@@ -81,9 +81,27 @@ func main() {
 	}
 
 	// Initiate log facility.
-	if verbose || os.Getenv("ENVA_DEBUG") == "true" {
-		logOptions.SetLogCallers("default", true)
-		logOptions.SetOutputLevel(log.DefaultScopeName, log.DebugLevel)
+	if logLevel == "" {
+		logLevel = os.Getenv("ENVA_LOG_LEVEL")
+	}
+	stringToLevel := map[string]log.Level{
+		"debug": log.DebugLevel,
+		"info":  log.InfoLevel,
+		"warn":  log.WarnLevel,
+		"error": log.ErrorLevel,
+		"fatal": log.FatalLevel,
+		"none":  log.NoneLevel,
+	}
+	if logLevel != "" {
+		lvl, ok := stringToLevel[logLevel]
+		if !ok {
+			fmt.Fprintln(os.Stderr, "invalid log level", logLevel)
+			os.Exit(-1)
+		}
+		if lvl == log.DebugLevel {
+			logOptions.SetLogCallers("default", true)
+		}
+		logOptions.SetOutputLevel(log.DefaultScopeName, lvl)
 	}
 	if err := log.Configure(logOptions); err != nil {
 		fmt.Fprintln(os.Stderr, "initiate log failed: ", err)

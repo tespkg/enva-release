@@ -234,7 +234,7 @@ func (a *Agent) Run(ctx context.Context) error {
 			// The second one is the values in Proc's args/options got changed, the Proc restart flow should be triggered.
 			isOSEnvsEq, isArgsEq := isConfigDeepEqual(a.currentConfig, config)
 			if !isOSEnvsEq {
-				log.Infof("Received new os envs, re-rendering them")
+				log.Infoa("Received new os envs, re-rendering them")
 				log.Debuga("current os envs ", a.currentConfig.osEnvVars)
 				log.Debuga("new os envs ", config.osEnvVars)
 				osEnvsVars := make(map[string]string)
@@ -252,7 +252,7 @@ func (a *Agent) Run(ctx context.Context) error {
 			}
 
 			if !isArgsEq {
-				log.Infof("Received new config, resetting budget")
+				log.Infoa("Received new config, resetting budget")
 				a.desiredConfig = config
 
 				// Reset retry budget if and only if the desired config changes
@@ -352,7 +352,7 @@ func (a *Agent) Watch(ctx context.Context) error {
 }
 
 func (a *Agent) reconcile() {
-	log.Infof("Reconciling retry (budget %d)", a.retry.budget)
+	log.Infof("Reconciling budget %d", a.retry.budget)
 
 	// check that the config is current
 	if isEnvsEq, isArgsEq := isConfigDeepEqual(a.desiredConfig, a.currentConfig); isEnvsEq && isArgsEq {
