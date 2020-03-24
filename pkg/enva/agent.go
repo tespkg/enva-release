@@ -392,6 +392,7 @@ func runProc(nameArgs, osEnvs []string, isRunOnlyOnce bool, terminate chan exitS
 		args = nameArgs[1:]
 	}
 	cmd := exec.Command(name, args...)
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -415,27 +416,35 @@ func runProc(nameArgs, osEnvs []string, isRunOnlyOnce bool, terminate chan exitS
 
 	var err error
 	var ok bool
+
+	pgid, err := syscall.Getpgid(cmd.Process.Pid)
+	if err != nil {
+		log.Warnf("get pgid failed %v, fallback to use pid as pgid", err)
+		pgid = cmd.Process.Pid
+	}
+
 	abort := make(chan struct{})
 	once := sync.Once{}
 	for {
 		select {
 		case <-abort:
-			log.Infoa("Aborting ", cmd.Process.Pid, name)
-			_ = cmd.Process.Signal(syscall.SIGKILL)
+			err = syscall.Kill(-pgid, syscall.SIGKILL)
+			log.Infoa("Aborting ", cmd.Process.Pid, pgid, name, err)
 		case status, ok = <-terminate:
 			if !ok { // nolint
 				// Channel got closed, but ignore here.
 			}
 			once.Do(func() {
-				log.Infoa("Gracefully terminate ", cmd.Process.Pid, nameArgs, status)
-				_ = cmd.Process.Signal(syscall.SIGTERM)
+				// TODO: fix zombie process later
+				err = syscall.Kill(-pgid, syscall.SIGTERM)
+				log.Infoa("Gracefully terminate ", cmd.Process.Pid, pgid, nameArgs, status, err)
 				go func() {
 					time.Sleep(gracefullyTerminateTimeout)
 					abort <- struct{}{}
 				}()
 			})
 		case err = <-done:
-			log.Infof("%v %v done", cmd.Process.Pid, name)
+			log.Infof("%v(pgid: %v) %v done", cmd.Process.Pid, pgid, name)
 			status.err = err
 			goto end
 		}

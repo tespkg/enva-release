@@ -133,7 +133,7 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 					Consumes:    []string{"multipart/form-data"},
 					Tags:        []string{keyValTag},
 					Parameters: []openspec.Parameter{
-						openapi.BuildParam("formData", "", "file", "", true, nil).
+						openapi.BuildParam("formData", "file", "file", "", true, nil).
 							WithParameterDesc("key values file"),
 					},
 					Responses: openapi.BuildResp(http.StatusOK, openapi.BuildSuccessResp(nil)),
@@ -174,7 +174,7 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 					Consumes:    []string{"multipart/form-data"},
 					Tags:        []string{addOnsTag},
 					Parameters: []openspec.Parameter{
-						openapi.BuildParam("formData", "", "file", "", true, nil).
+						openapi.BuildParam("formData", "file", "file", "", true, nil).
 							WithParameterDesc(fmt.Sprintf(`
 OAuth2.0 Registration file, accept env key usage, example file %s
 

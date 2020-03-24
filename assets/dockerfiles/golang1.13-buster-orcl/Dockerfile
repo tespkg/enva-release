@@ -1,4 +1,4 @@
-FROM registry.tespkg.in/library/debian:buster-slim as basis
+FROM registry.tespkg.in/library/enva:debian-buster-slim as basis
 
 FROM golang:1.13-buster
 

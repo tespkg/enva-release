@@ -176,6 +176,7 @@ func render(s KVStore, ir io.Reader, iw io.Writer, kvS *kvState, tmpFunc tempFun
 }
 
 func valueOf(s KVStore, key Key, defValue string, kvS *kvState, tmpFunc tempFunc, rdFileFunc readFileFunc) (string, error) {
+	rawKey := key
 	if key.Kind == EnvoKind {
 		// Optional env ONLY used for checking if the value is required or not when rendering
 		// The underlying kind is always env for env & envo cases.
@@ -187,6 +188,9 @@ func valueOf(s KVStore, key Key, defValue string, kvS *kvState, tmpFunc tempFunc
 	}
 	if errors.Is(err, ErrNotFound) {
 		if defValue == "" {
+			if rawKey.Kind == EnvoKind {
+				return "", nil
+			}
 			return "", fmt.Errorf("get valueOf %v failed: %w", key, err)
 		}
 		if err := s.Set(key, defValue); err != nil {
