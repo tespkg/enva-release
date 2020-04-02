@@ -12,6 +12,7 @@ RUN apk add --update ca-certificates openssl busybox-extras bash
 
 COPY --from=builder /build/bin/envs /usr/local/envs/bin/envs
 COPY --from=builder /build/static /usr/local/envs/static
+COPY --from=builder /build/docker-entrypoint-envs.sh /docker-entrypoint.sh
 
 # Create minimal nsswitch.conf file to prioritize the usage of /etc/hosts over DNS queries.
 # This resolves the conflict between:
@@ -24,3 +25,5 @@ COPY --from=builder /build/static /usr/local/envs/static
 RUN [ ! -e /etc/nsswitch.conf ] && echo 'hosts: files dns' > /etc/nsswitch.conf
 
 ENV PATH="/usr/local/envs/bin:${PATH}"
+
+ENTRYPOINT ["/docker-entrypoint.sh"]
