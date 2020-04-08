@@ -1,0 +1,56 @@
+image: golang:1.13
+
+services:
+  - name: gcr.io/etcd-development/etcd:v3.3.13
+    alias: etcd
+    command: ["/usr/local/bin/etcd", "--listen-client-urls=http://0.0.0.0:2379", "--advertise-client-urls=http://0.0.0.0:2379"]
+  - name: consul
+    command: ["consul", "agent", "-client=0.0.0.0", "-dev"]
+
+variables:
+  APP_CHART_NAME: go-template
+  KUBECONFIG: /etc/deploy/config
+  DEV_URL: https://dev.meeraspace.com
+  TEST_URL: https://test.meeraspace.com
+  DEMO_MEERAONLINE_URL: https://meeraonline.cn
+  STAGING_URL: https://target.meeraspace.com
+  SLACK_CHANNEL: gitlab-notifications
+  HELM_REPO_TARGET: https://chartmuseum.target.meeraspace.com/
+  DOCKER_DRIVER: overlay2
+
+include:
+  - remote: https://target-digital-transformation.gitlab.io/pipeline/00_.after-script-template.yml
+  - remote: https://target-digital-transformation.gitlab.io/pipeline/01_build.yml
+  - remote: https://target-digital-transformation.gitlab.io/pipeline/02_deploy_to_dev.yml
+  - remote: https://target-digital-transformation.gitlab.io/pipeline/03_push_Incubator_chart.yml
+  - remote: https://target-digital-transformation.gitlab.io/pipeline/04_deploy_to_test.yml
+  - remote: https://target-digital-transformation.gitlab.io/pipeline/05_push_stable_chart.yml
+
+before_script:
+  - export PATH=$PATH:$GOPATH/bin
+  - export ETCD_DSN=etcd://etcd:2379/a/bc
+  - export CONSUL_DSN=http://consul:8500/a/bc
+  - |
+    if ( echo ${CI_RUNNER_TAGS} | grep -q kubernetes ); then
+      export DOCKER_HOST="tcp://localhost:2375"
+      export ETCD_DSN=etcd://localhost:2379/a/bc
+      export CONSUL_DSN=http://localhost:8500/a/bc
+    fi
+
+stages:
+  - unit-test
+  - build
+
+test-coverage:
+  stage: unit-test
+  script:
+    - make run-test
+
+build:
+  stage: build
+  script:
+    # TODO: docker login registry.tespkg.in with CI_SECRET...
+    make PUSH=true build-images
+  only:
+    - master
+    - tags

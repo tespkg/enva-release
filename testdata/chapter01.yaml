@@ -1,0 +1,18 @@
+poet: "{${env://.poet}}"
+title: "${envo:// .title }"
+stanza:
+  - "${env:// .at | default atAT}"
+  - "${envf://.length | default /tmp/path/to/length/file }"
+  - "${env://._did}"
+  - ${env://.cRoSs}
+  - ${envf:// .an }
+  - ${env:// .Albatross }
+
+mariner:
+  with: "${env://.crossbow}"
+  shot: "${envf://.ALBATROSS}"
+
+water:
+  water:
+    where: "everywhere"
+    nor: "any drop to drink"
