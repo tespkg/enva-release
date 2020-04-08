@@ -52,5 +52,4 @@ build:
     # TODO: docker login registry.tespkg.in with CI_SECRET...
     make PUSH=true build-images
   only:
-    - master
     - tags
