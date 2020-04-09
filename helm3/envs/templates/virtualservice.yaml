@@ -1,0 +1,14 @@
+{{- if .Values.istio.virtualservice.enabled }}
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: {{ template "APP.name" . }}
+  namespace: {{ template "APP.namespace" . }}
+spec:
+  hosts:
+  - {{ template "ENVS.host" . }}
+  gateways: 
+  - {{ template "GATEWAY.addr" . }}
+  http:
+{{ toYaml .Values.istio.virtualservice.http | indent 2 }}
+{{- end -}}

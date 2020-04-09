@@ -1,0 +1,112 @@
+{{- if .Values.configmapEnvVars.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "APP.name" . }}-envvars
+  namespace: {{ template "APP.namespace" . }}
+data:
+
+  CONSUL.svcAddr: {{ template "CONSUL.svcAddr" . }}
+  # POSTGRES_USER: {{ template "POSTGRES_USER" . }}
+  # POSTGRES_PASSWORD: {{ template "POSTGRES_PASSWORD" . }}
+  POSTGRES_HOST: {{ template "POSTGRES_HOST" . }}
+  POSTGRES_PORT: "{{ template "POSTGRES_PORT" . }}"
+  POSTGRES.svcAddr: {{ template "POSTGRES.svcAddr" . }}
+
+  # MONGO_USER: {{ template "MONGO_USER" . }}
+  # MONGO_PASSWORD: {{ template "MONGO_PASSWORD" . }}
+  MONGO_HOST: {{ template "MONGO_HOST" . }}
+  MONGO_PORT: "{{ template "MONGO_PORT" . }}"
+  MONGO.svcAddr: {{ template "MONGO.svcAddr" . }}
+
+  # RABBITMQ_USER: {{ template "RABBITMQ_USER" . }}
+  # RABBITMQ_PASSWORD: {{ template "RABBITMQ_PASSWORD" . }}
+  RABBITMQ_HOST: {{ template "RABBITMQ_HOST" . }}
+  RABBITMQ_PORT: "{{ template "RABBITMQ_PORT" . }}"
+  RABBITMQ.svcAddr: {{ template "RABBITMQ.svcAddr" . }}
+  
+  # MINIO_ACCESS: {{ template "MINIO_ACCESS" . }}
+  # MINIO_SECRET: {{ template "MINIO_SECRET" . }} 
+  MINIO_HOST: {{ template "MINIO_HOST" . }}
+  MINIO_PORT: "{{ template "MINIO_PORT" . }}"
+  MINIO.svcAddr: {{ template "MINIO.svcAddr" . }}
+
+ 
+  REDIS_HOST: {{ template "REDIS_HOST" . }}
+  REDIS_PORT: "{{ template "REDIS_PORT" . }}"
+  REDIS.svcAddr: {{ template "REDIS.svcAddr" . }}
+
+
+  ELASTICSEARCH_HOST: {{ template "ELASTICSEARCH_HOST" . }}
+  ELASTICSEARCH_PORT: "{{ template "ELASTICSEARCH_PORT" . }}"
+  ELASTICSEARCH.svcAddr: {{ template "ELASTICSEARCH.svcAddr" . }}
+
+
+  ## meera app
+  
+  SSO.svcAddr: {{ template "SSO.svcAddr" . }}
+  SSO.url: {{ template "SSO.url" . }}
+
+  ACCESSCONTROL.svcAddr: {{ template "ACCESSCONTROL.svcAddr" . }}
+  ACCESSCONTROL.url: {{ template "ACCESSCONTROL.url" . }}
+
+  PROFILE.graphqlAddr: {{ template "PROFILE.graphqlAddr" . }}
+  PROFILE.restAddr: {{ template "PROFILE.restAddr" . }}
+  PROFILE.grpcAddr: {{ template "PROFILE.grpcAddr" . }}
+
+  CONFIGURATOR.svcAddr: {{ template "CONFIGURATOR.svcAddr" . }}
+  CONFIGURATOR.grpcAddr: {{ template "CONFIGURATOR.grpcAddr" . }}  
+
+  API.url: {{ template "API.url" .}}
+
+  SESSMS.svcAddr: {{ template "SESSMS.svcAddr" . }}
+
+  MEERAFS.svcAddr: {{ template "MEERAFS.svcAddr" . }}
+
+  MESSAGEPUSHER.svcAddr: {{ template "MESSAGEPUSHER.svcAddr" . }}
+
+  I18N.host: {{ template "I18N.host" . }}
+  I18N.url: {{ template "I18N.url" . }}
+
+  WORKSPACE.svcAddr: {{ template "WORKSPACE.svcAddr" . }}
+  WORKSPACE.host: {{ template "WORKSPACE.host" . }}
+  WORKSPACE.url: {{ template "WORKSPACE.url" . }}
+
+
+  HCM.graphqlAddr: {{ template "HCM.graphqlAddr" . }}
+  HCM.host: {{ template "HCM.host" . }}
+  HCM.url: {{ template "HCM.url" . }}
+
+
+
+  # MEERA_APP_OAUTH_HOST: {{ template "SSO.url" . }}
+  # MEERA_APP_PRODUCT_APP_URL_API: {{ template "API.url" . }}
+  # MEERA_APP_PRODUCT_APP_URL_PROFILE: {{ template "PROFILE.url" . }}
+  # MEERA_APP_ENV_VAR_ME_TO: {{ template "PROFILE.url" . }}
+  # MEERA_APP_PRODUCT_URL_CONFIGURATOR: {{ template "CONFIGURATOR.url" . }}
+  # MEERA_APP_ENV_VAR_ME_TO: {{ template "PROFILE.url" . }}
+  # MEERA_APP_PRODUCT_WORKSPACE_URL: {{ template "WORKSPACE.url" . }}
+  # MEERA_APP_MEETING_URL: {{ template "MEETING.url" . }}
+  # MEERA_APP_PRODUCT_BI_URL: {{ template "BI.url" . }}
+  # MEERA_APP_PRODUCT_APP_URL_EDGE: {{ template "EDGE.url" . }}
+  # MEERA_APP_PRODUCT_URL_CONFIGURATOR: {{ template "CONFIGURATOR.url" . }}
+  # MEERA_APP_PRODUCT_APP_URL_PLANNER: {{ template "PLANNER.url" . }}
+  # MEERA_APP_PRODUCT_APP_URL_MAP: {{ template "MAP.url" . }}
+  # MEERA_APP_PRODUCT_APP_URL_CSR: {{ template "CSR.url" . }}
+  # MEERA_APP_PRODUCT_APP_URL_CADRE: {{ template "CADRE.url" . }}
+  # MEERA_APP_PRODUCT_URL_HCM: {{ template "HCM.url" . }}
+  # MEERA_APP_PRODUCT_URL_ORGANIZATION: {{ template "ORGANIZATION.url" . }}
+  # MEERA_APP_PRODUCT_APP_URL_PSA: {{ template "PSA.url" . }}
+  # MEERA_APP_PRODUCT_APP_URL_REGULATION: {{ template "REGULATION.url" . }}
+  # MEERA_APP_PRODUCT_URL_OKR: {{ template "OKR.url" . }}
+  # MEERA_APP_PRODUCT_URL_CRM: {{ template "CRM.url" . }}
+  # MEERA_APP_PRODUCT_APP_URL_TROVE: {{ template "TROVE.url" . }}
+  # MEERA_APP_PRODUCT_APP_URL_REACH: {{ template "REACH.url" . }}
+  # MEERA_APP_PRODUCT_APP_URL_PDO: {{ template "PDO.url" . }}
+  # MEERA_APP_PRODUCT_URL_AMC: {{ template "AMC.url" . }}
+  # MEERA_APP_PRODUCT_URL_PERMITS: {{ template "PERMIT.url" . }}
+  # MEERA_APP_PRODUCT_URL_LANG: {{ template "LANG.url" . }}
+  # MEERA_APP_BASE_ENV_URL: {{ template "WORKSPACE.url" . }}
+  # MEERA_APP_PRODUCT_APP_URL_PULSE: {{ template "PULSE.url" . }}
+  # MEERA_APP_PRODUCT_URL_PEOPLEANALYTICS: {{ template "PEOPLEANALYTICS.url" . }}
+{{- end -}}

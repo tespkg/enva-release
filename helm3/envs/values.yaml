@@ -1,0 +1,212 @@
+##  helm3 template --set global.env=ops,global.service.postgres.customHost=postgres.test-meeraspace-postgres,image.extraEnv.POSTGRES_DATABASE=ops_ac ./ > out.yaml
+##  helm3 template --set global.env=ops ./ > out.yaml
+
+global:
+  env: dev
+  mode: 
+    standard: true
+    ## If set to "true"，  no namespace.prefix & host.prefix spec
+    ##   set, choosing the default namespace.prefix & host.prefix spec(global.env) . ---> (dev & dev on dev, test & test on test, internal and internal on internal)
+    ## If set to "false"
+    ##   set, set the custom namespace.prefix & host.prefix spec .  ---> (eks & demo-aws on demoaws)
+  namespace:
+    prefix: dev 
+    mid: meeraspace
+    suffix:
+      infrastructure:
+        gateway: gateway
+        consul: consul
+        postgres: postgres
+        mongo: mongodb
+        rabbitmq: rabbitmq
+        redis: redis
+        minio: minio
+        elasticsearch: elasticsearch
+        mssql: mssql
+      meeraApp:
+        envs: envs
+        sso: sso
+        accesscontrol: accesscontrol
+        configurator: configurator
+        sessms: sessms
+        workspace: workspace
+        profile: profile
+        messagepusher: messagepusher
+        csr: csr
+        hcm: hcm
+        license: license
+        meerafs: meerafs
+        xeena: xeena
+        edge: edge
+  host:
+    svcName:
+      workspace: null
+      envs: envs
+      sso: sso
+      profile: profile
+      accesscontrol: accesscontrol
+      configurator: configurator
+      csr: csr
+      crm: manager
+      edge: wasl
+      trove: was
+      license: license
+      hcm: hcm
+      organization: organization
+      map: map
+      pdo: pdo
+      reach: reach
+      amc: amc
+      lang: i18n
+      okr: okr
+      planner: planner
+      xeena: xeena-invite
+      bi: bi
+      cadre: cadre
+      permit: permit
+      pulse: pulse
+      sender: sender
+      psa: psa
+      regulation: regulation
+      peopleanalytics: peopleanalytics
+    prefix: dev
+    baseUrl: meeraspace.com
+  service:
+    gateway:
+      name: gateway
+      namespace: default
+    consul:
+      svcName: consul  
+    postgres:
+      svcName: postgres
+    mongo:
+      svcName: mongo
+    minio:
+      svcName: minio
+    redis:
+      svcName: redis-master
+    rabbitmq:
+      svcName: rabbitmq
+    elasticsearch:
+      svcName: elasticsearch-master
+
+# fullnameOverride: 
+
+replicaCount: 1
+
+job:
+  initdb:
+    enabled: false
+
+configmapEnvVars:
+  enabled: true
+
+secretDB:
+  enabled: false
+
+image:
+  repository: registry.tespkg.in/library/envs
+  tag: "alpine3.10"  
+  pullPolicy: Always
+  # pullPolicy: IfNotPresent
+  ports:
+  - name: envs
+    containerPort: 9112
+    protocol: TCP
+  extraCommand:
+  - /usr/local/envs/bin/envs
+  - serve
+  - --address=:9112
+  - --schema=https  
+  - --host=envs.dev.meeraspace.com
+  - --dsn=https://$(CONSUL.svcAddr)/envs
+  - --asset-dir=/usr/local/envs/static
+
+
+  ## ExtraEnv has the highest priority when there are multiple repeating envs
+  extraEnv:
+
+  extraENVRulehandled:
+  #   MEERA_APP_OAUTH_HOST: sso.
+
+  extraEnvFromSecert:
+
+  ##  A generic configmap is predefined and mounted to pod （include the public env）
+  ## {{- if .Values.configmapEnvVars.enabled }}
+  ## envFrom:
+  ##   - configMapRef:
+  ##       name: {{ template "APP.name" . }}-envvars
+  ## {{- end }}    
+
+service:
+  type: ClusterIP
+  ports:
+  - port: 9112
+    name: envs
+    targetPort: 9112
+
+istio:
+  envoyfilter:
+    enabled: false
+
+  virtualservice:
+    enabled: true
+    http:
+    - route:
+      - destination:
+          host: envs
+          port:
+            number: 9112
+
+
+
+resources: {}
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+volumeMounts:
+## If true,  Pod volumes to mount into the container's filesystem
+  enabled: false
+  # enabled: true
+  volumeMounts:
+  - name: configmap
+    mountPath: /config.yaml
+    subPath: dex-config
+
+volumes:
+## If true, will create/use a Volume, configmap nfs hostPath emptyDir
+  enabled: false
+  # enabled: true
+## if type is configmap, will auto use the configmap value by  `name: {{ template "APP.fullname" . }}-config`
+  type: configmap
+  volumes:
+
+
+persistentVolumeClaim1:
+## If true,  will create/use a Persistent Volume Claim
+  enabled: false
+  volumeClaimTemplates:
+  - metadata:
+      name: CNGNAME
+    spec:
+      accessModes:
+        - "ReadWriteOnly"
+      resources:
+        requests:
+          storage: 2Gi
+      storageClassName: 'gp2'
+
+configmap:
+  enabled: false
+  # enabled: true
+
+  configurationFiles: {}
+    # dex-config: |
+    #   issuer: https://china-sso.digitalenergycloud.com
+
+  configurationEnv: {}
+    # cache_host: memcached-gcxt
