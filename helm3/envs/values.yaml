@@ -106,9 +106,9 @@ secretDB:
 
 image:
   repository: registry.tespkg.in/library/envs
-  tag: "alpine3.10"  
-  # pullPolicy: Always
-  pullPolicy: IfNotPresent
+  tag: "latest"  
+  pullPolicy: Always
+  # pullPolicy: IfNotPresent
   ports:
   - name: envs
     containerPort: 9112
