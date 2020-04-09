@@ -122,6 +122,9 @@ services:
     ports:
       - 5556:5556
       - 5557:5557
+    depends_on:
+      - envs
+      - postgres
 
   sso-client:
     image: registry.tespkg.in/sso/example-app
@@ -137,6 +140,9 @@ services:
       ENVS_HTTP_ADDR: http://host.docker.internal:9112
     ports:
       - 5555:5555
+    depends_on:
+      - envs
+      - sso
 
   ac:
     image: registry.tespkg.in/ac/service
@@ -153,6 +159,10 @@ services:
       TARGET_SYS_ADMIN: CiQwOGE4Njg0Yi1kYjg4LTRiNzMtOTBhOS0zY2QxNjYxZjU0NjYSBWxvY2Fs
     ports:
       - 7001:7001
+    depends_on:
+      - envs
+      - postgres
+      - sso
 
   acconsole:
     image: registry.tespkg.in/ac/console
@@ -168,6 +178,9 @@ services:
       VUE_APP_STATE: acconsole
     ports:
       - 8080:8080
+    depends_on:
+      - envs
+      - ac
 
   profile-grpc:
     image: registry.tespkg.in/profile/service
@@ -185,6 +198,11 @@ services:
       ENVS_HTTP_ADDR: http://host.docker.internal:9112
     ports:
       - 50051:50051
+    depends_on:
+      - envs
+      - postgres
+      - rabbitstomp
+      - sso
 
   profile-graphql:
     image: registry.tespkg.in/profile/service
@@ -208,6 +226,12 @@ services:
       ENVS_HTTP_ADDR: http://host.docker.internal:9112
     ports:
       - 9301:9301
+    depends_on:
+      - envs
+      - postgres
+      - rabbitstomp
+      - redis
+      - sso
 
   configurator-be:
     image: registry.tespkg.in/configurator/service
@@ -232,6 +256,13 @@ services:
     ports:
       - 9302:9302
       - 9303:9303
+    depends_on:
+      - envs
+      - postgres
+      - rabbitstomp
+      - sso
+      - profile-grpc
+      - ac
 
   configurator-fe:
     image: registry.tespkg.in/configurator/web
@@ -274,7 +305,21 @@ services:
       MEERA_APP_PRODUCT_URL_REGULATION: ''
       MEERA_APP_API_KEYWORD: ''
     ports:
+      - 8080:80
+    depends_on:
+      - envs
+      - configurator-be
+      - profile-graphql
+
+  envoy:
+    image: envoyproxy/envoy:v1.11.2
+    container_name: envoy
+    command: |
+      /usr/local/bin/envoy -c /etc/envoyproxy/envoy.yaml
+    ports:
       - 80:80
+    volumes:
+      - ${PWD}/envoy.yaml:/etc/envoyproxy/envoy.yaml
 
 networks:
   default:

@@ -52,13 +52,24 @@ func (h *Handler) GetKeys(c *gin.Context) {
 	c.JSON(http.StatusOK, storeKVs2kvs(kvals))
 }
 
-func (h *Handler) PutKeys(c *gin.Context) {
-	var specKVals kvs.KeyVals
-	if err := c.BindJSON(&specKVals); err != nil {
+func (h *Handler) PutEnvKeys(c *gin.Context) {
+	var envKeyVals []kvs.EnvKeyVal
+	if err := c.BindJSON(&envKeyVals); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("parse request body failed: %v", err))
 		return
 	}
-	storeKVals := kvs2storeKVs(specKVals)
+
+	kvals := kvs.KeyVals{}
+	for _, envKeyVal := range envKeyVals {
+		kvals = append(kvals, kvs.KeyVal{
+			Key: kvs.Key{
+				Kind: kvs.EnvKind,
+				Name: envKeyVal.Name,
+			},
+			Value: envKeyVal.Value,
+		})
+	}
+	storeKVals := kvs2storeKVs(kvals)
 	for _, kval := range storeKVals {
 		if err := h.Set(kval.Key, kval.Value); err != nil {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("set key: %v failed: %v", kval.Key, err))
@@ -68,7 +79,7 @@ func (h *Handler) PutKeys(c *gin.Context) {
 	c.JSON(http.StatusOK, struct{}{})
 }
 
-func (h *Handler) ExportKVS(c *gin.Context) {
+func (h *Handler) ExportEnvKVS(c *gin.Context) {
 	storeKVals, err := h.GetKindValues(kvs.EnvKind)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("iterate env kind keys failed: %v", err))
@@ -92,7 +103,7 @@ func (h *Handler) ExportKVS(c *gin.Context) {
 	}
 }
 
-func (h *Handler) ImportKVS(c *gin.Context) {
+func (h *Handler) ImportEnvKVS(c *gin.Context) {
 	multiForm, err := c.MultipartForm()
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("invalid multipart form: %v", err))
@@ -151,11 +162,82 @@ func (h *Handler) ImportKVS(c *gin.Context) {
 	c.JSON(http.StatusOK, struct{}{})
 }
 
-func (h *Handler) PutKey(c *gin.Context) {
-	var kval kvs.KeyVal
-	if err := c.BindJSON(&kval); err != nil {
+func (h *Handler) PutEnvKey(c *gin.Context) {
+	var envKVal kvs.EnvKeyVal
+	if err := c.BindJSON(&envKVal); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("parse request body failed: %v", err))
 		return
+	}
+
+	kval := kvs.KeyVal{
+		Key: kvs.Key{
+			Name: envKVal.Name,
+			Kind: kvs.EnvKind,
+		},
+		Value: envKVal.Value,
+	}
+	storeKVal := kv2storeKV(kval)
+	if err := h.Set(storeKVal.Key, storeKVal.Value); err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("set key: %v failed: %v", storeKVal.Key, err))
+		return
+	}
+	c.JSON(http.StatusOK, struct{}{})
+}
+
+func (h *Handler) PutEnvfKey(c *gin.Context) {
+	name := c.Query("name")
+	if name == "" {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("empty name in query string"))
+		return
+	}
+
+	multiForm, err := c.MultipartForm()
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("invalid multipart form: %v", err))
+		return
+	}
+
+	var filenames []string
+	var fds []multipart.File
+	defer func() {
+		for _, fd := range fds {
+			fd.Close()
+		}
+	}()
+
+	for _, fs := range multiForm.File {
+		for _, f := range fs {
+			filename := f.Filename
+			filenames = append(filenames, filename)
+			fd, err := f.Open()
+			if err != nil {
+				c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("open file: %v failed: %v", filename, err))
+				return
+			}
+			fds = append(fds, fd)
+		}
+	}
+
+	if len(filenames) == 0 {
+		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("no file was found"))
+		return
+	}
+	if len(filenames) > 1 {
+		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("multiple files unsupported yet"))
+		return
+	}
+	data, err := ioutil.ReadAll(fds[0])
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("read envf content failed: %v", err))
+		return
+	}
+
+	kval := kvs.KeyVal{
+		Key: kvs.Key{
+			Kind: kvs.EnvfKind,
+			Name: name,
+		},
+		Value: string(data),
 	}
 	storeKVal := kv2storeKV(kval)
 	if err := h.Set(storeKVal.Key, storeKVal.Value); err != nil {

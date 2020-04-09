@@ -55,6 +55,11 @@ type KeyVal struct {
 	Value string `json:"value"`
 }
 
+type EnvKeyVal struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
 func (kv KeyVal) String() string {
 	return kv.Kind + "/" + kv.Name + "=" + kv.Value
 }

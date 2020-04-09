@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"regexp"
 
+	"tespkg.in/kit/log"
+
 	"github.com/coreos/go-oidc"
 	"golang.org/x/oauth2"
 	"tespkg.in/envs/pkg/kvs"
@@ -61,6 +63,11 @@ type ClientReq struct {
 	// 3. ssoOAuth2RedirectURI=http://localhost:5555/callback
 	// 4. ssoOAuth2Host=http://localhost:5555
 	Name string `json:"name" yaml:"name"`
+}
+
+type ClientReqWithID struct {
+	ID string `json:"id" yaml:"id"`
+	ClientReq
 }
 
 type ClientReqs []ClientReq
@@ -119,7 +126,7 @@ func registerOAuthClients(s kvs.KVStore, provider OAuthProviderConfig, reqs Clie
 		}
 
 		// Check if the client already existed in envs
-		_, err = s.Get(
+		clientID, err := s.Get(
 			kvs.Key{
 				Kind: kvs.EnvKind,
 				Name: client.Name + "ClientID",
@@ -128,9 +135,53 @@ func registerOAuthClients(s kvs.KVStore, provider OAuthProviderConfig, reqs Clie
 		if err != nil && !errors.Is(err, kvs.ErrNotFound) {
 			return err
 		}
-		if !errors.Is(err, kvs.ErrNotFound) {
-			// Ignore existed/registered client
-			continue
+		if err == nil && clientID != "" {
+			// Update existed/registered client
+			reqWithID := ClientReqWithID{
+				ID:        clientID,
+				ClientReq: client,
+			}
+
+			data, _ := json.Marshal(&reqWithID)
+			req, err := http.NewRequest(http.MethodPut, provider.Issuer+"/client", bytes.NewBuffer(data))
+			if err != nil {
+				return err
+			}
+			tok.SetAuthHeader(req)
+
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				return fmt.Errorf("update client %v failed: %v", client.Name, err)
+			}
+			closer = append(closer, resp.Body)
+
+			data, err = ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return err
+			}
+			var result struct {
+				Success bool   `json:"success"`
+				Message string `json:"message"`
+				Error   string `json:"error"`
+			}
+			if err := json.Unmarshal(data, &result); err != nil {
+				return err
+			}
+			if result.Success {
+				// Publish env keys to envs
+				if err := publishOIDCClient(s, client.Name+"RedirectURI", client.RedirectURIs[0]); err != nil {
+					return fmt.Errorf("publish %v RedirectURI failed %v", client.Name, err)
+				}
+				if client.OAuth2Host != "" {
+					if err := publishOIDCClient(s, client.Name+"Host", client.OAuth2Host); err != nil {
+						return fmt.Errorf("publish %v RedirectURI failed %v", client.Name, err)
+					}
+				}
+
+				continue
+			}
+
+			log.Warnf("update %v with id %v failed %v, trying creating", client.Name, clientID, result.Error)
 		}
 
 		// Register new client to oidc provider

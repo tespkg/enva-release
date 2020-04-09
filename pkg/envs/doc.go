@@ -12,18 +12,18 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	openspec "github.com/go-openapi/spec"
 	"tespkg.in/envs/pkg/kvs"
 	"tespkg.in/envs/pkg/openapi"
-	"tespkg.in/envs/pkg/spec"
-
-	openspec "github.com/go-openapi/spec"
 )
 
 const (
-	keyValTag  = "keyval"
-	addOnsTag  = "add-ons"
-	specTag    = "spec"
-	specHdrDef = "spechdr"
+	keyValTag     = "KeyVal"
+	envKeyValTag  = "EnvKeyVal"
+	fileKeyValTag = "FileKeyVal"
+	addOnsTag     = "Add-ons"
+	keyValDef     = "keyVal"
+	envKeyValDef  = "envKeyVal"
 )
 
 // GenerateSpec generate openapi spec
@@ -32,9 +32,8 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 	// 1. Definition for spec.KeyVal & spec.KeyVals model
 	// 2. Definition for spec.Header & spec.Spec & spec.Specs model
 	specDefs := map[string]openspec.Schema{
-		keyValTag:  openapi.GenerateModel(reflect.ValueOf(kvs.KeyVal{})),
-		specHdrDef: openapi.GenerateModel(reflect.ValueOf(spec.Header{})),
-		specTag:    openapi.GenerateModel(reflect.ValueOf(spec.Spec{})),
+		keyValDef:    openapi.GenerateModel(reflect.ValueOf(kvs.KeyVal{})),
+		envKeyValDef: openapi.GenerateModel(reflect.ValueOf(kvs.EnvKeyVal{})),
 	}
 
 	tags := []openspec.Tag{
@@ -45,18 +44,24 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 		},
 		{
 			TagProps: openspec.TagProps{
-				Name: addOnsTag,
+				Name: envKeyValTag,
 			},
 		},
 		{
 			TagProps: openspec.TagProps{
-				Name: specTag,
+				Name: fileKeyValTag,
+			},
+		},
+		{
+			TagProps: openspec.TagProps{
+				Name: addOnsTag,
 			},
 		},
 	}
 
 	pathItems := make(map[string]openspec.PathItem)
-	// 1. keys GET & PUT
+
+	// 1. keys GET
 	pathItems["/keys"] = openspec.PathItem{
 		PathItemProps: openspec.PathItemProps{
 			Get: &openspec.Operation{
@@ -70,40 +75,26 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 						openapi.BuildParam("query", "kind", "string", "", false, nil).
 							WithParameterDesc("Get keyvals by kind, supported kinds: env, envf, envo, envof"),
 					},
-					Responses: openapi.BuildResp(http.StatusOK, openapi.BuildSuccessResp(openapi.ArrRefSchema(keyValTag))),
-				},
-			},
-			Put: &openspec.Operation{
-				OperationProps: openspec.OperationProps{
-					ID:          "PutKeys",
-					Summary:     "Update value of keys",
-					Description: "Update value of keys",
-					Produces:    []string{"application/json"},
-					Tags:        []string{keyValTag},
-					Parameters: []openspec.Parameter{
-						openapi.BuildParam("body", "body", "", "", true, nil).
-							WithNewSchema(openapi.ArrRefSchema(keyValTag)).
-							WithParameterDesc("Update multiple keyvals"),
-					},
-					Responses: openapi.BuildResp(http.StatusOK, openapi.BuildSuccessResp(nil)),
+					Responses: openapi.BuildResp(http.StatusOK, openapi.BuildSuccessResp(openapi.ArrRefSchema(keyValDef))),
 				},
 			},
 		},
 	}
-	// 2. key PUT
-	pathItems["/key"] = openspec.PathItem{
+
+	// 2. envkeys PUT
+	pathItems["/envkeys"] = openspec.PathItem{
 		PathItemProps: openspec.PathItemProps{
 			Put: &openspec.Operation{
 				OperationProps: openspec.OperationProps{
-					ID:          "PutKey",
-					Summary:     "Update value of a single key",
-					Description: "Update value of a single key",
+					ID:          "PutEnvKeys",
+					Summary:     "Create or Update value of env kind keys",
+					Description: "Create Update value of env kind keys",
 					Produces:    []string{"application/json"},
-					Tags:        []string{keyValTag},
+					Tags:        []string{envKeyValTag},
 					Parameters: []openspec.Parameter{
 						openapi.BuildParam("body", "body", "", "", true, nil).
-							WithNewSchema(openapi.ObjRefSchema(keyValTag)).
-							WithParameterDesc("Update a single keyval"),
+							WithNewSchema(openapi.ArrRefSchema(envKeyValDef)).
+							WithParameterDesc("Update multiple normal env keyvals"),
 					},
 					Responses: openapi.BuildResp(http.StatusOK, openapi.BuildSuccessResp(nil)),
 				},
@@ -111,27 +102,48 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 		},
 	}
 
-	// 3. kvs GET & PUT
-	pathItems["/kvs"] = openspec.PathItem{
+	// 3. envkey PUT
+	pathItems["/envkey"] = openspec.PathItem{
+		PathItemProps: openspec.PathItemProps{
+			Put: &openspec.Operation{
+				OperationProps: openspec.OperationProps{
+					ID:          "PutEnvKey",
+					Summary:     "Create or Update value of a single env kind key",
+					Description: "Create or Update value of a single env kind key",
+					Produces:    []string{"application/json"},
+					Tags:        []string{envKeyValTag},
+					Parameters: []openspec.Parameter{
+						openapi.BuildParam("body", "body", "", "", true, nil).
+							WithNewSchema(openapi.ObjRefSchema(envKeyValDef)).
+							WithParameterDesc("Update a single normal env keyval"),
+					},
+					Responses: openapi.BuildResp(http.StatusOK, openapi.BuildSuccessResp(nil)),
+				},
+			},
+		},
+	}
+
+	// 4. envkvs GET & PUT
+	pathItems["/envkvs"] = openspec.PathItem{
 		PathItemProps: openspec.PathItemProps{
 			Get: &openspec.Operation{
 				OperationProps: openspec.OperationProps{
-					ID:          "ExportKVS",
-					Summary:     "Export all env/envo kind key values",
-					Description: "Export all env/envo kind key values",
+					ID:          "ExportEnvKVS",
+					Summary:     "Export all env kind key values",
+					Description: "Export all env kind key values",
 					Produces:    []string{"application/json"},
-					Tags:        []string{keyValTag},
+					Tags:        []string{envKeyValTag},
 					Responses:   openapi.BuildResp(http.StatusOK, openapi.BuildSuccessResp(openapi.FileSchema())),
 				},
 			},
 			Put: &openspec.Operation{
 				OperationProps: openspec.OperationProps{
-					ID:          "ImportKVS",
-					Summary:     "Import given key values",
-					Description: "Import given key values",
+					ID:          "ImportEnvKVS",
+					Summary:     "Import given env kind key values",
+					Description: "Import given env kind key values",
 					Produces:    []string{"application/json"},
 					Consumes:    []string{"multipart/form-data"},
-					Tags:        []string{keyValTag},
+					Tags:        []string{envKeyValTag},
 					Parameters: []openspec.Parameter{
 						openapi.BuildParam("formData", "file", "file", "", true, nil).
 							WithParameterDesc("key values file"),
@@ -142,27 +154,50 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 		},
 	}
 
-	// 4. key/{fully_qualified_key_name} GET
-	pathItems["/key/{fully_qualified_key_name}"] = openspec.PathItem{
+	//5. envfkey PUT
+	pathItems["/envfkey"] = openspec.PathItem{
 		PathItemProps: openspec.PathItemProps{
-			Get: &openspec.Operation{
+			Put: &openspec.Operation{
 				OperationProps: openspec.OperationProps{
-					ID:          "GetKey",
-					Summary:     "Get a keyval with the given key name",
-					Description: "Get a keyval with the given key name",
+					ID:          "PutEnvfKey",
+					Summary:     "Create or Update a envf kind key value",
+					Description: "Create or Update a envf kind key value",
 					Produces:    []string{"application/json"},
-					Tags:        []string{keyValTag},
+					Consumes:    []string{"multipart/form-data"},
+					Tags:        []string{fileKeyValTag},
 					Parameters: []openspec.Parameter{
-						openapi.BuildParam("path", "fully_qualified_key_name", "string", "", true, nil).
-							WithParameterDesc("Allowed format: kind/name,  supported kind: env, envf, envo, envof"),
+						openapi.BuildParam("query", "name", "string", "", true, nil).
+							WithParameterDesc("key name for the env file"),
+						openapi.BuildParam("formData", "file", "file", "", true, nil).
+							WithParameterDesc("env file"),
 					},
-					Responses: openapi.BuildResp(http.StatusOK, openapi.BuildSuccessResp(openapi.ObjRefSchema(keyValTag))),
+					Responses: openapi.BuildResp(http.StatusOK, openapi.BuildSuccessResp(nil)),
 				},
 			},
 		},
 	}
 
-	// 5. oidc registration
+	// 6. key/{fully_qualified_key_name} GET
+	pathItems["/key/{fully_qualified_key_name}"] = openspec.PathItem{
+		PathItemProps: openspec.PathItemProps{
+			Get: &openspec.Operation{
+				OperationProps: openspec.OperationProps{
+					ID:          "GetKey",
+					Summary:     "Get a keyval with the given key name and kind",
+					Description: "Get a keyval with the given key name and kind",
+					Produces:    []string{"application/json"},
+					Tags:        []string{keyValTag},
+					Parameters: []openspec.Parameter{
+						openapi.BuildParam("path", "fully_qualified_key_name", "string", "", true, nil).
+							WithParameterDesc("Allowed format: kind/name,  supported kind: env, envf, envo"),
+					},
+					Responses: openapi.BuildResp(http.StatusOK, openapi.BuildSuccessResp(openapi.ObjRefSchema(keyValDef))),
+				},
+			},
+		},
+	}
+
+	// 7. oidc registration
 	pathItems["/oidcr"] = openspec.PathItem{
 		PathItemProps: openspec.PathItemProps{
 			Put: &openspec.Operation{
@@ -192,64 +227,6 @@ which is the key prefix to store the key & value pairs in env store.
 `,
 								sa.Schema+"://"+filepath.Join(sa.KnownHost, sa.BasePath, "example/oidcr")),
 							),
-					},
-					Responses: openapi.BuildResp(http.StatusOK, openapi.BuildSuccessResp(nil)),
-				},
-			},
-		},
-	}
-
-	// 6. specs GET
-	pathItems["/specs"] = openspec.PathItem{
-		PathItemProps: openspec.PathItemProps{
-			Get: &openspec.Operation{
-				OperationProps: openspec.OperationProps{
-					ID:          "GetSpecs",
-					Summary:     "Get service/application specs headers",
-					Description: "Get service/application specs headers",
-					Produces:    []string{"application/json"},
-					Tags:        []string{specTag},
-					Responses:   openapi.BuildResp(http.StatusOK, openapi.BuildSuccessResp(openapi.ArrRefSchema(specHdrDef))),
-				},
-			},
-		},
-	}
-	// 7. spec/{name} GET & PUT
-	pathItems["/spec/{name}"] = openspec.PathItem{
-		PathItemProps: openspec.PathItemProps{
-			Get: &openspec.Operation{
-				OperationProps: openspec.OperationProps{
-					ID:          "GetSpec",
-					Summary:     "Get a service/application spec details",
-					Description: "Get a service/application spec details",
-					Produces:    []string{"application/json"},
-					Tags:        []string{specTag},
-					Parameters: []openspec.Parameter{
-						openapi.BuildParam("path", "name", "string", "", true, nil).
-							WithParameterDesc("service/application spec name"),
-					},
-					Responses: openapi.BuildResp(http.StatusOK, openapi.BuildSuccessResp(openapi.ObjRefSchema(specTag))),
-				},
-			},
-			Put: &openspec.Operation{
-				OperationProps: openspec.OperationProps{
-					ID:          "PutSpec",
-					Summary:     "Create or reset service/application spec",
-					Description: "Create or reset service/application spec",
-					Produces:    []string{"application/json"},
-					Consumes:    []string{"multipart/form-data"},
-					Tags:        []string{specTag},
-					Parameters: []openspec.Parameter{
-						openapi.BuildParam("path", "name", "string", "", true, nil).
-							WithParameterDesc("Service/application spec name"),
-						openapi.BuildParam("formData", "file-1", "file", "", true, nil).
-							WithParameterDesc("First file to upload, please change filename key in the request if needed"),
-						openapi.BuildParam("formData", "file-2", "file", "", false, nil).
-							WithParameterDesc("Second file to upload, please change filename key in the request if needed"),
-						openapi.BuildParam("formData", "file-...", "file", "", false, nil).
-							WithParameterDesc("Mth file to upload, please change filename key in the request if needed"),
-						openapi.BuildParam("formData", "file-N", "file", "", false, nil).
-							WithParameterDesc("Nth file to upload, please change filename key in the request if needed"),
 					},
 					Responses: openapi.BuildResp(http.StatusOK, openapi.BuildSuccessResp(nil)),
 				},
