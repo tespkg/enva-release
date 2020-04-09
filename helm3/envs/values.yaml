@@ -119,7 +119,7 @@ image:
   - --address=:9112
   - --schema=https  
   - --host=envs.dev.meeraspace.com
-  - --dsn=https://$(CONSUL.svcAddr)/envs
+  - --dsn=http://$(CONSUL.svcAddr)/envs2
   - --asset-dir=/usr/local/envs/static
 
 
