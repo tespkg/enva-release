@@ -1,0 +1,16 @@
+{{- if .Values.persistentVolumeClaim1.enabled }}
+{{- if not .Values.persistentVolumeClaim1.existingClaim -}}
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: "{{ .Values.persistentVolumeClaim1.name }}"
+  namespace: {{ template "APP.namespace" . }}  
+spec:
+  accessModes:
+{{ toYaml .Values.persistentVolumeClaim1.accessModes | indent 4 }}
+  resources:
+    requests:
+      storage: "{{ .Values.persistentVolumeClaim1.size }}"
+  storageClassName: "{{ .Values.persistentVolumeClaim1.storageClass }}"
+{{- end -}}
+{{- end -}}
