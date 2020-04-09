@@ -99,16 +99,17 @@ func newServer(a *Args, p *patchTable) (*Server, error) {
 	// Create APIs handler
 	handler := NewHandler(s)
 	ge.GET("keys", handler.GetKeys)
-	ge.PUT("keys", handler.PutKeys)
-	ge.GET("kvs", handler.ExportKVS)
-	ge.PUT("kvs", handler.ImportKVS)
-	ge.PUT("key", handler.PutKey)
+	ge.PUT("envkeys", handler.PutEnvKeys)
+	ge.PUT("envkey", handler.PutEnvKey)
+	ge.GET("envkvs", handler.ExportEnvKVS)
+	ge.PUT("envkvs", handler.ImportEnvKVS)
+	ge.PUT("envfkey", handler.PutEnvfKey)
 	ge.GET("key/*fully_qualified_key_name", handler.GetKey)
+	ge.PUT("oidcr", handler.OAuthRegistration)
+	ge.GET("example/:typ", AddOnsExample)
 	ge.GET("specs", handler.GetSpecs)
 	ge.GET("spec/:name", handler.GetSpec)
 	ge.PUT("spec/:name", handler.PutSpec)
-	ge.PUT("oidcr", handler.OAuthRegistration)
-	ge.GET("example/:typ", AddOnsExample)
 
 	ge.GET("/", func(c *gin.Context) {
 		c.Redirect(http.StatusFound, a.StaticAssetPath)

@@ -56,7 +56,7 @@ clients:
   # instead of exposing oauth2 redirect URI option to the DevOps explicitly.
   OAuth2Host: http://localhost
   redirectURIs:
-  - http://localhost/sso/callback
+  - http://localhost:8080/sso/callback
   allowedAuthTypes:
   - authorization_code
   - implicit
