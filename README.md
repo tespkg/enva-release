@@ -9,7 +9,7 @@ In this README:
 - [Use cases](#use-cases)
 - [Workflow](#workflow)
 - [Conventions](#conventions)
-- [Tutorials](#Tutorials)
+- [Tutorials](#tutorials)
 - [Architecture](#architecture)
 - [Minimized steps for different services](#minimized-steps)
 - [FAQs](#faqs)
