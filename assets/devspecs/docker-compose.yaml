@@ -112,7 +112,7 @@ services:
       - consul
 
   sso:
-    image: registry.tespkg.in/sso/service
+    image: registry.gitlab.com/target-digital-transformation/sso/master:dddc4772
     container_name: sso
     command: >
       --publish ssoGRPCAddr=sso:5557

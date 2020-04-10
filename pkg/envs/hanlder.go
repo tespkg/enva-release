@@ -52,6 +52,21 @@ func (h *Handler) GetKeys(c *gin.Context) {
 	c.JSON(http.StatusOK, storeKVs2kvs(kvals))
 }
 
+func (h *Handler) PutKey(c *gin.Context) {
+	var kval kvs.KeyVal
+	if err := c.BindJSON(&kval); err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("parse request body failed: %v", err))
+		return
+	}
+
+	storeKVal := kv2storeKV(kval)
+	if err := h.Set(storeKVal.Key, storeKVal.Value); err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("set key: %v failed: %v", storeKVal.Key, err))
+		return
+	}
+	c.JSON(http.StatusOK, struct{}{})
+}
+
 func (h *Handler) PutEnvKeys(c *gin.Context) {
 	var envKeyVals []kvs.EnvKeyVal
 	if err := c.BindJSON(&envKeyVals); err != nil {

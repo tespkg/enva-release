@@ -99,6 +99,7 @@ func newServer(a *Args, p *patchTable) (*Server, error) {
 	// Create APIs handler
 	handler := NewHandler(s)
 	ge.GET("keys", handler.GetKeys)
+	ge.PUT("key", handler.PutKey)
 	ge.PUT("envkeys", handler.PutEnvKeys)
 	ge.PUT("envkey", handler.PutEnvKey)
 	ge.GET("envkvs", handler.ExportEnvKVS)
