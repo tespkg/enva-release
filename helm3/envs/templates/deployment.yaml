@@ -21,6 +21,8 @@ spec:
         app: {{ template "APP.name" . }}
         release: {{ .Release.Name }}
         version: {{ template "APP.version" . }}
+        namespace: {{ template "APP.namespace" . }}
+        env: {{ .Values.global.env }}
     spec:
       imagePullSecrets:
       - name: {{ template "APP.name" . }}-gitlabregistrykey
@@ -36,16 +38,17 @@ spec:
           env:
   {{- $baseUrl := .Values.global.host.baseUrl -}}
   {{- $env := .Values.global.env -}}
+  {{- $nsMid := .Values.global.namespace.mid -}}
   {{- $customenv := .Values.global.host.prefix -}}
   {{- $standardStatus := .Values.global.mode.standard -}}
   {{- $app := default .Chart.Name .Values.nameOverride -}}
           {{- range $key, $value := .Values.image.extraENVRulehandled }}
           {{- if eq $standardStatus false }}
           - name: {{ $key }}
-            value: https://{{ $value }}{{- printf "%s.%s" $customenv $baseUrl -}}
+            value: {{ printf $value | replace "$env" $customenv | replace "$baseUrl" $baseUrl | replace "$nsMid" $nsMid }}
           {{- else }}
           - name: {{ $key }}
-            value: https://{{ $value }}{{- printf "%s.%s" $env $baseUrl -}}
+            value: {{ printf $value | replace "$env" $env | replace "$baseUrl" $baseUrl | replace "$nsMid" $nsMid }}
           {{- end }}
           {{- end }}
           {{- range $key, $value := .Values.image.extraEnvFromSecert }}
