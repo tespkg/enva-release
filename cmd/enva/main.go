@@ -138,30 +138,39 @@ func main() {
 	}
 
 	// Analyze publish key value pair
-	if len(publishedKVs) == 0 {
-		osEnvPublishKVs := os.Getenv("ENVA_PUBLISH")
-		if osEnvPublishKVs != "" {
-			parts := strings.Split(osEnvPublishKVs, ",")
-			for _, part := range parts {
-				kv := strings.TrimSpace(part)
-				if kv == "" {
-					continue
-				}
-				publishedKVs = append(publishedKVs, kv)
+	osEnvPublishKVs := os.Getenv("ENVA_PUBLISH")
+	if osEnvPublishKVs != "" {
+		parts := strings.Split(osEnvPublishKVs, ",")
+		for _, part := range parts {
+			kv := strings.TrimSpace(part)
+			if kv == "" {
+				continue
 			}
+			publishedKVs = append(publishedKVs, kv)
 		}
 	}
+
 	// Publish key value pair to envs
+	visitedKey := make(map[string]struct{})
 	for _, kv := range publishedKVs {
-		ii := strings.Split(kv, "=")
-		if len(ii) != 2 {
-			log.Fatalf("invalid ENVA_PUBLISH key value pair, require key=value, got: %v", kv)
+		k, v, err := extractKV(strings.TrimSpace(kv))
+		if err != nil {
+			log.Fatalf("invalid publish key value pair, require key=value, got: %v", kv)
 		}
+
+		// If duplicated key found, command option has priority
+		// If duplicated found in both command options or os env, only the first one would be count
+		if _, ok := visitedKey[k]; !ok {
+			log.Warnf("ignore duplicated publish key:%v with value: %v ", k, v)
+			continue
+		}
+		visitedKey[k] = struct{}{}
+
 		// Support publish env value only
 		if err := kvsClient.Set(kvs.Key{
 			Kind: kvs.EnvKind,
-			Name: ii[0],
-		}, ii[1]); err != nil {
+			Name: k,
+		}, v); err != nil {
 			log.Fatalf("publish key value pair %v failed: %v", kv, err)
 		}
 	}
@@ -222,4 +231,12 @@ func raise(sig os.Signal) error {
 		return err
 	}
 	return p.Signal(sig)
+}
+
+func extractKV(kv string) (k, v string, err error) {
+	ii := strings.Split(kv, "=")
+	if len(ii) != 2 {
+		return "", "", fmt.Errorf("invalid ENVA_PUBLISH key value pair, require key=value, got: %v", kv)
+	}
+	return strings.TrimSpace(ii[0]), strings.TrimSpace(ii[1]), nil
 }
