@@ -223,7 +223,7 @@ func (c *Client) doRequest(r *request) (*http.Response, error) {
 // Query is used to do a GET request against an endpoint
 // and deserialize the response into an interface.
 func (c *Client) query(endpoint string, out interface{}) error {
-	r := c.newRequest("GET", endpoint)
+	r := c.newRequest(http.MethodGet, endpoint)
 	found, resp, err := requireNotFoundOrOK(c.doRequest(r))
 	if err != nil {
 		return err
@@ -255,7 +255,7 @@ func (c *Client) Set(key kvs.Key, value string) error {
 		Key:   key,
 		Value: value,
 	}
-	r := c.newRequest("PUT", "/key")
+	r := c.newRequest(http.MethodPut, "/key")
 	r.obj = kval
 
 	resp, err := requireOK(c.doRequest(r))

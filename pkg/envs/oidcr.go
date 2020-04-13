@@ -186,7 +186,7 @@ func registerOAuthClients(s kvs.KVStore, provider OAuthProviderConfig, reqs Clie
 
 		// Register new client to oidc provider
 		data, _ := json.Marshal(&client)
-		req, err := http.NewRequest("POST", provider.Issuer+"/client", bytes.NewBuffer(data))
+		req, err := http.NewRequest(http.MethodPost, provider.Issuer+"/client", bytes.NewBuffer(data))
 		if err != nil {
 			return err
 		}

@@ -33,7 +33,7 @@ var (
 )
 
 var (
-	envKeyRegex = regexp.MustCompile(`\${env([of])?:// *\.([_a-zA-Z][_a-zA-Z0-9]*) *(\| *default ([\-./:*,@_a-zA-Z0-9]*))? *}`)
+	envKeyRegex = regexp.MustCompile(`\${env([of])?:// *\.([_a-zA-Z][_a-zA-Z0-9]*) *(\| *default ([~!@#$%^&*()\-_+={}\[\]:";'<>,.?/|\\a-zA-Z0-9]*))? *}`)
 )
 
 type KVStore interface {

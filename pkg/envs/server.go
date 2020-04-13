@@ -98,15 +98,25 @@ func newServer(a *Args, p *patchTable) (*Server, error) {
 
 	// Create APIs handler
 	handler := NewHandler(s)
+	// APIs for all key kind
+	ge.GET("key/*fully_qualified_key_name", handler.GetKey)
 	ge.GET("keys", handler.GetKeys)
-	ge.PUT("envkeys", handler.PutEnvKeys)
+	ge.PUT("key", handler.PutKey)
+
+	// APIs for env kind key
 	ge.PUT("envkey", handler.PutEnvKey)
+	ge.PUT("envkeys", handler.PutEnvKeys)
 	ge.GET("envkvs", handler.ExportEnvKVS)
 	ge.PUT("envkvs", handler.ImportEnvKVS)
+
+	// APIs for envf kind key
 	ge.PUT("envfkey", handler.PutEnvfKey)
-	ge.GET("key/*fully_qualified_key_name", handler.GetKey)
+
+	// APIs for add-ons
 	ge.PUT("oidcr", handler.OAuthRegistration)
 	ge.GET("example/:typ", AddOnsExample)
+
+	// APIs for application spec, unused yet, maybe remove later
 	ge.GET("specs", handler.GetSpecs)
 	ge.GET("spec/:name", handler.GetSpec)
 	ge.PUT("spec/:name", handler.PutSpec)
