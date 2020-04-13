@@ -160,7 +160,7 @@ func main() {
 
 		// If duplicated key found, command option has priority
 		// If duplicated found in both command options or os env, only the first one would be count
-		if _, ok := visitedKey[k]; !ok {
+		if _, ok := visitedKey[k]; ok {
 			log.Warnf("ignore duplicated publish key:%v with value: %v ", k, v)
 			continue
 		}
