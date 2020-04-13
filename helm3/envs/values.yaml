@@ -23,8 +23,8 @@ global:
     baseUrl: meeraspace.com
   service:
     gateway:
-      name: gateway
-      namespace: default
+      name: meeraspace-gateway
+      namespace: istio-system
     consul:
       svcName: consul  
 

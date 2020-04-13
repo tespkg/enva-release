@@ -1,3 +1,32 @@
+- kind: env
+  name: workspaceHost
+  value: {{ template "workspaceHost" . }}
+- kind: env
+  name: workspaceUrl
+  value: https://{{ template "workspaceHost" . }}
+- kind: env
+  name: EnterpriseRegisterURL
+  value: https://{{ template "workspaceHost" . }}/public/register
+- kind: env
+  name: sessmsGRPCAddr
+  value: sessms-grpc.{{ template "nsPrefixMid" . }}-sessms:6000
+- kind: env
+  name: profileGRPCAddr
+  value: profile-grpc.{{ template "nsPrefixMid" . }}-profile:50051
+- kind: env
+  name: profileHTTPAddr
+  value: profile-graphql.{{ template "nsPrefixMid" . }}-profile:9301
+- kind: env
+  name: profilesHost
+  value: profile.{{ template "workspaceHost" . }}
+- kind: env
+  name: profileUrl
+  value: https://profile.{{ template "workspaceHost" . }}
+- kind: env
+  name: acGRPCAddr
+  value: accesscontrol-be.{{ template "nsPrefixMid" . }}-accesscontrol:7001
+
+
 ## DB
 - kind: env
   name: postgresSVCAddr
@@ -18,47 +47,7 @@
   name: profileDSN
   value: postgres://postgres:password@{{ template "postgresSVCAddr" . }}/profile?sslmode=disable
 
-
-
-
-## SVC * URL
-# sso
+# rabbitmqDSN  amqp://guest:guest@rabbitmq:5672/
 - kind: env
-  name: ssoHTTPAddr
-  value: sso-be.{{ template "nsPrefixMid" . }}-sso:5556
-- kind: env
-  name: ssoGRPCAddr
-  value: sso-be.{{ template "nsPrefixMid" . }}-sso:5557
-- kind: env
-  name: ssoHost
-  value: sso.{{ template "workspaceHost" . }}
-- kind: env
-  name: ssoUrl
-  value: https://sso.{{ template "workspaceHost" . }}
-
-
-- kind: env
-  name: EnterpriseRegisterURL
-  value: https://{{ template "workspaceHost" . }}/public/register
-
-# sessms
-- kind: env
-  name: sessmsGRPCAddr
-  value: sessms-grpc.{{ template "nsPrefixMid" . }}-sessms:6000
-- kind: env
-  name: sessmsHost
-  value: sender.{{ template "workspaceHost" . }}
-- kind: env
-  name: sessmsUrl
-  value: https://sender.{{ template "workspaceHost" . }}
-
-# profile
-- kind: env
-  name: profileGRPCAddr
-  value: profile-grpc.{{ template "nsPrefixMid" . }}-profile:6000
-- kind: env
-  name: profilesHost
-  value: sender.{{ template "workspaceHost" . }}
-- kind: env
-  name: profileUrl
-  value: https://sender.{{ template "workspaceHost" . }}
+  name: rabbitmqDSN
+  value: amqp://guest:guest@{{ template "rabbitmqSVCAddr" . }}/

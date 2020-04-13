@@ -93,6 +93,22 @@
 {{- end -}}
 
 
+{{- define "rabbitmqHost" -}}
+{{- if .Values.global.service.rabbitmq.customHost -}}
+{{- .Values.global.service.rabbitmq.customHost  | trimSuffix "-" -}}
+{{- else -}}
+{{- .Values.global.service.rabbitmq.svcName -}}.{{ template "nsPrefixMid" . }}-{{.Values.global.namespace.suffix.infrastructure.rabbitmq }}
+{{- end -}}
+{{- end -}}
+{{- define "rabbitmqPort" -}}
+{{- default "5672" .Values.global.service.rabbitmq.svcPort  | trimSuffix "-" -}}
+{{- end -}}
+{{- define "rabbitmqSVCAddr" -}}
+{{ template "rabbitmqHost" . }}:{{ template "rabbitmqPort" . }}
+{{- end -}}
+
+
+
 {{- define "workspaceHost" -}}
 {{ template "hostSuffix" . }}.{{- .Values.global.host.baseUrl -}}
 {{- end -}}
@@ -100,7 +116,7 @@
 {{- define "sessmsHost" -}}
 sessms-grpc.{{ template "nsPrefixMid" . }}-{{.Values.global.namespace.suffix.meeraApp.sessms }}
 {{- end -}}
-{{- define "SESSMS.svcAddr" -}}
+{{- define "sessmsSVCAddr" -}}
 {{ template "SESSMS.host" . }}:6000
 {{- end -}}
 
