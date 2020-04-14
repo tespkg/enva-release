@@ -49,6 +49,8 @@ test-coverage:
 build:
   stage: build
   script:
+    # 1. build envs image
+    # 1. build enva images, push them to registry.tespkg.in
     # TODO: docker login registry.tespkg.in with CI_SECRET...
     make PUSH=true build-images
   only:
