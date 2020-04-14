@@ -154,6 +154,7 @@ we need to make sure OAuth2 client has been registered & published into env stor
 - [x] Expose OAuth2.0 Client registration via envs API
 - [x] Keep enva running if envs stopped
 - [ ] Health check endpoint for enva
+- [ ] Apart from `default` keyword, add `overwrite` keyword support
 - [ ] Add a cli tool to upload env & envf & add-ons files via API call
 - [ ] Refactor oicr registration add-ons API to support multiple redirect URIs
 - [ ] Add-ons API support for extending the pre-configuration of service startup, e.g, create dbUser/db if not exist etc.
