@@ -154,10 +154,12 @@ we need to make sure OAuth2 client has been registered & published into env stor
 - [x] Expose OAuth2.0 Client registration via envs API
 - [x] Keep enva running if envs stopped
 - [ ] Health check endpoint for enva
+- [ ] Add a cli tool to upload env & envf & add-ons files via API call
 - [ ] Refactor oicr registration add-ons API to support multiple redirect URIs
+- [ ] Add-ons API support for extending the pre-configuration of service startup, e.g, create dbUser/db if not exist etc.
+- [ ] Support auth & authz with ReadOnly & Admin user permission
 - [ ] Frontend use envs to render index.html directly instead of putting env key into OSEnv and render OSEnv then render index.html via OSEnv
 - [x] ~~Create a `init` CLI for db's kv publish & merge `oidcr` into it.~~
-- [ ] Add-ons API support for extending the pre-configuration of service startup, e.g, create dbUser/db if not exist etc.
 - [ ] Replace nginx with our own `simple static site service(s4)`
 - [x] ~~Migrate specs at startup~~
 - [ ] Kubernetes operator...
