@@ -7,5 +7,4 @@ if [[ $? -ne 0 ]]; then
   echo -e "$HOST_IP\t$HOST_DOMAIN" >> /etc/hosts
 fi
 
-echo enva $@
-exec enva "$@"
+exec "$@"

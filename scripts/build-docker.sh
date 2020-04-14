@@ -11,9 +11,8 @@ ASSETS_DOCKERFILE_DIR=${ROOT_DIR}/assets/dockerfiles
 
 echo  "Build base images..."
 cd "${ROOT_DIR}"
-docker build --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${http_proxy} --build-arg no_proxy=${no_proxy} -t registry.tespkg.in/library/envs:alpine3.10 -f Dockerfile-envs .
-docker build --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${http_proxy} --build-arg no_proxy=${no_proxy} -t registry.tespkg.in/library/enva:alpine3.10 .
-docker build --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${http_proxy} --build-arg no_proxy=${no_proxy} -t registry.tespkg.in/library/enva:debian-buster-slim -f Dockerfile-debian .
+docker build --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${http_proxy} --build-arg no_proxy=${no_proxy} -t registry.tespkg.in/library/enva:alpine3.10 -f Dockerfile-enva .
+docker build --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${http_proxy} --build-arg no_proxy=${no_proxy} -t registry.tespkg.in/library/enva:debian-buster-slim -f Dockerfile-enva-debian .
 
 echo "Wrap vendor official images..."
 cd ${ASSETS_DOCKERFILE_DIR}/alpine3.10 && docker build --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${http_proxy} --build-arg no_proxy=${no_proxy} -t registry.tespkg.in/library/alpine:3.10 .
@@ -26,7 +25,6 @@ cd ${ASSETS_DOCKERFILE_DIR}/ubuntu18.04 && docker build --build-arg http_proxy=$
 
 if [[ $# == 1 ]] && [[ $1 == "true" ]]; then
     echo "Push base images..."
-    docker push registry.tespkg.in/library/envs:alpine3.10
     docker push registry.tespkg.in/library/enva:alpine3.10
     docker push registry.tespkg.in/library/enva:debian-buster-slim
 

@@ -13,8 +13,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 	&& rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /build/bin/enva /usr/local/envs/bin/enva
-COPY --from=builder /build/bin/oidcr /usr/local/envs/bin/oidcr
-COPY --from=builder /build/docker-entrypoint.sh /docker-entrypoint.sh
+COPY --from=builder /build/docker-entrypoint-enva.sh /docker-entrypoint.sh
 
 ENV PATH="/usr/local/envs/bin:${PATH}"
 
