@@ -46,24 +46,3 @@
 {{- define "GATEWAY.addr" -}}
 {{- printf "%s/%s" .Values.global.service.gateway.namespace .Values.global.service.gateway.name  -}}
 {{- end -}}
-
-{{- define "consulHOST" -}}
-{{- if .Values.global.service.consul.customHost -}}
-{{- .Values.global.service.consul.customHost | trunc 63 | trimSuffix "-" -}}
-{{- else -}}
-{{- .Values.global.service.consul.svcName -}}.{{ template "nsPrefixMid" . }}-{{.Values.global.namespace.suffix.infrastructure.consul }}
-{{- end -}}
-{{- end -}}
-{{- define "consulHTTPAddr" -}}
-consul.{{ template "nsPrefixMid" . }}-{{.Values.global.namespace.suffix.infrastructure.consul }}:8500
-{{- end -}}
-
-{{- define "ENVS.svcAddr" -}}
-envs.{{ template "nsPrefixMid" . }}-{{.Values.global.namespace.suffix.meeraApp.envs }}:9112
-{{- end -}}
-{{- define "ENVS.host" -}}
-{{- .Values.global.host.svcName.envs  -}}.{{ template "hostSuffix" . }}.{{- .Values.global.host.baseUrl -}}
-{{- end -}}
-{{- define "ENVS.url" -}}
-https://{{ template "ENVS.host" . }}
-{{- end -}}

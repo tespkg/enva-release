@@ -1,7 +1,7 @@
 apiVersion: apps/v1beta2
 kind: Deployment
 metadata:
-  name: {{ template "APP.fullname" . }}
+  name: {{ template "APP.name" . }}
   namespace: {{ template "APP.namespace" . }}
   labels:
     app: {{ template "APP.name" . }}
@@ -23,6 +23,7 @@ spec:
         version: {{ template "APP.version" . }}
         namespace: {{ template "APP.namespace" . }}
         env: {{ .Values.global.env }}
+        namespace: {{ template "APP.namespace" . }}
     spec:
       imagePullSecrets:
       - name: {{ template "APP.name" . }}-gitlabregistrykey
@@ -38,17 +39,27 @@ spec:
           env:
   {{- $baseUrl := .Values.global.host.baseUrl -}}
   {{- $env := .Values.global.env -}}
+  {{- $nsPrefix := .Values.global.namespace.prefix -}}
   {{- $nsMid := .Values.global.namespace.mid -}}
-  {{- $customenv := .Values.global.host.prefix -}}
+  {{- $hostPrefix := .Values.global.host.prefix -}}
   {{- $standardStatus := .Values.global.mode.standard -}}
   {{- $app := default .Chart.Name .Values.nameOverride -}}
           {{- range $key, $value := .Values.image.extraENVRulehandled }}
           {{- if eq $standardStatus false }}
           - name: {{ $key }}
-            value: {{ printf $value | replace "$env" $customenv | replace "$baseUrl" $baseUrl | replace "$nsMid" $nsMid }}
+            value: {{ printf $value | replace "$env" $hostPrefix | replace "$baseUrl" $baseUrl }}
           {{- else }}
           - name: {{ $key }}
-            value: {{ printf $value | replace "$env" $env | replace "$baseUrl" $baseUrl | replace "$nsMid" $nsMid }}
+            value: {{ printf $value | replace "$env" $env | replace "$baseUrl" $baseUrl }}
+          {{- end }}
+          {{- end }}
+          {{- range $key, $value := .Values.image.extraENVRulehandled2 }}
+          {{- if eq $standardStatus false }}
+          - name: {{ $key }}
+            value: {{ printf $value | replace "$env" $nsPrefix | replace "$nsMid" $nsMid }}
+          {{- else }}
+          - name: {{ $key }}
+            value: {{ printf $value | replace "$env" $env | replace "$nsMid" $nsMid }}
           {{- end }}
           {{- end }}
           {{- range $key, $value := .Values.image.extraEnvFromSecert }}

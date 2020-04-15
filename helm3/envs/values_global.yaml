@@ -1,18 +1,29 @@
 global:
-  env: dev
+  env: global
   mode: 
-    standard: true
+    standard: false
     ## If set to "true"，  no namespace.prefix & host.prefix spec
   namespace:
-    prefix: dev 
-    mid: meeraspace
+    prefix: global 
+    mid: fluxble
+    suffix:
+      infrastructure:
+        gateway: gateway
+        consul: consul
+      meeraApp:
+        envs: envs
   host:
-    prefix: dev
-    baseUrl: meeraspace.com
+    svcName:
+      workspace: null
+      envs: envs
+    prefix: fluxble
+    baseUrl: com
   service:
     gateway:
-      name: gateway
-      namespace: default
+      name: global-gateway
+      namespace: istio-system
+    consul:
+      svcName: consul  
 
 # fullnameOverride: 
 
@@ -41,7 +52,6 @@ image:
 
   extraENVRulehandled:
     envsHost: envs.$env.$baseUrl
-    
   extraENVRulehandled2:
     consulHTTPAddr: consul.$env-$nsMid-consul:8500
 
@@ -61,7 +71,6 @@ istio:
 
   virtualservice:
     enabled: true
-    host: envs
     http:
     - route:
       - destination:

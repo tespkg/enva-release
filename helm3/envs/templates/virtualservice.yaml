@@ -6,7 +6,7 @@ metadata:
   namespace: {{ template "APP.namespace" . }}
 spec:
   hosts:
-  - {{ template "ENVS.host" . }}
+  - {{ .Values.istio.virtualservice.host }}.{{ template "hostSuffix" . }}.{{ .Values.global.host.baseUrl }}
   gateways: 
   - {{ template "GATEWAY.addr" . }}
   http:

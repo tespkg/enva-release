@@ -1,0 +1,55 @@
+---
+# Source: envs/templates/KV.yaml
+- kind: env
+  name: workspaceHost
+  value: fluxble.com
+- kind: env
+  name: workspaceUrl
+  value: https://fluxble.com
+- kind: env
+  name: EnterpriseRegisterURL
+  value: https://fluxble.com/public/register
+- kind: env
+  name: sessmsGRPCAddr
+  value: sessms-grpc.target-meeraspace-sessms:6000
+- kind: env
+  name: profileGRPCAddr
+  value: profile-grpc.target-meeraspace-profile:50051
+- kind: env
+  name: profileHTTPAddr
+  value: profile-graphql.target-meeraspace-profile:9301
+- kind: env
+  name: profilesHost
+  value: profile.fluxble.com
+- kind: env
+  name: profileUrl
+  value: https://profile.fluxble.com
+- kind: env
+  name: acGRPCAddr
+  value: accesscontrol-be.target-meeraspace-accesscontrol:7001
+
+
+## DB
+- kind: env
+  name: postgresSVCAddr
+  value: postgres.target-meeraspace-postgres:5432
+- kind: env
+  name: ssoDSN
+  value: postgres://target:V1w493o0cZ1REI0PlftBztQOz@target-fluxble.cluster-cs8kekwx3z8y.eu-west-1.rds.amazonaws.com:5432/sso_global?sslmode=disable
+- kind: env
+  name: acDSN
+  value: postgres://postgres:password@postgres.target-meeraspace-postgres:5432/ac?sslmode=disable
+- kind: env
+  name: licenseDSN
+  value: postgres://postgres:password@postgres.target-meeraspace-postgres:5432/license?sslmode=disable
+- kind: env
+  name: configuratorDSN
+  value: postgres://postgres:password@postgres.target-meeraspace-postgres:5432/configurator?sslmode=disable
+- kind: env
+  name: profileDSN
+  value: postgres://postgres:password@postgres.target-meeraspace-postgres:5432/profile?sslmode=disable
+
+# rabbitmqDSN  amqp://guest:guest@rabbitmq:5672/
+- kind: env
+  name: rabbitmqDSN
+  value: amqp://guest:guest@rabbitmq.target-meeraspace-rabbitmq:5672/

@@ -1,0 +1,55 @@
+---
+# Source: envs/templates/KV.yaml
+- kind: env
+  name: workspaceHost
+  value: internal.meeraspace.com
+- kind: env
+  name: workspaceUrl
+  value: https://internal.meeraspace.com
+- kind: env
+  name: EnterpriseRegisterURL
+  value: https://internal.meeraspace.com/public/register
+- kind: env
+  name: sessmsGRPCAddr
+  value: sessms-grpc.internal-meeraspace-sessms:6000
+- kind: env
+  name: profileGRPCAddr
+  value: profile-grpc.internal-meeraspace-profile:50051
+- kind: env
+  name: profileHTTPAddr
+  value: profile-graphql.internal-meeraspace-profile:9301
+- kind: env
+  name: profilesHost
+  value: profile.internal.meeraspace.com
+- kind: env
+  name: profileUrl
+  value: https://profile.internal.meeraspace.com
+- kind: env
+  name: acGRPCAddr
+  value: accesscontrol-be.internal-meeraspace-accesscontrol:7001
+
+
+## DB
+- kind: env
+  name: postgresSVCAddr
+  value: postgres.internal-meeraspace-postgres:5432
+- kind: env
+  name: ssoDSN
+  value: postgres://postgres:postgres@postgres.internal-meeraspace-postgres:5432/sso?sslmode=disable
+- kind: env
+  name: acDSN
+  value: postgres://postgres:postgres@postgres.internal-meeraspace-postgres:5432/ac?sslmode=disable
+- kind: env
+  name: licenseDSN
+  value: postgres://postgres:postgres@postgres.internal-meeraspace-postgres:5432/license?sslmode=disable
+- kind: env
+  name: configuratorDSN
+  value: postgres://postgres:postgres@postgres.internal-meeraspace-postgres:5432/configurator?sslmode=disable
+- kind: env
+  name: profileDSN
+  value: postgres://postgres:postgres@postgres.internal-meeraspace-postgres:5432/profile?sslmode=disable
+
+# rabbitmqDSN  amqp://guest:guest@rabbitmq:5672/
+- kind: env
+  name: rabbitmqDSN
+  value: amqp://guest:guest@rabbitmq.internal-meeraspace-rabbitmq:5672/
