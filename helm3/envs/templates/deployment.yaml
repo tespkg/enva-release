@@ -23,7 +23,6 @@ spec:
         version: {{ template "APP.version" . }}
         namespace: {{ template "APP.namespace" . }}
         env: {{ .Values.global.env }}
-        namespace: {{ template "APP.namespace" . }}
     spec:
       imagePullSecrets:
       - name: {{ template "APP.name" . }}-gitlabregistrykey
@@ -47,19 +46,10 @@ spec:
           {{- range $key, $value := .Values.image.extraENVRulehandled }}
           {{- if eq $standardStatus false }}
           - name: {{ $key }}
-            value: {{ printf $value | replace "$env" $hostPrefix | replace "$baseUrl" $baseUrl }}
+            value: {{ printf $value | replace "$hostPrefix" $hostPrefix | replace "$baseUrl" $baseUrl  | replace "$nsPrefix" $nsPrefix |  replace "$nsMid" $nsMid }}
           {{- else }}
           - name: {{ $key }}
-            value: {{ printf $value | replace "$env" $env | replace "$baseUrl" $baseUrl }}
-          {{- end }}
-          {{- end }}
-          {{- range $key, $value := .Values.image.extraENVRulehandled2 }}
-          {{- if eq $standardStatus false }}
-          - name: {{ $key }}
-            value: {{ printf $value | replace "$env" $nsPrefix | replace "$nsMid" $nsMid }}
-          {{- else }}
-          - name: {{ $key }}
-            value: {{ printf $value | replace "$env" $env | replace "$nsMid" $nsMid }}
+            value: {{ printf $value | replace "$hostPrefix" $env | replace "$baseUrl" $baseUrl |  replace "$nsPrefix" $env |  replace "$nsMid" $nsMid }}
           {{- end }}
           {{- end }}
           {{- range $key, $value := .Values.image.extraEnvFromSecert }}
@@ -73,7 +63,8 @@ spec:
           - name: {{ $key }}
             value: {{ $value | quote }}
           {{- end }}
-          command: 
+          # command: 
+          args:
           {{- range $key, $value := .Values.image.extraCommand }}
           - {{ $value }}
           {{- end }}

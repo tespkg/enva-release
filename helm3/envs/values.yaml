@@ -40,10 +40,8 @@ image:
   - --asset-dir=/usr/local/envs/static
 
   extraENVRulehandled:
-    envsHost: envs.$env.$baseUrl
-    
-  extraENVRulehandled2:
-    consulHTTPAddr: consul.$env-$nsMid-consul:8500
+    envsHost: envs.$hostPrefix.$baseUrl
+    consulHTTPAddr: consul.$nsPrefix-$nsMid-consul:8500
 
   ## ExtraEnv has the highest priority when there are multiple repeating envs
   extraEnv:
