@@ -22,6 +22,7 @@ cd ${ASSETS_DOCKERFILE_DIR}/golang1.13-buster-orcl && docker build --build-arg h
 cd ${ASSETS_DOCKERFILE_DIR}/nginx-alpine && docker build --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${http_proxy} --build-arg no_proxy=${no_proxy} -t registry.tespkg.in/library/nginx:alpine .
 cd ${ASSETS_DOCKERFILE_DIR}/debian-buster-slim && docker build --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${http_proxy} --build-arg no_proxy=${no_proxy} -t registry.tespkg.in/library/debian:buster-slim .
 cd ${ASSETS_DOCKERFILE_DIR}/ubuntu18.04 && docker build --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${http_proxy} --build-arg no_proxy=${no_proxy} -t registry.tespkg.in/library/ubuntu:18.04 .
+cd ${ASSETS_DOCKERFILE_DIR}/openjdk-8-jre-slim && docker build --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${http_proxy} --build-arg no_proxy=${no_proxy} -t registry.tespkg.in/library/openjdk:8-jre-slim .
 
 if [[ $# == 1 ]] && [[ $1 == "true" ]]; then
     echo "Push base images..."
@@ -36,5 +37,6 @@ if [[ $# == 1 ]] && [[ $1 == "true" ]]; then
     docker push registry.tespkg.in/library/nginx:alpine
     docker push registry.tespkg.in/library/debian:buster-slim
     docker push registry.tespkg.in/library/ubuntu:18.04
+    docker push registry.tespkg.in/library/openjdk:8-jre-slim
 fi
 
