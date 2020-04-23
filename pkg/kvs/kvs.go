@@ -8,8 +8,11 @@ import (
 	"io/ioutil"
 	"os"
 	"regexp"
+	"strings"
 	"sync"
 	"text/template"
+
+	"tespkg.in/kit/log"
 )
 
 const (
@@ -85,6 +88,7 @@ func scan(r io.Reader, readFileFunc readFileFunc) (KeyVals, error) {
 	}
 	doc := string(bs)
 
+	uniqueKeys := make(map[string]struct{})
 	var kvs KeyVals
 	keyRes := envKeyRegex.FindAllStringSubmatch(doc, -1)
 	for _, keyMatch := range keyRes {
@@ -96,9 +100,14 @@ func scan(r io.Reader, readFileFunc readFileFunc) (KeyVals, error) {
 			}
 			value = string(bs)
 		}
+		if _, ok := uniqueKeys[k.String()]; ok {
+			continue
+		}
+		uniqueKeys[k.String()] = struct{}{}
+
 		kvs = append(kvs, KeyVal{
 			Key:   k,
-			Value: value,
+			Value: strings.TrimSpace(value),
 		})
 	}
 
@@ -198,6 +207,7 @@ func valueOf(s KVStore, key Key, defValue string, kvS *kvState, tmpFunc tempFunc
 			}
 			return "", fmt.Errorf("get valueOf %v failed: %w", key, err)
 		}
+		log.Infof("Setting default key %v with value %v, length: %v", rawKey, briefOf(defValue), len(defValue))
 		if err := s.Set(key, defValue); err != nil {
 			return "", fmt.Errorf("set default valueOf %v failed: %w", key, err)
 		}

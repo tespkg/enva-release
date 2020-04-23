@@ -12,6 +12,8 @@ import (
 	"os"
 	"strings"
 
+	"tespkg.in/kit/log"
+
 	"tespkg.in/envs/pkg/kvs"
 )
 
@@ -258,6 +260,7 @@ func (c *Client) Set(key kvs.Key, value string) error {
 	r := c.newRequest(http.MethodPut, "/key")
 	r.obj = kval
 
+	log.Infof("Putting value of key %v, length: %v", key, value)
 	resp, err := requireOK(c.doRequest(r))
 	if err != nil {
 		return err

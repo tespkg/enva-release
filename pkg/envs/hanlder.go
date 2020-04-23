@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"tespkg.in/kit/log"
+
 	"github.com/ghodss/yaml"
 	"github.com/gin-gonic/gin"
 	"tespkg.in/envs/pkg/kvs"
@@ -45,7 +47,8 @@ func (h *Handler) GetKey(c *gin.Context) {
 		Name:      name,
 	})
 	if err != nil {
-		if errors.As(err, &store.ErrNotFound) {
+		if errors.Is(err, store.ErrNotFound) {
+			log.Errorf("%v not found", rawKey)
 			c.AbortWithStatusJSON(http.StatusNotFound, jsonErrorf("%v not found", rawKey))
 			return
 		}

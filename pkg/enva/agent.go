@@ -121,6 +121,7 @@ func isConfigDeepEqual(a, b config) (isOSEnvsEq, isArgsEq bool) {
 			aDoc, _ := ioutil.ReadFile(aArg)
 			bDoc, _ := ioutil.ReadFile(bArg)
 			if !reflect.DeepEqual(aDoc, bDoc) {
+				log.Infof("Un-equaled aArg: %v and bArg: %v", aArg, bArg)
 				return isOSEnvsEq, false
 			}
 			continue
@@ -128,6 +129,7 @@ func isConfigDeepEqual(a, b config) (isOSEnvsEq, isArgsEq bool) {
 
 		// Not envf file
 		if aArg != bArg {
+			log.Infof("Un-equaled aArg: %v and bArg: %v", aArg, bArg)
 			return isOSEnvsEq, false
 		}
 	}

@@ -13,6 +13,7 @@ echo  "Build base images..."
 cd "${ROOT_DIR}"
 docker build --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${http_proxy} --build-arg no_proxy=${no_proxy} -t registry.tespkg.in/library/enva:alpine3.10 -f Dockerfile-enva .
 docker build --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${http_proxy} --build-arg no_proxy=${no_proxy} -t registry.tespkg.in/library/enva:debian-buster-slim -f Dockerfile-enva-debian .
+docker build --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${http_proxy} --build-arg no_proxy=${no_proxy} -t registry.tespkg.in/library/envs:alpine3.10 .
 
 echo "Wrap vendor official images..."
 cd ${ASSETS_DOCKERFILE_DIR}/alpine3.10 && docker build --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${http_proxy} --build-arg no_proxy=${no_proxy} -t registry.tespkg.in/library/alpine:3.10 .
@@ -28,6 +29,7 @@ if [[ $# == 1 ]] && [[ $1 == "true" ]]; then
     echo "Push base images..."
     docker push registry.tespkg.in/library/enva:alpine3.10
     docker push registry.tespkg.in/library/enva:debian-buster-slim
+    docker push registry.tespkg.in/library/envs:alpine3.10
 
     echo "Push wrapped vendor images..."
     docker push registry.tespkg.in/library/alpine:3.10
