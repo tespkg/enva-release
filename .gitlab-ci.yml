@@ -73,6 +73,7 @@ build:
     make PUSH=true build-images
   only:
     - tags
+  when: manual
 
 build_image:
   extends: .build_single_image
