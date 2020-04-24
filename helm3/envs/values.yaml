@@ -22,7 +22,7 @@ configmapEnvVars:
   enabled: false
 
 image:
-  repository: registry.gitlab.com/target-digital-transformation/enviroment-store/master
+  repository: registry.gitlab.com/target-digital-transformation/environment-store/master
   tag: "latest"  
   # repository: registry.tespkg.in/library/envs
   # tag: "alpine3.10"  
