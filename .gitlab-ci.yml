@@ -8,46 +8,64 @@ services:
     command: ["consul", "agent", "-client=0.0.0.0", "-dev"]
 
 variables:
-  APP_CHART_NAME: go-template
+  APP_CHART_NAME: envs ## replace the right chart name
+  RELEASE_NAME: envs
   KUBECONFIG: /etc/deploy/config
-  DEV_URL: https://dev.meeraspace.com
-  TEST_URL: https://test.meeraspace.com
-  DEMO_MEERAONLINE_URL: https://meeraonline.cn
-  STAGING_URL: https://target.meeraspace.com
   SLACK_CHANNEL: gitlab-notifications
-  HELM_REPO_TARGET: https://chartmuseum.target.meeraspace.com/
   DOCKER_DRIVER: overlay2
-
-include:
-  - remote: https://target-digital-transformation.gitlab.io/pipeline/00_.after-script-template.yml
-  - remote: https://target-digital-transformation.gitlab.io/pipeline/01_build.yml
-  - remote: https://target-digital-transformation.gitlab.io/pipeline/02_deploy_to_dev.yml
-  - remote: https://target-digital-transformation.gitlab.io/pipeline/03_push_Incubator_chart.yml
-  - remote: https://target-digital-transformation.gitlab.io/pipeline/04_deploy_to_test.yml
-  - remote: https://target-digital-transformation.gitlab.io/pipeline/05_push_stable_chart.yml
-
-before_script:
-  - export PATH=$PATH:$GOPATH/bin
-  - export ETCD_DSN=etcd://etcd:2379/a/bc
-  - export CONSUL_DSN=http://consul:8500/a/bc
-  - |
-    if ( echo ${CI_RUNNER_TAGS} | grep -q kubernetes ); then
-      export DOCKER_HOST="tcp://localhost:2375"
-      export ETCD_DSN=etcd://localhost:2379/a/bc
-      export CONSUL_DSN=http://localhost:8500/a/bc
-    fi
 
 stages:
   - unit-test
+  - test
   - build
+  - deploy_to_dev
+  - push_incubator_chart
+  - deploy_to_test
+  - push_stable_chart
+  - release_request
+  - deploy_to_staging
+  - deploy_to_demo
+  - deploy_to_prod
+
+include:
+  - remote: https://target-digital-transformation.gitlab.io/pipeline/01_build_reuse_image.yml
+  - remote: https://target-digital-transformation.gitlab.io/pipeline/02_v2_deploy_to_dev.yml
+  - remote: https://target-digital-transformation.gitlab.io/pipeline/03_v2_push_Incubator_chart.yml
+  - remote: https://target-digital-transformation.gitlab.io/pipeline/04_v2_deploy_to_test.yml
+  - remote: https://target-digital-transformation.gitlab.io/pipeline/05_v2_push_stable_chart.yml
+  - remote: https://target-digital-transformation.gitlab.io/pipeline/06_v2_release_request.yml
+  - remote: https://target-digital-transformation.gitlab.io/pipeline/07_v2_deploy_to_staging.yml
+
+# before_script:
+#   - export PATH=$PATH:$GOPATH/bin
+#   - export ETCD_DSN=etcd://etcd:2379/a/bc
+#   - export CONSUL_DSN=http://consul:8500/a/bc
+#   - |
+#     if ( echo ${CI_RUNNER_TAGS} | grep -q kubernetes ); then
+#       export DOCKER_HOST="tcp://localhost:2375"
+#       export ETCD_DSN=etcd://localhost:2379/a/bc
+#       export CONSUL_DSN=http://localhost:8500/a/bc
+#     fi
 
 test-coverage:
   stage: unit-test
+  before_script:
+    - export PATH=$PATH:$GOPATH/bin
+    - export ETCD_DSN=etcd://etcd:2379/a/bc
+    - export CONSUL_DSN=http://consul:8500/a/bc
+    - |
+      if ( echo ${CI_RUNNER_TAGS} | grep -q kubernetes ); then
+        export DOCKER_HOST="tcp://localhost:2375"
+        export ETCD_DSN=etcd://localhost:2379/a/bc
+        export CONSUL_DSN=http://localhost:8500/a/bc
+      fi  
   script:
     - make run-test
 
 build:
   stage: build
+  before_script:
+    - docker login -u gitlab-ci -p $DOCKER_REGISTRY_TESPKG_PASSWORD registry.tespkg.in 
   script:
     # 1. build envs image
     # 1. build enva images, push them to registry.tespkg.in
@@ -55,3 +73,81 @@ build:
     make PUSH=true build-images
   only:
     - tags
+
+build_image:
+  extends: .build_single_image
+  stage: build
+  only:
+    - master
+    - tags
+
+dev.meeraspace.com:
+  extends: .deploy_to_dev_v2
+  variables:
+    ##   helm3 install [RELEASE_NAME] [APP_CHART_NAME] -n [NAMESPACE] --set global.env=${environment_name}
+    RELEASE_NAME: workspace-be   
+    NAMESPACE: dev-meeraspace-envs
+    environment_name: dev
+    environment_url: https://dev.meeraspace.com
+  only:
+    - master
+
+push_incubator_chart:
+  extends: .push_incubator_chart_v2
+
+test.meeraspace.com:
+  extends: .deploy_to_test_v2
+  variables:
+    NAMESPACE: test-meeraspace-envs
+    environment_name: test
+    environment_url: https://test.meeraspace.com
+
+kenya.meeraspace.com:
+  extends: .deploy_to_test_v2
+  variables:
+    NAMESPACE: kenya-meeraspace-envs
+    environment_name: kenya
+    environment_url: https://kenya.meeraspace.com
+  when: manual
+
+push_stable_chart:
+  extends: .push_stable_chart_v2
+
+request_to_internal.meeraspace.com:
+  extends: .release_request_v2
+  variables: 
+    environment_url: https://internal.meeraspace.com
+    SLACK_CHANNEL: release-notifications
+
+request_to_demo-aws.meeraspace.com:
+  extends: .release_request_v2
+  variables: 
+    environment_url: https://demo-aws.meeraspace.com
+    SLACK_CHANNEL: release-notifications
+
+internal.meeraspace.com:
+  extends: .deploy_to_staging_v2
+  variables:
+    NAMESPACE: internal-meeraspace-envs
+    environment_name: internal
+    environment_url: https://internal.meeraspace.com
+    SLACK_CHANNEL: release-notifications
+  when: manual
+
+demo-aws.meeraspace.com:
+  extends: .deploy_to_staging_v2
+  variables:
+    NAMESPACE: eks-meeraspace-envs
+    environment_name: demo-aws
+    environment_url: https://demo-aws.meeraspace.com
+    SLACK_CHANNEL: release-notifications
+    KUBE_CONF: $EKS_DEMO_KUBE_CONF
+  script:
+    - >
+      helm3 upgrade ${RELEASE_NAME} -n ${NAMESPACE} \
+        --set global.env=${environment_name} \
+        --set global.mode.standard=false \
+        --set global.namespace.prefix=eks \
+        --set global.host.prefix=demo-aws \
+        --debug --wait ./
+  when: manual

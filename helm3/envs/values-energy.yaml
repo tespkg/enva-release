@@ -1,14 +1,14 @@
 global:
-  env: dev
+  env: energy
   mode: 
     standard: true
     ## If set to "true"，  no namespace.prefix & host.prefix spec
   namespace:
-    prefix: dev 
-    mid: meeraspace
+    prefix: energy 
+    mid: fluxble
   host:
-    prefix: dev
-    baseUrl: meeraspace.com
+    prefix: energy
+    baseUrl: fluxble.com
   service:
     gateway:
       name: gateway
@@ -22,10 +22,8 @@ configmapEnvVars:
   enabled: false
 
 image:
-  repository: registry.gitlab.com/target-digital-transformation/enviroment-store/master
-  tag: "latest"  
-  # repository: registry.tespkg.in/library/envs
-  # tag: "alpine3.10"  
+  repository: registry.tespkg.in/library/envs
+  tag: "alpine3.10"  
   pullPolicy: Always
   # pullPolicy: IfNotPresent
   ports:
@@ -38,12 +36,13 @@ image:
   - --address=:9112
   - --schema=https  
   - --host=$(envsHost)
-  - --dsn=http://$(consulHTTPAddr)/envs
+  - --dsn=http://consul.global-fluxble-consul:8500/envsenergy
+  - --dsn=http://consul.global-fluxble-consul:8500/envstarget
   - --asset-dir=/usr/local/envs/static
 
   extraENVRulehandled:
     envsHost: envs.$hostPrefix.$baseUrl
-    consulHTTPAddr: consul.$nsPrefix-$nsMid-consul:8500
+    # consulHTTPAddr: consul.$nsPrefix-$nsMid-consul:8500
 
   ## ExtraEnv has the highest priority when there are multiple repeating envs
   extraEnv:
@@ -60,7 +59,7 @@ istio:
     enabled: false
 
   virtualservice:
-    enabled: false
+    enabled: true
     host: envs
     http:
     - route:
