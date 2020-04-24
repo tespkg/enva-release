@@ -1,5 +1,3 @@
-image: golang:1.13
-
 services:
   - name: gcr.io/etcd-development/etcd:v3.3.13
     alias: etcd
@@ -36,18 +34,8 @@ include:
   - remote: https://target-digital-transformation.gitlab.io/pipeline/06_v2_release_request.yml
   - remote: https://target-digital-transformation.gitlab.io/pipeline/07_v2_deploy_to_staging.yml
 
-# before_script:
-#   - export PATH=$PATH:$GOPATH/bin
-#   - export ETCD_DSN=etcd://etcd:2379/a/bc
-#   - export CONSUL_DSN=http://consul:8500/a/bc
-#   - |
-#     if ( echo ${CI_RUNNER_TAGS} | grep -q kubernetes ); then
-#       export DOCKER_HOST="tcp://localhost:2375"
-#       export ETCD_DSN=etcd://localhost:2379/a/bc
-#       export CONSUL_DSN=http://localhost:8500/a/bc
-#     fi
-
 test-coverage:
+  image: golang:1.13
   stage: unit-test
   before_script:
     - export PATH=$PATH:$GOPATH/bin
@@ -62,20 +50,18 @@ test-coverage:
   script:
     - make run-test
 
-build:
+build_enva:
+  image: golang:1.13
   stage: build
   before_script:
     - docker login -u gitlab-ci -p $DOCKER_REGISTRY_TESPKG_PASSWORD registry.tespkg.in 
   script:
-    # 1. build envs image
-    # 1. build enva images, push them to registry.tespkg.in
-    # TODO: docker login registry.tespkg.in with CI_SECRET...
     make PUSH=true build-images
   only:
     - tags
   when: manual
 
-build_image:
+build_image_envs:
   extends: .build_single_image
   stage: build
   only:
@@ -86,7 +72,6 @@ dev.meeraspace.com:
   extends: .deploy_to_dev_v2
   variables:
     ##   helm3 install [RELEASE_NAME] [APP_CHART_NAME] -n [NAMESPACE] --set global.env=${environment_name}
-    RELEASE_NAME: workspace-be   
     NAMESPACE: dev-meeraspace-envs
     environment_name: dev
     environment_url: https://dev.meeraspace.com
