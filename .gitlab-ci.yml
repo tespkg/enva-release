@@ -33,6 +33,7 @@ include:
   - remote: https://target-digital-transformation.gitlab.io/pipeline/05_v2_push_stable_chart.yml
   - remote: https://target-digital-transformation.gitlab.io/pipeline/06_v2_release_request.yml
   - remote: https://target-digital-transformation.gitlab.io/pipeline/07_v2_deploy_to_staging.yml
+  - remote: https://target-digital-transformation.gitlab.io/pipeline/07_v2_deploy_to_prod_odp_azure.yml
 
 test-coverage:
   image: golang:1.13
@@ -137,3 +138,35 @@ demo-aws.meeraspace.com:
         --set global.host.prefix=demo-aws \
         --debug --wait ./
   when: manual
+
+oman.fluxble.com:
+  stage: deploy_to_prod
+  extends: .deploy_to_prod_odp_azure
+  variables:
+    NAMESPACE: oman-fluxble-envs
+    environment_name: oman
+    environment_url: https://oman.fluxble.com
+    SLACK_CHANNEL: gitlab-test
+  script:
+    - >
+      helm3 upgrade ${RELEASE_NAME} -n ${NAMESPACE} \
+        --set global.env=${environment_name} \
+        --set global.service.gateway.name=meeraspace-gateway \
+        --set global.service.gateway.namespace=istio-system \
+        --debug --wait ./
+
+omangov.fluxble.com:
+  stage: deploy_to_prod
+  extends: .deploy_to_prod_odp_azure
+  variables:
+    NAMESPACE: omangov-fluxble-envs
+    environment_name: omangov
+    environment_url: https://omangov.fluxble.com
+    SLACK_CHANNEL: gitlab-test
+  script:
+    - >
+      helm3 upgrade ${RELEASE_NAME} -n ${NAMESPACE} \
+        --set global.env=${environment_name} \
+        --set global.service.gateway.name=meeraspace-gateway \
+        --set global.service.gateway.namespace=istio-system \
+        --debug --wait ./
