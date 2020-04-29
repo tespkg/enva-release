@@ -58,7 +58,7 @@ services:
       - 8600:8600
 
   redis:
-    image: redis:alpine
+    image: redis:5.0.8
     container_name: redis
     ports:
       - 6379:6379
