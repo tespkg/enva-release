@@ -18,5 +18,6 @@ require (
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
 	golang.org/x/tools v0.0.0-20200302191653-49e4010bbf7f
+	gopkg.in/yaml.v2 v2.2.8
 	tespkg.in/kit v1.1.2
 )

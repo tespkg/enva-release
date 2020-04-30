@@ -16,6 +16,7 @@ import (
 
 	"github.com/ghodss/yaml"
 	"github.com/gin-gonic/gin"
+	goyaml "gopkg.in/yaml.v2"
 	"tespkg.in/envs/pkg/kvs"
 	"tespkg.in/envs/pkg/spec"
 	"tespkg.in/envs/pkg/store"
@@ -211,15 +212,34 @@ func (h *Handler) ImportEnvKVS(c *gin.Context) {
 		return
 	}
 
-	out, err := ioutil.ReadAll(fds[0])
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("invalid file content: %v", err))
-		return
+	dec := goyaml.NewDecoder(fds[0])
+	var res [][]byte
+	for {
+		var value interface{}
+		err := dec.Decode(&value)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("invalid file content: %v", err))
+			return
+		}
+		valueBytes, err := goyaml.Marshal(value)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("marshal file content: %v", err))
+			return
+		}
+		res = append(res, valueBytes)
 	}
+
 	kvals := kvs.KeyVals{}
-	if err := yaml.Unmarshal(out, &kvals); err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("invalid file content: %v", err))
-		return
+	for _, out := range res {
+		vals := kvs.KeyVals{}
+		if err := yaml.Unmarshal(out, &vals); err != nil {
+			c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("invalid file content: %v", err))
+			return
+		}
+		kvals = append(kvals, vals...)
 	}
 
 	storeKVals := kvs2storeKVs(kvals)
