@@ -36,13 +36,13 @@ image:
   - /usr/local/envs/bin/envs
   - serve
   - --address=:9112
-  - --schema=https  
+  - --schema=http
   - --host=$(envsHost)
   - --dsn=http://$(consulHTTPAddr)/envs
   - --asset-dir=/usr/local/envs/static
 
   extraENVRulehandled:
-    envsHost: envs.$hostPrefix.$baseUrl
+    envsHost: localhost:9112
     consulHTTPAddr: consul.$nsPrefix-$nsMid-consul:8500
 
   ## ExtraEnv has the highest priority when there are multiple repeating envs
