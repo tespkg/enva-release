@@ -521,14 +521,25 @@ func renderEnvFiles(kvStore kvs.KVStore, envTplFiles []envFile, pt PatchTable) (
 			dstFn = fn[len(dirPrefix):]
 		}
 		log.Debugf("render env files from %v to %v", fn, dstFn)
+		tmpfile, err := ioutil.TempFile("", "plian-envf-")
+		if err != nil {
+			return nil, err
+		}
+		fds = append(fds, tmpfile)
+
+		if err := kvs.Render(kvStore, input, tmpfile); err != nil {
+			return nil, err
+		}
+
 		output, err := pt.create(dstFn)
 		if err != nil {
 			return nil, err
 		}
 		fds = append(fds, output)
-		if err := kvs.Render(kvStore, input, output); err != nil {
-			return nil, err
-		}
+
+		tmpfile.Seek(0, io.SeekStart)
+		io.Copy(output, tmpfile)
+
 		envFiles = append(envFiles, envFile{
 			filename:    dstFn,
 			needRestart: file.needRestart,

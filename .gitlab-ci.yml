@@ -67,7 +67,6 @@ build_image_envs:
   stage: build
   only:
     - master
-    - tags
 
 dev.meeraspace.com:
   extends: .deploy_to_dev_v2
