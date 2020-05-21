@@ -49,14 +49,24 @@ func TestAgentRun(t *testing.T) {
 	se.Get(kvs.Key{Kind: kvs.EnvfKind, Name: "length"}).Return("", kvs.ErrNotFound).AnyTimes()
 	se.Set(kvs.Key{Kind: kvs.EnvfKind, Name: "length"}, "content of /tmp/path/to/length/file").Return(nil).AnyTimes()
 	se.Get(kvs.Key{Kind: kvs.EnvKind, Name: "_did"}).Return("did", nil).AnyTimes()
-	se.Get(kvs.Key{Kind: kvs.EnvKind, Name: "cRoSs"}).Return("cross", nil).AnyTimes()
+	se.Set(kvs.Key{Kind: kvs.EnvKind, Name: "cRoSs"}, "cross").Return(nil).AnyTimes()
 	se.Get(kvs.Key{Kind: kvs.EnvfKind, Name: "an"}).Return("an", nil).AnyTimes()
 	se.Get(kvs.Key{Kind: kvs.EnvKind, Name: "Albatross"}).Return("${env://.nestedAlbatross}", nil).AnyTimes()
 	se.Get(kvs.Key{Kind: kvs.EnvKind, Name: "nestedAlbatross"}).Return("nested Albatross", nil).AnyTimes()
 	se.Get(kvs.Key{Kind: kvs.EnvKind, Name: "crossbow"}).Return("crossbow", nil).AnyTimes()
 	se.Get(kvs.Key{Kind: kvs.EnvfKind, Name: "ALBATROSS"}).Return("ALBATROSS", nil).AnyTimes()
+	se.Set(kvs.Key{Kind: kvs.EnvfKind, Name: "everywhere"}, "content of /tmp/path/to/everywhere/file").Return(nil).AnyTimes()
 
-	err := ioutil.WriteFile("/tmp/path/to/length/file", []byte("content of /tmp/path/to/length/file"), 0755)
+	lengthFile := "/tmp/path/to/length/file"
+	err := os.MkdirAll(filepath.Dir(lengthFile), 0755)
+	require.Nil(t, err)
+	err = ioutil.WriteFile(lengthFile, []byte("content of "+lengthFile), 0755)
+	require.Nil(t, err)
+
+	everywhereFile := "/tmp/path/to/everywhere/file"
+	err = os.MkdirAll(filepath.Dir(everywhereFile), 0755)
+	require.Nil(t, err)
+	err = ioutil.WriteFile(everywhereFile, []byte("content of "+everywhereFile), 0755)
 	require.Nil(t, err)
 
 	envFilename, err := filepath.Abs("../../testdata/chapter01.yaml")

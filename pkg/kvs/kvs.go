@@ -61,7 +61,7 @@ type Action struct {
 }
 
 func (av Action) String() string {
-	return av.Type + "to" + briefOf(av.Value)
+	return av.Type + " to" + briefOf(av.Value)
 }
 
 func (k Key) String() string {
