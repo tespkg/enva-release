@@ -37,6 +37,7 @@ In this README:
 1. Optional key `${envo:// .key }`
 1. Required file key `${envf:// .keyf }`
 1. Allowed key name pattern `\${env([of])?:// *\.([_a-zA-Z][_a-zA-Z0-9]*) *(\| *default ([~!@#$%^&*()\-_+={}\[\]:";'<>,.?/|\\a-zA-Z0-9]*))? *}`
+1. Set key with `empty` default value, eg, `${env:// .key1 | default '' }` 
 
 ## Tutorials
 
@@ -157,10 +158,10 @@ we need to make sure OAuth2 client has been registered & published into env stor
 - [ ] Add a cli tool to upload env & envf & add-ons files via API call
 - [ ] Support auth & authz with ReadOnly & Admin user permission
 - [ ] Audit on every API call for tracing who/when/what
-- [ ] Apart from `default` keyword, add `overwrite`, `readonly` keywords support
+- [x] Apart from `default` keyword, add `overwrite`, `readonly` keywords support
 - [ ] Refactor oicr registration add-ons API to support multiple redirect URIs
 - [ ] Add-ons API support for extending the pre-configuration of service startup, e.g, create dbUser/db if not exist etc.
-- [ ] Frontend use envs to render index.html directly instead of putting env key into OSEnv and render OSEnv then render index.html via OSEnv
+- [x] Frontend use envs to render index.html directly instead of putting env key into OSEnv and render OSEnv then render index.html via OSEnv
 - [ ] Support regex search against on key name in GetKeys API
 - [x] ~~Create a `init` CLI for db's kv publish & merge `oidcr` into it.~~
 - [ ] Replace nginx with our own `simple static site service(s4)`

@@ -19,7 +19,7 @@ import (
 
 var (
 	envsAddr             = ""
-	osEnvFiles           = ""
+	envFiles             = ""
 	publishedKVs         []string
 	isRunOnlyOnce        bool
 	locationRegistration bool
@@ -31,7 +31,7 @@ var (
 
 func init() {
 	getopt.FlagLong(&envsAddr, "envs-addr", 'a', "Optional, envs address, eg: http://localhost:8502/a/bc")
-	getopt.FlagLong(&osEnvFiles, "os-env-files", 'f', `Optional, os env files, separated by comma, eg: "path/to/index.html, path/to/config.js"`)
+	getopt.FlagLong(&envFiles, "env-files", 'f', `Optional, env files, separated by comma, eg: "path/to/index.html, path/to/config.js"`)
 	getopt.FlagLong(&publishedKVs, "publish", 'p', `Optional, publish kvs, eg: --publish k1=v1 --publish k2=v2`)
 	getopt.FlagLong(&isRunOnlyOnce, "run-only-once", 'r', "Optional, run Proc only once then exit")
 	getopt.FlagLong(&locationRegistration, "location", 'l', "Optional, enable Proc location registration")
@@ -57,7 +57,7 @@ func printUsage(s *getopt.Set, w io.Writer) {
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, `Apart from the Command Options, there are OS Envs supported as well, 
 ENVS_HTTP_ADDR, equivalent of Option "envs-addr", 
-ENVA_OS_ENV_FILES, equivalent of Option "os-env-files", separated by comma, eg: "path/to/file1, path/to/file2",
+ENVA_ENV_FILES, equivalent of Option "env-files", separated by comma, eg: "path/to/file1, path/to/file2",
 ENVA_PUBLISH, equivalent of Option "publish", separated by comma, eg: "k1=v1, k2=v2",
 ENVA_RUN_ONLY_ONCE, equivalent of Option "run-only-once", eg: ENVA_RUN_ONLY_ONCE=true equal to honor --run-only-once Option.
 ENVA_LOG_LEVEL, equivalent of Option "log-level", eg: ENVA_LOG_LEVEL=debug equal to honor --log-level=debug Command Option.
@@ -123,18 +123,19 @@ func main() {
 		log.Fatala("Initiate envs client failed", err)
 	}
 
-	// Analyze os env files
-	if osEnvFiles == "" {
-		osEnvFiles = os.Getenv("ENVA_OS_ENV_FILES")
+	// Analyze env files
+	osEnvFiles := os.Getenv("ENVA_ENV_FILES")
+	if osEnvFiles != ""{
+		envFiles = strings.Join([]string{envFiles, osEnvFiles}, ",")
 	}
-	var finalisedOSEnvFiles []string
-	parts := strings.Split(osEnvFiles, ",")
+	var finalisedEnvFiles []string
+	parts := strings.Split(envFiles, ",")
 	for _, part := range parts {
 		fn := strings.TrimSpace(part)
 		if fn == "" {
 			continue
 		}
-		finalisedOSEnvFiles = append(finalisedOSEnvFiles, fn)
+		finalisedEnvFiles = append(finalisedEnvFiles, fn)
 	}
 
 	// Analyze publish key value pair
@@ -183,7 +184,7 @@ func main() {
 	if len(args) == 0 {
 		log.Fatala("Proc name is missing")
 	}
-	a, err := enva.NewAgent(kvsClient, args, finalisedOSEnvFiles, isRunOnlyOnce, enva.DefaultRetry, enva.DefaultPatchTable())
+	a, err := enva.NewAgent(kvsClient, args, finalisedEnvFiles, isRunOnlyOnce, enva.DefaultRetry, enva.DefaultPatchTable())
 	if err != nil {
 		log.Fatala(err)
 	}

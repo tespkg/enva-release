@@ -246,7 +246,14 @@ func (c *Client) Get(key kvs.Key) (string, error) {
 	kval := kvs.KeyVal{}
 	keyInPath := fmt.Sprintf("%s/%s", key.Kind, key.Name)
 	endpoint := fmt.Sprintf("/key/%s", keyInPath)
-	if err := c.query(endpoint, &kval); err != nil {
+
+	var err error
+	defer func() {
+		log.Infof("Get value of key %v, value: %v, length: %v, err: %v", key, kval.Value, len(kval.Value), err)
+	}()
+
+	err = c.query(endpoint, &kval)
+	if err != nil {
 		return "", err
 	}
 	return kval.Value, nil
@@ -260,8 +267,14 @@ func (c *Client) Set(key kvs.Key, value string) error {
 	r := c.newRequest(http.MethodPut, "/key")
 	r.obj = kval
 
-	log.Infof("Putting value of key %v, length: %v", key, value)
-	resp, err := requireOK(c.doRequest(r))
+	var resp *http.Response
+	var err error
+
+	defer func() {
+		log.Infof("Put key %v with value: %v, length: %v, err: %v", key, value, len(value), err)
+	}()
+
+	resp, err = requireOK(c.doRequest(r))
 	if err != nil {
 		return err
 	}

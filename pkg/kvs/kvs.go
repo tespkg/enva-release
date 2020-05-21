@@ -24,6 +24,12 @@ const (
 	EnvoKind = "envo"
 
 	briefMaxLen = 50
+
+	actionDefault   = "default"
+	actionOverwrite = "overwrite"
+
+	defaultEmptyStub = `''`
+	nonePlaceHolder  = "nonePlaceHolder"
 )
 
 var (
@@ -36,7 +42,7 @@ var (
 )
 
 var (
-	envKeyRegex = regexp.MustCompile(`\${env([of])?:// *\.([_a-zA-Z][_a-zA-Z0-9]*) *(\| *default ([~!@#$%^&*()\-_+={}\[\]:";'<>,.?/|\\a-zA-Z0-9]*))? *}`)
+	envKeyRegex = regexp.MustCompile(`\${env([of])?:// *\.([_a-zA-Z][_a-zA-Z0-9]*) *(\| *(default|overwrite) ([~!@#$%^&*()\-_+={}\[\]:";'<>,.?/|\\a-zA-Z0-9]*))? *}`)
 )
 
 type KVStore interface {
@@ -49,6 +55,15 @@ type Key struct {
 	Name string `json:"name"`
 }
 
+type Action struct {
+	Type  string `json:"type"`
+	Value string `json:"value"`
+}
+
+func (av Action) String() string {
+	return av.Type + "to" + briefOf(av.Value)
+}
+
 func (k Key) String() string {
 	return k.Kind + "/" + k.Name
 }
@@ -56,6 +71,8 @@ func (k Key) String() string {
 type KeyVal struct {
 	Key
 	Value string `json:"value"`
+
+	actionType string
 }
 
 type EnvKeyVal struct {
@@ -64,7 +81,11 @@ type EnvKeyVal struct {
 }
 
 func (kv KeyVal) String() string {
-	return kv.Kind + "/" + kv.Name + "=" + kv.Value
+	value := kv.Value
+	if value == nonePlaceHolder {
+		value = ""
+	}
+	return kv.Kind + "/" + kv.Name + "=" + value
 }
 
 type KeyVals []KeyVal
@@ -92,13 +113,13 @@ func scan(r io.Reader, readFileFunc readFileFunc) (KeyVals, error) {
 	var kvs KeyVals
 	keyRes := envKeyRegex.FindAllStringSubmatch(doc, -1)
 	for _, keyMatch := range keyRes {
-		k, value := keyFromMatchItem(keyMatch)
-		if k.Kind == EnvfKind && value != "" {
-			bs, err := readFileFunc(value)
+		k, av := keyFromMatchItem(keyMatch)
+		if k.Kind == EnvfKind && av.Value != "" && av.Value != nonePlaceHolder {
+			bs, err := readFileFunc(av.Value)
 			if err != nil {
-				return nil, fmt.Errorf("invalid envf: %v with default: %v, err: %v", k.Name, value, err)
+				return nil, fmt.Errorf("invalid envf: %v with %v, err: %v", k.Name, av, err)
 			}
-			value = string(bs)
+			av.Value = string(bs)
 		}
 		if _, ok := uniqueKeys[k.String()]; ok {
 			continue
@@ -106,8 +127,9 @@ func scan(r io.Reader, readFileFunc readFileFunc) (KeyVals, error) {
 		uniqueKeys[k.String()] = struct{}{}
 
 		kvs = append(kvs, KeyVal{
-			Key:   k,
-			Value: strings.TrimSpace(value),
+			Key:        k,
+			Value:      strings.TrimSpace(av.Value),
+			actionType: av.Type,
 		})
 	}
 
@@ -127,7 +149,7 @@ func render(s KVStore, ir io.Reader, iw io.Writer, kvS *kvState, tmpFunc tempFun
 
 	vars := make(map[string]string)
 	for _, kv := range kvs {
-		val, err := valueOf(s, kv.Key, kv.Value, kvS, tmpFunc, rdFileFunc)
+		val, err := valueOf(s, kv.Key, Action{Type: kv.actionType, Value: kv.Value}, kvS, tmpFunc, rdFileFunc)
 		if err != nil {
 			return err
 		}
@@ -189,29 +211,43 @@ func render(s KVStore, ir io.Reader, iw io.Writer, kvS *kvState, tmpFunc tempFun
 	return nil
 }
 
-func valueOf(s KVStore, key Key, defValue string, kvS *kvState, tmpFunc tempFunc, rdFileFunc readFileFunc) (string, error) {
+func valueOf(s KVStore, key Key, av Action, kvS *kvState, tmpFunc tempFunc, rdFileFunc readFileFunc) (string, error) {
 	rawKey := key
 	if key.Kind == EnvoKind {
 		// Optional env ONLY used for checking if the value is required or not when rendering
 		// The underlying kind is always env for env & envo cases.
 		key.Kind = EnvKind
 	}
-	value, err := s.Get(key)
-	if err != nil && !errors.Is(err, ErrNotFound) {
-		return "", fmt.Errorf("get valueOf %v failed: %w", key, err)
-	}
-	if errors.Is(err, ErrNotFound) {
-		if defValue == "" {
+
+	var value string
+	var err error
+
+	if av.Type == actionOverwrite {
+		if av.Value == nonePlaceHolder {
+			return "", fmt.Errorf("overwrite with none is not allowed")
+		}
+		value, err = set(s, key, av.Value)
+		if err != nil {
+			return "", fmt.Errorf("overwrite %v with %v failed: %w", key, briefOf(value), err)
+		}
+		log.Infof("Overwrite key %v with value %v, length: %v", rawKey, briefOf(value), len(value))
+	} else {
+		value, err = s.Get(key)
+		if err != nil && !errors.Is(err, ErrNotFound) {
+			return "", fmt.Errorf("get valueOf %v failed: %w", key, err)
+		}
+		if errors.Is(err, ErrNotFound) {
 			if rawKey.Kind == EnvoKind {
 				return "", nil
 			}
-			return "", fmt.Errorf("get valueOf %v failed: %w", key, err)
+			value, err = set(s, key, av.Value)
+			if err != nil {
+				return "", fmt.Errorf("set %v with default: %v failed: %w", key, briefOf(value), err)
+			}
+			if av.Value != nonePlaceHolder {
+				log.Infof("Set key %v with default value %v, length: %v", rawKey, briefOf(value), len(value))
+			}
 		}
-		log.Infof("Setting default key %v with value %v, length: %v", rawKey, briefOf(defValue), len(defValue))
-		if err := s.Set(key, defValue); err != nil {
-			return "", fmt.Errorf("set default valueOf %v failed: %w", key, err)
-		}
-		value = defValue
 	}
 
 	kvS.set(key.Name)
@@ -237,6 +273,19 @@ func valueOf(s KVStore, key Key, defValue string, kvS *kvState, tmpFunc tempFunc
 	return out.String(), nil
 }
 
+func set(s KVStore, key Key, value string) (string, error) {
+	if value == nonePlaceHolder {
+		return "", nil
+	}
+	if value == defaultEmptyStub {
+		value = ""
+	}
+	if err := s.Set(key, value); err != nil {
+		return "", fmt.Errorf("set %v with value %v failed: %w", key, briefOf(value), err)
+	}
+	return value, nil
+}
+
 func briefOf(value string) string {
 	if len(value) > briefMaxLen {
 		return value[:briefMaxLen] + "..."
@@ -244,9 +293,18 @@ func briefOf(value string) string {
 	return value
 }
 
-func keyFromMatchItem(match []string) (Key, string) {
-	kind, key, defaultValue := EnvKind+match[1], match[2], match[4]
-	return Key{Kind: kind, Name: key}, defaultValue
+func keyFromMatchItem(match []string) (Key, Action) {
+	kind, key, actionType, actionValue := EnvKind+match[1], match[2], match[4], match[5]
+	if match[3] == "" || match[5] == "" {
+		actionValue = nonePlaceHolder
+	}
+	if actionType == "" {
+		actionType = actionDefault
+	}
+	if actionType != actionDefault && actionType != actionOverwrite {
+		actionType = actionDefault
+	}
+	return Key{Kind: kind, Name: key}, Action{Type: actionType, Value: actionValue}
 }
 
 type kvState struct {

@@ -31,62 +31,88 @@ func TestScan(t *testing.T) {
 				Kind: EnvKind,
 				Name: "poet",
 			},
+			Value:      nonePlaceHolder,
+			actionType: actionDefault,
 		},
 		{
 			Key: Key{
 				Kind: EnvoKind,
 				Name: "title",
 			},
+			Value:      nonePlaceHolder,
+			actionType: actionDefault,
 		},
 		{
 			Key: Key{
 				Kind: EnvKind,
 				Name: "at",
 			},
-			Value: "atAT",
+			Value:      "atAT",
+			actionType: actionDefault,
 		},
 		{
 			Key: Key{
 				Kind: EnvfKind,
 				Name: "length",
 			},
-			Value: "content of /tmp/path/to/length/file",
+			Value:      "content of /tmp/path/to/length/file",
+			actionType: actionDefault,
 		},
 		{
 			Key: Key{
 				Kind: EnvKind,
 				Name: "_did",
 			},
+			Value:      nonePlaceHolder,
+			actionType: actionDefault,
 		},
 		{
 			Key: Key{
 				Kind: EnvKind,
 				Name: "cRoSs",
 			},
+			Value:      "cross",
+			actionType: actionOverwrite,
 		},
 		{
 			Key: Key{
 				Kind: EnvfKind,
 				Name: "an",
 			},
+			Value:      nonePlaceHolder,
+			actionType: actionDefault,
 		},
 		{
 			Key: Key{
 				Kind: EnvKind,
 				Name: "Albatross",
 			},
+			Value:      nonePlaceHolder,
+			actionType: actionDefault,
 		},
 		{
 			Key: Key{
 				Kind: EnvKind,
 				Name: "crossbow",
 			},
+			Value:      nonePlaceHolder,
+			actionType: actionDefault,
 		},
 		{
 			Key: Key{
 				Kind: EnvfKind,
 				Name: "ALBATROSS",
 			},
+			Value:      nonePlaceHolder,
+			actionType: actionDefault,
+		},
+		{
+			Key: Key{
+				Kind: EnvfKind,
+				Name: "everywhere",
+			},
+			Value:      "content of /tmp/path/to/everywhere/file",
+			actionType: actionOverwrite,
 		},
 	}
 
@@ -107,12 +133,13 @@ func TestRender(t *testing.T) {
 	se.Get(Key{Kind: EnvfKind, Name: "length"}).Return("", ErrNotFound).AnyTimes()
 	se.Set(Key{Kind: EnvfKind, Name: "length"}, "content of /tmp/path/to/length/file").Return(nil).AnyTimes()
 	se.Get(Key{Kind: EnvKind, Name: "_did"}).Return("did", nil).AnyTimes()
-	se.Get(Key{Kind: EnvKind, Name: "cRoSs"}).Return("cross", nil).AnyTimes()
+	se.Set(Key{Kind: EnvKind, Name: "cRoSs"}, "cross").Return(nil).AnyTimes()
 	se.Get(Key{Kind: EnvfKind, Name: "an"}).Return("an", nil).AnyTimes()
 	se.Get(Key{Kind: EnvKind, Name: "Albatross"}).Return("${env://.nestedAlbatross}", nil).AnyTimes()
 	se.Get(Key{Kind: EnvKind, Name: "nestedAlbatross"}).Return("nested Albatross", nil).AnyTimes()
 	se.Get(Key{Kind: EnvKind, Name: "crossbow"}).Return("crossbow", nil).AnyTimes()
 	se.Get(Key{Kind: EnvfKind, Name: "ALBATROSS"}).Return("ALBATROSS", nil).AnyTimes()
+	se.Set(Key{Kind: EnvfKind, Name: "everywhere"}, "content of /tmp/path/to/everywhere/file").Return(nil).AnyTimes()
 
 	idx := 0
 	buf := &bytes.Buffer{}
@@ -141,7 +168,7 @@ mariner:
 
 water:
   water:
-    where: "everywhere"
+    where: "/tmp/tmp-4.out"
     nor: "any drop to drink"
 `, os.TempDir(), os.TempDir(), os.TempDir())
 
@@ -157,6 +184,7 @@ water:
 
 func TestRegex(t *testing.T) {
 	cases := []string{
+		`Hi, this is ${env:// .emptyDefault | default '' }, I'm speaking to ${env:// .empty | overwrite '' }'`,
 		`Hi, this is ${env:// .config | default value/of/config }, I'm speaking to ${env:// .clientID | default alice }'`,
 		`Hi, this is ${env:// .config| default value/of/config }, I'm speaking to ${env:// .clientID | default alice }'`,
 		`Hi, this is ${env:// .config|default value/of/config }, I'm speaking to ${env:// .clientID | default alice }'`,

@@ -15,7 +15,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"syscall"
-	"text/template"
 	"time"
 
 	"golang.org/x/time/rate"
@@ -93,8 +92,15 @@ func newExitStatus(code int, err error) exitStatus {
 	}
 }
 
+type envFile struct {
+	filename    string
+	needRestart bool
+}
+
 type config struct {
-	args      []string
+	args     []string
+	envFiles []envFile
+
 	osEnvVars []string
 }
 
@@ -102,17 +108,26 @@ func isEnvfArg(arg string) bool {
 	return strings.Contains(arg, "envf-")
 }
 
-func isConfigDeepEqual(a, b config) (isOSEnvsEq, isArgsEq bool) {
-	if reflect.DeepEqual(a.osEnvVars, b.osEnvVars) {
-		isOSEnvsEq = true
+func isConfigDeepEqual(old, new config) (updatedEnvFiles []envFile, isArgsEq bool) {
+	if len(old.envFiles) != len(new.envFiles) {
+		updatedEnvFiles = new.envFiles
+	} else {
+		for i := 0; i < len(old.envFiles); i++ {
+			aDoc, _ := ioutil.ReadFile(old.envFiles[i].filename)
+			bDoc, _ := ioutil.ReadFile(new.envFiles[i].filename)
+			if !reflect.DeepEqual(aDoc, bDoc) {
+				updatedEnvFiles = append(updatedEnvFiles, new.envFiles[i])
+			}
+		}
 	}
 
-	if len(a.args) != len(b.args) {
-		return isOSEnvsEq, false
+	if len(old.args) != len(new.args) {
+		return updatedEnvFiles, false
 	}
-	for i := 0; i < len(a.args); i++ {
-		aArg := a.args[i]
-		bArg := b.args[i]
+
+	for i := 0; i < len(old.args); i++ {
+		aArg := old.args[i]
+		bArg := new.args[i]
 
 		isAArgFile, isBArgFile := isEnvfArg(aArg), isEnvfArg(bArg)
 
@@ -122,7 +137,7 @@ func isConfigDeepEqual(a, b config) (isOSEnvsEq, isArgsEq bool) {
 			bDoc, _ := ioutil.ReadFile(bArg)
 			if !reflect.DeepEqual(aDoc, bDoc) {
 				log.Infof("Un-equaled aArg: %v and bArg: %v", aArg, bArg)
-				return isOSEnvsEq, false
+				return updatedEnvFiles, false
 			}
 			continue
 		}
@@ -130,11 +145,11 @@ func isConfigDeepEqual(a, b config) (isOSEnvsEq, isArgsEq bool) {
 		// Not envf file
 		if aArg != bArg {
 			log.Infof("Un-equaled aArg: %v and bArg: %v", aArg, bArg)
-			return isOSEnvsEq, false
+			return updatedEnvFiles, false
 		}
 	}
 
-	return isOSEnvsEq, true
+	return updatedEnvFiles, true
 }
 
 func removeEnvfFile(c config) {
@@ -155,11 +170,11 @@ type Agent struct {
 	// Original args for the Proc
 	rawArgs []string
 
-	// Original os envs for the Proc
-	rawOSEnvs []string
+	// Original os env vars for the Proc
+	rawOSEnvVars []string
 
 	// Template files
-	osEnvTplFiles []string
+	envTplFiles []envFile
 
 	// Indicate if Proc will run only once or run as a daemon service
 	isRunOnlyOnce bool
@@ -186,9 +201,16 @@ type Agent struct {
 	terminateCh chan exitStatus
 }
 
-func NewAgent(kvs kvs.KVStore, args, osEnvFiles []string, isRunOnlyOnce bool, retry retry, pt PatchTable) (*Agent, error) {
-	// Templating osEnvFiles if this is any and use it later.
-	osEnvTplFiles, err := templateOSEnvFiles(osEnvFiles, pt.tplDir())
+func NewAgent(kvs kvs.KVStore, args []string, envFilenames []string, isRunOnlyOnce bool, retry retry, pt PatchTable) (*Agent, error) {
+	// Templating osEnvFiles if there is any and use it later.
+	var envFiles []envFile
+	for _, envFilename := range envFilenames {
+		envFiles = append(envFiles, envFile{
+			filename:    envFilename,
+			needRestart: false, // TODO: get restart policy from the enva start-up args
+		})
+	}
+	envTplFiles, err := templateEnvFiles(envFiles, pt)
 	if err != nil {
 		return nil, err
 	}
@@ -196,9 +218,9 @@ func NewAgent(kvs kvs.KVStore, args, osEnvFiles []string, isRunOnlyOnce bool, re
 	return &Agent{
 		kvs:           kvs,
 		rawArgs:       args,
-		rawOSEnvs:     os.Environ(),
+		rawOSEnvVars:  os.Environ(),
 		pt:            pt,
-		osEnvTplFiles: osEnvTplFiles,
+		envTplFiles:   envTplFiles,
 		isRunOnlyOnce: isRunOnlyOnce,
 		retry:         retry,
 		configCh:      make(chan config),
@@ -232,28 +254,22 @@ func (a *Agent) Run(ctx context.Context) error {
 		select {
 		case config := <-a.configCh:
 			// There are two kinds of config update
-			// The first one is the values in OS env vars got changed, it will not trigger the Proc restart flow in our current use case,
+			// The first one is the env files specified by the enva in the hard way got changed, it might will trigger the Proc restart flow in our current use case,
 			// The second one is the values in Proc's args/options got changed, the Proc restart flow should be triggered.
-			isOSEnvsEq, isArgsEq := isConfigDeepEqual(a.currentConfig, config)
-			if !isOSEnvsEq {
-				log.Infoa("Received new os envs, re-rendering them")
-				log.Debuga("current os envs ", a.currentConfig.osEnvVars)
-				log.Debuga("new os envs ", config.osEnvVars)
-				osEnvsVars := make(map[string]string)
-				for _, osEnv := range config.osEnvVars {
-					ii := strings.Split(osEnv, "=")
-					osEnvsVars[ii[0]] = ii[1]
+			needReconcile := false
+			updatedEnvFiles, isArgsEq := isConfigDeepEqual(a.currentConfig, config)
+			for _, envFile := range updatedEnvFiles {
+				log.Infoa("Received new plain env file", envFile)
+				if envFile.needRestart {
+					needReconcile = true
 				}
-				// Render OSEnvFiles from the saved template osEnvFiles by using new os.env vars
-				if err := renderOSEnvFiles(a.osEnvTplFiles, osEnvsVars, a.pt); err != nil {
-					log.Warna("render os env file failed ", err)
-				}
-
-				// Since there might have no restart required, set current osEnvVars directly
-				a.currentConfig.osEnvVars = config.osEnvVars
+			}
+			if !isArgsEq {
+				log.Infoa("Received new args, resetting budget")
+				needReconcile = true
 			}
 
-			if !isArgsEq {
+			if needReconcile {
 				log.Infoa("Received new config, resetting budget")
 				a.desiredConfig = config
 
@@ -327,7 +343,7 @@ func (a *Agent) Watch(ctx context.Context) error {
 		select {
 		case <-renderTimer.C:
 			// Render args, osEnvs to new config
-			c, err := render(a.kvs, a.rawArgs, a.rawOSEnvs)
+			c, err := render(a.kvs, a.rawArgs, a.rawOSEnvVars, a.envTplFiles, a.pt)
 			if err != nil && !errors.Is(err, kvs.ErrNotFound) {
 				log.Warna("Watch failed ", err)
 			}
@@ -357,7 +373,7 @@ func (a *Agent) reconcile() {
 	log.Infof("Reconciling budget %d", a.retry.budget)
 
 	// check that the config is current
-	if isEnvsEq, isArgsEq := isConfigDeepEqual(a.desiredConfig, a.currentConfig); isEnvsEq && isArgsEq {
+	if updatedEnvFiles, isArgsEq := isConfigDeepEqual(a.desiredConfig, a.currentConfig); len(updatedEnvFiles) == 0 && isArgsEq {
 		log.Infof("Reapplying same desired & current configuration")
 	}
 
@@ -457,27 +473,18 @@ end:
 	return status
 }
 
-func render(kvStore kvs.KVStore, rawArgs, rawOSEnvs []string) (config, error) {
-	// Render os.env
-	osEnvs := make([]string, len(rawOSEnvs))
-	for i, osEnv := range rawOSEnvs {
-		out := bytes.Buffer{}
-		err := kvs.Render(kvStore, bytes.NewBufferString(osEnv), &out)
-		if err != nil {
-			return config{}, err
-		}
-		newOSEnv := out.String()
-		if osEnv != newOSEnv {
-			log.Debugf("render %v to %v", osEnv, newOSEnv)
-		}
-		osEnvs[i] = newOSEnv
+func render(kvStore kvs.KVStore, rawArgs, rawOSEnvVars []string, envTplFiles []envFile, pt PatchTable) (config, error) {
+	// Render env files
+	envFiles, err := renderEnvFiles(kvStore, envTplFiles, pt)
+	if err != nil {
+		return config{}, err
 	}
 
 	// Render args
 	argsStr := strings.Join(rawArgs, "#")
 	log.Debuga("argsStr ", argsStr)
 	out := bytes.Buffer{}
-	err := kvs.Render(kvStore, bytes.NewBufferString(argsStr), &out)
+	err = kvs.Render(kvStore, bytes.NewBufferString(argsStr), &out)
 	if err != nil {
 		return config{}, err
 	}
@@ -486,22 +493,26 @@ func render(kvStore kvs.KVStore, rawArgs, rawOSEnvs []string) (config, error) {
 
 	return config{
 		args:      finalisedArgs,
-		osEnvVars: osEnvs,
+		envFiles:  envFiles,
+		osEnvVars: rawOSEnvVars, // TODO: render os ENV
 	}, nil
 }
 
-func renderOSEnvFiles(osTplFiles []string, vars map[string]string, pt PatchTable) error {
+func renderEnvFiles(kvStore kvs.KVStore, envTplFiles []envFile, pt PatchTable) ([]envFile, error) {
 	var fds []io.Closer
 	defer func() {
 		for _, fd := range fds {
 			fd.Close()
 		}
 	}()
-	for _, fn := range osTplFiles {
-		b, err := ioutil.ReadFile(fn)
+	var envFiles []envFile
+	for _, file := range envTplFiles {
+		fn := file.filename
+		input, err := os.Open(fn)
 		if err != nil {
-			return err
+			return nil, err
 		}
+		fds = append(fds, input)
 
 		// Trim tplDir and create new file
 		dstFn := fn
@@ -509,32 +520,32 @@ func renderOSEnvFiles(osTplFiles []string, vars map[string]string, pt PatchTable
 		if len(dirPrefix) > 0 {
 			dstFn = fn[len(dirPrefix):]
 		}
-		log.Debugf("render os env vars from %v to %v", fn, dstFn)
-		f, err := pt.create(dstFn)
+		log.Debugf("render env files from %v to %v", fn, dstFn)
+		output, err := pt.create(dstFn)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		fds = append(fds, f)
+		fds = append(fds, output)
+		if err := kvs.Render(kvStore, input, output); err != nil {
+			return nil, err
+		}
+		envFiles = append(envFiles, envFile{
+			filename:    dstFn,
+			needRestart: file.needRestart,
+		})
 
-		tpl := template.New(dstFn)
-		tpl, err = tpl.Parse(string(b))
-		if err != nil {
-			return err
-		}
-		if err := tpl.Execute(f, vars); err != nil {
-			return err
-		}
 	}
-	return nil
+	return envFiles, nil
 }
 
-// templateOSEnvFiles Copy all the os env files to template dir, use them as the templates files
-func templateOSEnvFiles(files []string, tplDir string) ([]string, error) {
+// templateEnvFiles Copy all the env files to template dir, use them as the templates files
+func templateEnvFiles(files []envFile, pt PatchTable) ([]envFile, error) {
+	tplDir := pt.tplDir()
 	if tplDir == "" {
 		return files, nil
 	}
 
-	var templateFiles []string
+	var templateFiles []envFile
 	var opendFds []io.Closer
 	defer func() {
 		for _, closer := range opendFds {
@@ -542,18 +553,18 @@ func templateOSEnvFiles(files []string, tplDir string) ([]string, error) {
 		}
 	}()
 
-	for _, fn := range files {
-		tplFn := filepath.Join(tplDir, fn)
+	for _, file := range files {
+		tplFn := filepath.Join(tplDir, file.filename)
 		if err := os.MkdirAll(filepath.Dir(tplFn), 0755); err != nil {
 			return nil, fmt.Errorf("mkdir for tpl file: %v failed: %w", tplFn, err)
 		}
-		input, err := os.Open(fn)
+		input, err := os.Open(file.filename)
 		if err != nil {
 			return nil, err
 		}
 		opendFds = append(opendFds, input)
 
-		output, err := os.Create(tplFn)
+		output, err := pt.create(tplFn)
 		if err != nil {
 			return nil, err
 		}
@@ -563,7 +574,10 @@ func templateOSEnvFiles(files []string, tplDir string) ([]string, error) {
 			return nil, err
 		}
 
-		templateFiles = append(templateFiles, tplFn)
+		templateFiles = append(templateFiles, envFile{
+			filename:    tplFn,
+			needRestart: file.needRestart,
+		})
 	}
 
 	return templateFiles, nil

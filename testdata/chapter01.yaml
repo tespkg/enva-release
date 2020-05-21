@@ -4,7 +4,7 @@ stanza:
   - "${env:// .at | default atAT}"
   - "${envf://.length | default /tmp/path/to/length/file }"
   - "${env://._did}"
-  - ${env://.cRoSs}
+  - ${env://.cRoSs | overwrite cross}
   - ${envf:// .an }
   - ${env:// .Albatross }
 
@@ -14,5 +14,5 @@ mariner:
 
 water:
   water:
-    where: "everywhere"
+    where: "${envf:// .everywhere | overwrite /tmp/path/to/everywhere/file }"
     nor: "any drop to drink"

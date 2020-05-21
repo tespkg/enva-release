@@ -2,6 +2,9 @@
   name: ssoIssuer
   value: http://host.docker.internal:5556
 - kind: env
+  name: ssoUrl
+  value: http://host.docker.internal:5556
+- kind: env
   name: ssoDSN
   value: postgres://postgres:password@host.docker.internal:5432/sso?sslmode=disable
 - kind: env
