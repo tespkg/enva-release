@@ -23,8 +23,8 @@ import (
 )
 
 const (
-	pollingWatchInterval       = time.Second * 5
-	gracefullyTerminateTimeout = time.Second * 5
+	pollingWatchInterval       = time.Second * 10
+	gracefullyTerminateTimeout = time.Second * 10
 	hold                       = -1
 	finished                   = 0
 	configUpdated              = 1
