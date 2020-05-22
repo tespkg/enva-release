@@ -52,9 +52,13 @@ test-coverage:
     - make run-test
 
 build_enva:
-  image: golang:1.13
+  image: docker:18.09
   stage: build
+  services:
+    - docker:18.09-dind
   before_script:
+    - apk add bash make
+    - if ( echo ${CI_RUNNER_TAGS} | grep -q docker-in-docker );then export DOCKER_HOST="tcp://localhost:2375";else echo "nothing to do";fi
     - docker login -u gitlab-ci -p $DOCKER_REGISTRY_TESPKG_PASSWORD registry.tespkg.in 
   script:
     make PUSH=true build-images
