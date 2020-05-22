@@ -250,7 +250,7 @@ func (c *Client) Get(key kvs.Key) (string, error) {
 	var err error
 	defer func() {
 		if err != nil && err != kvs.ErrNotFound {
-			log.Infof("Get value of key %v, value: %v, length: %v, err: %v", key, kval.Value, len(kval.Value), err)
+			log.Errorf("Get value of key %v, value: %v, length: %v, err: %v", key, kval.Value, len(kval.Value), err)
 		} else {
 			log.Debugf("Get value of key %v, value: %v, length: %v, err: %v", key, kval.Value, len(kval.Value), err)
 		}
@@ -276,7 +276,7 @@ func (c *Client) Set(key kvs.Key, value string) error {
 
 	defer func() {
 		if err != nil {
-			log.Infof("Put key %v with value: %v, length: %v, err: %v", key, value, len(value), err)
+			log.Errorf("Put key %v with value: %v, length: %v, err: %v", key, value, len(value), err)
 		} else {
 			log.Debugf("Put key %v with value: %v, length: %v", key, value, len(value))
 		}
