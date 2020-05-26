@@ -158,14 +158,14 @@ energy.fluxble.com:
     nsPrefix: energy-fluxble
     baseUrl: energy.fluxble.com
     gateway: default/gateway
-    extraENVRulehandled: consul.global-fluxble-consul:8500
+    consulHTTPAddr: consul.global-fluxble-consul:8500
     dbname: envsenergy
   script:
     - >
       helm3 upgrade ${RELEASE_NAME} -n ${NAMESPACE} \
         --set global.nsPrefix=${nsPrefix},global.baseUrl=${baseUrl},global.gateway=${gateway} \
         --set image.extraEnv.dbname=${dbname} \
-        --set image.extraENVRulehandled.extraENVRulehandled=${extraENVRulehandled} \
+        --set image.extraENVRulehandled.consulHTTPAddr=${consulHTTPAddr} \
         --debug --wait ./      
   when: manual
 
@@ -179,14 +179,14 @@ target.fluxble.com:
     nsPrefix: target-fluxble
     baseUrl: target.fluxble.com
     gateway: default/gateway
-    extraENVRulehandled: consul.global-fluxble-consul:8500
+    consulHTTPAddr: consul.global-fluxble-consul:8500
     dbname: envstarget
   script:
     - >
       helm3 upgrade ${RELEASE_NAME} -n ${NAMESPACE} \
         --set global.nsPrefix=${nsPrefix},global.baseUrl=${baseUrl},global.gateway=${gateway} \
         --set image.extraEnv.dbname=${dbname} \
-        --set image.extraENVRulehandled.extraENVRulehandled=${extraENVRulehandled} \
+        --set image.extraENVRulehandled.consulHTTPAddr=${consulHTTPAddr} \
         --debug --wait ./      
   when: manual
 
@@ -200,14 +200,14 @@ global.fluxble.com:
     nsPrefix: global-fluxble
     baseUrl: fluxble.com
     gateway: istio-system/global-gateway
-    extraENVRulehandled: consul.global-fluxble-consul:8500
+    consulHTTPAddr: consul.global-fluxble-consul:8500
     dbname: envs
   script:
     - >
       helm3 upgrade ${RELEASE_NAME} -n ${NAMESPACE} \
         --set global.nsPrefix=${nsPrefix},global.baseUrl=${baseUrl},global.gateway=${gateway} \
         --set image.extraEnv.dbname=${dbname} \
-        --set image.extraENVRulehandled.extraENVRulehandled=${extraENVRulehandled} \
+        --set image.extraENVRulehandled.consulHTTPAddr=${consulHTTPAddr} \
         --debug --wait ./      
   when: manual
 
