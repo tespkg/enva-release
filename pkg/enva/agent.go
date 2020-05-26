@@ -269,24 +269,24 @@ func (a *Agent) Run(ctx context.Context) error {
 				needReconcile = true
 			}
 
-			if needReconcile {
-				log.Infoa("Received new config, resetting budget")
-				a.desiredConfig = config
-
-				// Reset retry budget if and only if the desired config changes
-				a.retry.budget = a.retry.maxRetries
-
-				// For most of the daemon service which will listen & serve on a TCP port,
-				// There is a race condition, which is when the first new desired Proc start occurred before the previous Proc stopped take placed,
-				// might cause the restart operation failed and starting to retry start
-				log.Debugf("triggering the termination caused by config updated")
-				a.terminate(newExitStatus(configUpdated, nil))
-				a.reconcile()
-			} else {
+			if !needReconcile {
 				// Remove useless generated envf file
 				removeEnvfFile(config)
 				continue
 			}
+
+			log.Infoa("Received new config, resetting budget")
+			a.desiredConfig = config
+
+			// Reset retry budget if and only if the desired config changes
+			a.retry.budget = a.retry.maxRetries
+
+			// For most of the daemon service which will listen & serve on a TCP port,
+			// There is a race condition, which is when the first new desired Proc start occurred before the previous Proc stopped take placed,
+			// might cause the restart operation failed and starting to retry start
+			log.Debugf("triggering the termination caused by config updated")
+			a.terminate(newExitStatus(configUpdated, nil))
+			a.reconcile()
 
 		case status := <-a.statusCh:
 			log.Debugf("status changed, code: %v, err: %v", status.code, status.err)
