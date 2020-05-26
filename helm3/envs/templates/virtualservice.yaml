@@ -3,12 +3,16 @@ apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService
 metadata:
   name: {{ template "APP.name" . }}
-  namespace: {{ template "APP.namespace" . }}
 spec:
+{{- if  not .Values.istio.virtualservice.host  }}
   hosts:
-  - {{ .Values.istio.virtualservice.host }}.{{ template "hostSuffix" . }}.{{ .Values.global.host.baseUrl }}
+  - {{ .Values.global.baseUrl }}
+{{- else }}
+  hosts:
+  - {{ .Values.istio.virtualservice.host }}.{{ .Values.global.baseUrl }}
+{{- end }}
   gateways: 
-  - {{ template "GATEWAY.addr" . }}
+  - {{ .Values.global.gateway }}
   http:
 {{ toYaml .Values.istio.virtualservice.http | indent 2 }}
 {{- end -}}

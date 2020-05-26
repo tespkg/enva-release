@@ -1,0 +1,18 @@
+{{- if .Values.istio.virtualserviceGrpcMtls.enabled }}
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: {{ template "APP.name" . }}-mtls
+spec:
+{{- if  not .Values.istio.virtualserviceGrpcMtls.host  }}
+  hosts:
+  - {{ .Values.global.baseUrl }}
+{{- else }}
+  hosts:
+  - {{ .Values.istio.virtualserviceGrpcMtls.host }}.{{ .Values.global.baseUrl }}
+{{- end }}
+  gateways: 
+  - {{ .Values.global.gateway }}
+  http:
+{{ toYaml .Values.istio.virtualserviceGrpcMtls.http | indent 2 }}
+{{- end -}}
