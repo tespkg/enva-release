@@ -211,34 +211,40 @@ global.fluxble.com:
         --debug --wait ./      
   when: manual
 
-# oman.fluxble.com:
-#   stage: deploy_to_prod
-#   extends: .deploy_to_prod_odp_azure
-#   variables:
-#     NAMESPACE: oman-fluxble-envs
-#     environment_name: oman
-#     environment_url: https://oman.fluxble.com
-#     SLACK_CHANNEL: gitlab-test
-#   script:
-#     - >
-#       helm3 upgrade ${RELEASE_NAME} -n ${NAMESPACE} \
-#         --set global.env=${environment_name} \
-#         --set global.service.gateway.name=meeraspace-gateway \
-#         --set global.service.gateway.namespace=istio-system \
-#         --debug --wait ./
+oman.fluxble.com:
+  stage: deploy_to_prod
+  extends: .deploy_to_prod_odp_azure
+  variables:
+    NAMESPACE: oman-fluxble-envs
+    environment_name: oman
+    environment_url: https://oman.fluxble.com
+    SLACK_CHANNEL: gitlab-test
+    nsPrefix: oman-fluxble
+    baseUrl: oman.fluxble.com
+    gateway: istio-system/global-gateway
+    consulHTTPAddr: consul.oman-fluxble-consul:8500
+    dbname: envs    
+  script:
+    - >
+      helm3 upgrade ${RELEASE_NAME} -n ${NAMESPACE} \
+        --set global.nsPrefix=${nsPrefix},global.baseUrl=${baseUrl},global.gateway=${gateway} \
+        --debug --wait ./
 
-# omangov.fluxble.com:
-#   stage: deploy_to_prod
-#   extends: .deploy_to_prod_odp_azure
-#   variables:
-#     NAMESPACE: omangov-fluxble-envs
-#     environment_name: omangov
-#     environment_url: https://omangov.fluxble.com
-#     SLACK_CHANNEL: gitlab-test
-#   script:
-#     - >
-#       helm3 upgrade ${RELEASE_NAME} -n ${NAMESPACE} \
-#         --set global.env=${environment_name} \
-#         --set global.service.gateway.name=meeraspace-gateway \
-#         --set global.service.gateway.namespace=istio-system \
-#         --debug --wait ./
+omangov.fluxble.com:
+  stage: deploy_to_prod
+  extends: .deploy_to_prod_odp_azure
+  variables:
+    NAMESPACE: omangov-fluxble-envs
+    environment_name: omangov
+    environment_url: https://omangov.fluxble.com
+    SLACK_CHANNEL: gitlab-test
+    nsPrefix: omangov-fluxble
+    baseUrl: omangov.fluxble.com
+    gateway: istio-system/global-gateway
+    consulHTTPAddr: consul.oman-fluxble-consul:8500
+    dbname: envs       
+  script:
+    - >
+      helm3 upgrade ${RELEASE_NAME} -n ${NAMESPACE} \
+        --set global.nsPrefix=${nsPrefix},global.baseUrl=${baseUrl},global.gateway=${gateway} \
+        --debug --wait ./
