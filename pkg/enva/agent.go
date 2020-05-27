@@ -109,7 +109,7 @@ func isEnvfArg(arg string) bool {
 }
 
 func isConfigDeepEqual(old, new config) (updatedEnvFiles []envFile, isOSEnvVarsEq, isArgsEq bool) {
-	if reflect.DeepEqual(old.osEnvVars, old.osEnvVars) {
+	if reflect.DeepEqual(old.osEnvVars, new.osEnvVars) {
 		isOSEnvVarsEq = true
 	}
 
@@ -383,7 +383,7 @@ func (a *Agent) reconcile() {
 	log.Infof("Reconciling budget %d", a.retry.budget)
 
 	// check that the config is current
-	if updatedEnvFiles, isOSEnvVarsEq, isArgsEq := isConfigDeepEqual(a.desiredConfig, a.currentConfig); len(updatedEnvFiles) == 0 && isArgsEq && isOSEnvVarsEq {
+	if updatedEnvFiles, isOSEnvVarsEq, isArgsEq := isConfigDeepEqual(a.currentConfig, a.desiredConfig); len(updatedEnvFiles) == 0 && isArgsEq && isOSEnvVarsEq {
 		log.Infof("Reapplying same desired & current configuration")
 	}
 
