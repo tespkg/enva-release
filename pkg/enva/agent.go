@@ -108,7 +108,11 @@ func isEnvfArg(arg string) bool {
 	return strings.Contains(arg, "envf-")
 }
 
-func isConfigDeepEqual(old, new config) (updatedEnvFiles []envFile, isArgsEq bool) {
+func isConfigDeepEqual(old, new config) (updatedEnvFiles []envFile, isOSEnvVarsEq, isArgsEq bool) {
+	if reflect.DeepEqual(old.osEnvVars, old.osEnvVars) {
+		isOSEnvVarsEq = true
+	}
+
 	if len(old.envFiles) != len(new.envFiles) {
 		updatedEnvFiles = new.envFiles
 	} else {
@@ -122,7 +126,7 @@ func isConfigDeepEqual(old, new config) (updatedEnvFiles []envFile, isArgsEq boo
 	}
 
 	if len(old.args) != len(new.args) {
-		return updatedEnvFiles, false
+		return updatedEnvFiles, isOSEnvVarsEq, false
 	}
 
 	for i := 0; i < len(old.args); i++ {
@@ -137,7 +141,7 @@ func isConfigDeepEqual(old, new config) (updatedEnvFiles []envFile, isArgsEq boo
 			bDoc, _ := ioutil.ReadFile(bArg)
 			if !reflect.DeepEqual(aDoc, bDoc) {
 				log.Infof("Un-equaled aArg: %v and bArg: %v", aArg, bArg)
-				return updatedEnvFiles, false
+				return updatedEnvFiles, isOSEnvVarsEq, false
 			}
 			continue
 		}
@@ -145,11 +149,11 @@ func isConfigDeepEqual(old, new config) (updatedEnvFiles []envFile, isArgsEq boo
 		// Not envf file
 		if aArg != bArg {
 			log.Infof("Un-equaled aArg: %v and bArg: %v", aArg, bArg)
-			return updatedEnvFiles, false
+			return updatedEnvFiles, isOSEnvVarsEq, false
 		}
 	}
 
-	return updatedEnvFiles, true
+	return updatedEnvFiles, isOSEnvVarsEq, true
 }
 
 func removeEnvfFile(c config) {
@@ -257,15 +261,21 @@ func (a *Agent) Run(ctx context.Context) error {
 			// The first one is the env files specified by the enva in the hard way got changed, it might will trigger the Proc restart flow in our current use case,
 			// The second one is the values in Proc's args/options got changed, the Proc restart flow should be triggered.
 			needReconcile := false
-			updatedEnvFiles, isArgsEq := isConfigDeepEqual(a.currentConfig, config)
+			updatedEnvFiles, isOSEnvVarsEq, isArgsEq := isConfigDeepEqual(a.currentConfig, config)
 			for _, envFile := range updatedEnvFiles {
-				log.Infoa("Received new plain env file", envFile)
+				log.Infof("plain env file %v changed", envFile)
 				if envFile.needRestart {
 					needReconcile = true
 				}
 			}
+
+			if !isOSEnvVarsEq {
+				log.Infoa("os env vars changed")
+				needReconcile = true
+			}
+
 			if !isArgsEq {
-				log.Infoa("Received new args, resetting budget")
+				log.Infoa("args changed")
 				needReconcile = true
 			}
 
@@ -373,7 +383,7 @@ func (a *Agent) reconcile() {
 	log.Infof("Reconciling budget %d", a.retry.budget)
 
 	// check that the config is current
-	if updatedEnvFiles, isArgsEq := isConfigDeepEqual(a.desiredConfig, a.currentConfig); len(updatedEnvFiles) == 0 && isArgsEq {
+	if updatedEnvFiles, isOSEnvVarsEq, isArgsEq := isConfigDeepEqual(a.desiredConfig, a.currentConfig); len(updatedEnvFiles) == 0 && isArgsEq && isOSEnvVarsEq {
 		log.Infof("Reapplying same desired & current configuration")
 	}
 
@@ -474,6 +484,21 @@ end:
 }
 
 func render(kvStore kvs.KVStore, rawArgs, rawOSEnvVars []string, envTplFiles []envFile, pt PatchTable) (config, error) {
+	// Render os.env
+	osEnvVars := make([]string, len(rawOSEnvVars))
+	for i, osEnv := range rawOSEnvVars {
+		out := bytes.Buffer{}
+		err := kvs.Render(kvStore, bytes.NewBufferString(osEnv), &out)
+		if err != nil {
+			return config{}, err
+		}
+		newOSEnvVar := out.String()
+		if osEnv != newOSEnvVar {
+			log.Debugf("render %v to %v", osEnv, newOSEnvVar)
+		}
+		osEnvVars[i] = newOSEnvVar
+	}
+
 	// Render env files
 	envFiles, err := renderEnvFiles(kvStore, envTplFiles, pt)
 	if err != nil {
@@ -494,7 +519,7 @@ func render(kvStore kvs.KVStore, rawArgs, rawOSEnvVars []string, envTplFiles []e
 	return config{
 		args:      finalisedArgs,
 		envFiles:  envFiles,
-		osEnvVars: rawOSEnvVars, // TODO: render os ENV
+		osEnvVars: osEnvVars,
 	}, nil
 }
 
