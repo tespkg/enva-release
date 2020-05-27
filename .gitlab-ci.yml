@@ -34,6 +34,7 @@ include:
   - remote: https://target-digital-transformation.gitlab.io/pipeline/06_v2_release_request.yml
   - remote: https://target-digital-transformation.gitlab.io/pipeline/07_v2_deploy_to_staging.yml
   - remote: https://target-digital-transformation.gitlab.io/pipeline/07_v2_deploy_to_prod_odp_azure.yml
+  - remote: https://target-digital-transformation.gitlab.io/pipeline/07_v2_deploy_to_prod_eks_fluxble.yml
 
 test-coverage:
   image: golang:1.13
@@ -81,6 +82,16 @@ dev.meeraspace.com:
     NAMESPACE: dev-meeraspace-envs
     environment_name: dev
     environment_url: https://dev.meeraspace.com
+    nsPrefix: dev-meeraspace
+    baseUrl: dev.meeraspace.com
+    gateway: default/gateway
+  script:
+    - >
+      helm3 upgrade ${RELEASE_NAME} -n ${NAMESPACE} \
+        --set global.nsPrefix=${nsPrefix},global.baseUrl=${baseUrl},global.gateway=${gateway} \
+        --set image.repository=$CI_REGISTRY_IMAGE/${CI_COMMIT_REF_SLUG} \
+        --set-string image.tag=${CI_COMMIT_SHA:0:8} \
+        --debug --wait ./     
   only:
     - master
 
@@ -93,6 +104,14 @@ test.meeraspace.com:
     NAMESPACE: test-meeraspace-envs
     environment_name: test
     environment_url: https://test.meeraspace.com
+    nsPrefix: test-meeraspace
+    baseUrl: test.meeraspace.com
+    gateway: default/gateway
+  script:
+    - >
+      helm3 upgrade ${RELEASE_NAME} -n ${NAMESPACE} \
+        --set global.nsPrefix=${nsPrefix},global.baseUrl=${baseUrl},global.gateway=${gateway} \
+        --debug --wait ./    
 
 kenya.meeraspace.com:
   extends: .deploy_to_test_v2
@@ -111,11 +130,6 @@ request_to_internal.meeraspace.com:
     environment_url: https://internal.meeraspace.com
     SLACK_CHANNEL: release-notifications
 
-request_to_demo-aws.meeraspace.com:
-  extends: .release_request_v2
-  variables: 
-    environment_url: https://demo-aws.meeraspace.com
-    SLACK_CHANNEL: release-notifications
 
 internal.meeraspace.com:
   extends: .deploy_to_staging_v2
@@ -124,24 +138,77 @@ internal.meeraspace.com:
     environment_name: internal
     environment_url: https://internal.meeraspace.com
     SLACK_CHANNEL: release-notifications
-  when: manual
-
-demo-aws.meeraspace.com:
-  extends: .deploy_to_staging_v2
-  variables:
-    NAMESPACE: eks-meeraspace-envs
-    environment_name: demo-aws
-    environment_url: https://demo-aws.meeraspace.com
-    SLACK_CHANNEL: release-notifications
-    KUBE_CONF: $EKS_DEMO_KUBE_CONF
+    nsPrefix: internal-meeraspace
+    baseUrl: internal.meeraspace.com
+    gateway: default/gateway
   script:
     - >
       helm3 upgrade ${RELEASE_NAME} -n ${NAMESPACE} \
-        --set global.env=${environment_name} \
-        --set global.mode.standard=false \
-        --set global.namespace.prefix=eks \
-        --set global.host.prefix=demo-aws \
-        --debug --wait ./
+        --set global.nsPrefix=${nsPrefix},global.baseUrl=${baseUrl},global.gateway=${gateway} \
+        --debug --wait ./      
+  when: manual
+
+energy.fluxble.com:
+  extends: .deploy_to_staging_v2
+  variables:
+    NAMESPACE: energy-fluxble-envs
+    environment_name: energy
+    environment_url: https://energy.fluxble.com
+    SLACK_CHANNEL: release-notifications
+    nsPrefix: energy-fluxble
+    baseUrl: energy.fluxble.com
+    gateway: default/gateway
+    consulHTTPAddr: consul.global-fluxble-consul:8500
+    dbname: envsenergy
+  script:
+    - >
+      helm3 upgrade ${RELEASE_NAME} -n ${NAMESPACE} \
+        --set global.nsPrefix=${nsPrefix},global.baseUrl=${baseUrl},global.gateway=${gateway} \
+        --set image.extraEnv.dbname=${dbname} \
+        --set image.extraENVRulehandled.consulHTTPAddr=${consulHTTPAddr} \
+        --debug --wait ./      
+  when: manual
+
+target.fluxble.com:
+  extends: .deploy_to_staging_v2
+  variables:
+    NAMESPACE: target-fluxble-envs
+    environment_name: target
+    environment_url: https://target.fluxble.com
+    SLACK_CHANNEL: release-notifications
+    nsPrefix: target-fluxble
+    baseUrl: target.fluxble.com
+    gateway: default/gateway
+    consulHTTPAddr: consul.global-fluxble-consul:8500
+    dbname: envstarget
+  script:
+    - >
+      helm3 upgrade ${RELEASE_NAME} -n ${NAMESPACE} \
+        --set global.nsPrefix=${nsPrefix},global.baseUrl=${baseUrl},global.gateway=${gateway} \
+        --set image.extraEnv.dbname=${dbname} \
+        --set image.extraENVRulehandled.consulHTTPAddr=${consulHTTPAddr} \
+        --debug --wait ./      
+  when: manual
+
+global.fluxble.com:
+  extends: .deploy_to_staging_v2
+  variables:
+    NAMESPACE: global-fluxble-envs
+    environment_name: global
+    environment_url: https://global.fluxble.com
+    SLACK_CHANNEL: release-notifications
+    nsPrefix: global-fluxble
+    baseUrl: fluxble.com
+    gateway: istio-system/global-gateway
+    consulHTTPAddr: consul.global-fluxble-consul:8500
+    dbname: envs
+  script:
+    - >
+      helm3 upgrade ${RELEASE_NAME} -n ${NAMESPACE} \
+        --set global.nsPrefix=${nsPrefix},global.baseUrl=${baseUrl},global.gateway=${gateway} \
+        --set image.extraEnv.dbname=${dbname} \
+        --set image.extraENVRulehandled.consulHTTPAddr=${consulHTTPAddr} \
+        --debug --wait ./      
   when: manual
 
 oman.fluxble.com:
@@ -152,12 +219,15 @@ oman.fluxble.com:
     environment_name: oman
     environment_url: https://oman.fluxble.com
     SLACK_CHANNEL: gitlab-test
+    nsPrefix: oman-fluxble
+    baseUrl: oman.fluxble.com
+    gateway: istio-system/global-gateway
+    consulHTTPAddr: consul.oman-fluxble-consul:8500
+    dbname: envs    
   script:
     - >
       helm3 upgrade ${RELEASE_NAME} -n ${NAMESPACE} \
-        --set global.env=${environment_name} \
-        --set global.service.gateway.name=meeraspace-gateway \
-        --set global.service.gateway.namespace=istio-system \
+        --set global.nsPrefix=${nsPrefix},global.baseUrl=${baseUrl},global.gateway=${gateway} \
         --debug --wait ./
 
 omangov.fluxble.com:
@@ -168,10 +238,13 @@ omangov.fluxble.com:
     environment_name: omangov
     environment_url: https://omangov.fluxble.com
     SLACK_CHANNEL: gitlab-test
+    nsPrefix: omangov-fluxble
+    baseUrl: omangov.fluxble.com
+    gateway: istio-system/global-gateway
+    consulHTTPAddr: consul.oman-fluxble-consul:8500
+    dbname: envs       
   script:
     - >
       helm3 upgrade ${RELEASE_NAME} -n ${NAMESPACE} \
-        --set global.env=${environment_name} \
-        --set global.service.gateway.name=meeraspace-gateway \
-        --set global.service.gateway.namespace=istio-system \
+        --set global.nsPrefix=${nsPrefix},global.baseUrl=${baseUrl},global.gateway=${gateway} \
         --debug --wait ./

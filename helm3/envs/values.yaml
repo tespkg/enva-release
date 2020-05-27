@@ -1,25 +1,23 @@
+## helm3 template --set global.env=oman,global.mode.standard=false,global.namespace.prefix=oman,global.namespace.mid=fluxble,global.host.prefix=oman,global.host.baseUrl=fluxble.com ./
 global:
-  env: dev
-  mode: 
-    standard: true
-    ## If set to "true"，  no namespace.prefix & host.prefix spec
-  namespace:
-    prefix: dev 
-    mid: meeraspace
-  host:
-    prefix: dev
-    baseUrl: meeraspace.com
-  service:
-    gateway:
-      name: gateway
-      namespace: default
+
+  nsPrefix: dev-meeraspace
+
+  baseUrl: dev.meeraspace.com
+  
+  gateway: default/gateway
+
 
 # fullnameOverride: 
 
 replicaCount: 1
 
-configmapEnvVars:
+envs:
   enabled: false
+
+job:
+  initdb:
+    enabled: false
 
 image:
   repository: registry.gitlab.com/target-digital-transformation/environment-store/master
@@ -36,17 +34,26 @@ image:
   - /usr/local/envs/bin/envs
   - serve
   - --address=:9112
-  - --schema=https  
+  - --schema=$(schema)  
   - --host=$(envsHost)
-  - --dsn=http://$(consulHTTPAddr)/envs
+  - --dsn=http://$(consulHTTPAddr)/$(dbname)
   - --asset-dir=/usr/local/envs/static
-
-  extraENVRulehandled:
-    envsHost: envs.$hostPrefix.$baseUrl
-    consulHTTPAddr: consul.$nsPrefix-$nsMid-consul:8500
-
-  ## ExtraEnv has the highest priority when there are multiple repeating envs
   extraEnv:
+    dbname: envs
+    schema: https
+  extraENVRulehandled:
+    envsHost: envs.$baseUrl
+    consulHTTPAddr: consul.$nsPrefix-consul:8500
+
+service:
+  type: ClusterIP
+  ports:
+    - port: 5556
+      name: http
+      targetPort: 5556
+    - port: 5557
+      name: grpc
+      targetPort: 5557
 
 service:
   type: ClusterIP
@@ -60,7 +67,7 @@ istio:
     enabled: false
 
   virtualservice:
-    enabled: true
+    enabled: false
     host: envs
     http:
     - route:
@@ -68,6 +75,9 @@ istio:
           host: envs
           port:
             number: 9112
+
+  virtualserviceGrpcMtls:
+    enabled: false
 
 resources: {}
 
@@ -78,17 +88,33 @@ tolerations: []
 affinity: {}
 
 volumeMounts:
-## If true,  Pod volumes to mount into the container's filesystem
+  ## If true,  Pod volumes to mount into the container's filesystem
+  # enabled: true
   enabled: false
+  volumeMounts:
 
 volumes:
-## If true, will create/use a Volume, configmap nfs hostPath emptyDir
   enabled: false
-
+  ## if type is configmap, will auto use the configmap value by  `name: {{ template "APP.fullname" . }}-config`
+  configmap:
+    enabled: false
+  volumes:
 
 persistentVolumeClaim1:
-## If true,  will create/use a Persistent Volume Claim
+  ## If true,  will create/use a Persistent Volume Claim
   enabled: false
+  # enabled: true
+  name: CHANGEME   # same to volumes.volumes.volumesvolumes.claimName
+  ## supported values: "ReadOnlyMany", "ReadWriteMany", "ReadWriteOnce"
+  accessModes:
+    - ReadWriteOnce
+  annotations: {}
+  # existingClaim: ""
+  size: 4Gi
+  storageClass: "standard"
 
 configmap:
   enabled: false
+
+  configurationEnv:
+    {}
