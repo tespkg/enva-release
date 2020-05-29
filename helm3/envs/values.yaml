@@ -67,7 +67,7 @@ istio:
     enabled: false
 
   virtualservice:
-    enabled: false
+    enabled: true
     host: envs
     http:
     - route:
