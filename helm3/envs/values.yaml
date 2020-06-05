@@ -45,15 +45,6 @@ image:
     envsHost: envs.$baseUrl
     consulHTTPAddr: consul.$nsPrefix-consul:8500
 
-service:
-  type: ClusterIP
-  ports:
-    - port: 5556
-      name: http
-      targetPort: 5556
-    - port: 5557
-      name: grpc
-      targetPort: 5557
 
 service:
   type: ClusterIP
@@ -67,7 +58,7 @@ istio:
     enabled: false
 
   virtualservice:
-    enabled: false
+    enabled: true
     host: envs
     http:
     - route:
