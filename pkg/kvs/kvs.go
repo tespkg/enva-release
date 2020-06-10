@@ -238,6 +238,9 @@ func valueOf(s KVStore, key Key, av Action, kvS *kvState, tmpFunc tempFunc, rdFi
 		}
 		if errors.Is(err, ErrNotFound) {
 			if rawKey.Kind == EnvoKind {
+				if av.Value != nonePlaceHolder && av.Value != defaultEmptyStub {
+					log.Warnf("ignoring default value: %v on key: %v", av.Value, rawKey)
+				}
 				return "", nil
 			}
 			value, err = set(s, key, av.Value)
