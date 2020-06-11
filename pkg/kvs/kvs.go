@@ -230,7 +230,7 @@ func valueOf(s KVStore, key Key, av Action, kvS *kvState, tmpFunc tempFunc, rdFi
 		if err != nil {
 			return "", fmt.Errorf("overwrite %v with %v failed: %w", key, briefOf(value), err)
 		}
-		log.Infof("Overwrite key %v with value %v, length: %v", rawKey, briefOf(value), len(value))
+		log.Debugf("overwrite key %v with value %v, length: %v", rawKey, briefOf(value), len(value))
 	} else {
 		value, err = s.Get(key)
 		if err != nil && !errors.Is(err, ErrNotFound) {
