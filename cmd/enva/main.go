@@ -25,6 +25,7 @@ var (
 	locationRegistration bool
 	logLevel             string
 	help                 bool
+	statusEndpoint       string
 
 	logOptions = log.DefaultOptions()
 )
@@ -37,6 +38,7 @@ func init() {
 	getopt.FlagLong(&locationRegistration, "location", 'l', "Optional, enable Proc location registration")
 	getopt.FlagLong(&logLevel, "log-level", 'v', "Optional, log level, can be one of debug, info, warn, error, fatal, none")
 	getopt.FlagLong(&help, "help", 'h', "Optional, display usage")
+	getopt.FlagLong(&statusEndpoint, "status-endpoint", 's', "Optional, start an HTTP server for reporting status")
 	getopt.SetUsage(func() {
 		s := getopt.CommandLine
 		printUsage(s, os.Stderr)
@@ -61,6 +63,7 @@ ENVA_ENV_FILES, equivalent of Option "env-files", separated by comma, eg: "path/
 ENVA_PUBLISH, equivalent of Option "publish", separated by comma, eg: "k1=v1, k2=v2",
 ENVA_RUN_ONLY_ONCE, equivalent of Option "run-only-once", eg: ENVA_RUN_ONLY_ONCE=true equal to honor --run-only-once Option.
 ENVA_LOG_LEVEL, equivalent of Option "log-level", eg: ENVA_LOG_LEVEL=debug equal to honor --log-level=debug Command Option.
+ENVA_STATUS_ENDPOINT, equivalent of Option "status-endpoint", eg: ENVA_STATUS_ENDPOINT=http://127.0.0.1:8503/healthz equal to honor --status-endpoint=http://127.0.0.1:8503/healthz Command Option.
 If both the command options & env are set at same time, Command Options have priority`)
 	fmt.Fprintln(w)
 }
@@ -125,7 +128,7 @@ func main() {
 
 	// Analyze env files
 	osEnvFiles := os.Getenv("ENVA_ENV_FILES")
-	if osEnvFiles != ""{
+	if osEnvFiles != "" {
 		envFiles = strings.Join([]string{envFiles, osEnvFiles}, ",")
 	}
 	var finalisedEnvFiles []string
@@ -176,6 +179,10 @@ func main() {
 		}
 	}
 
+	if statusEndpoint == "" {
+		statusEndpoint = os.Getenv("ENVA_STATUS_ENDPOINT")
+	}
+
 	// Get Proc options & args from env store and start the Proc.
 	// Name conversion for the options & args, eg:
 	// enva --envs-addr http://localhost:9112 \
@@ -217,6 +224,16 @@ func main() {
 		}
 		log.Debuga("exit from watch")
 	}()
+
+	if statusEndpoint != "" {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err := a.ServeStatusReport(ctx, statusEndpoint); err != nil {
+				log.Fatala(err)
+			}
+		}()
+	}
 
 	// TODO: Register Proc location if needed
 	if locationRegistration {

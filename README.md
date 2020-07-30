@@ -11,6 +11,7 @@ In this README:
 - [Conventions](#conventions)
 - [Tutorials](#tutorials)
 - [Architecture](#architecture)
+- [Liveness/Readiness Probe](#livenessreadiness-probe)
 - [Minimized steps for different services](#minimized-steps)
 - [FAQs](#faqs)
 - [TODOs](#todo)
@@ -58,6 +59,58 @@ There are three components in environment store lifecycle
 1. enva, agent of envs which act as the bridge between envs & service/application, publish & render/watch service/application key value pairs
 
 ![envs-arch](assets/images/envs-arch.png)
+
+### Liveness/Readiness probe
+1. In order to report if a pod is ready to serve request or not, envs/enva expose an HTTP-based status report endpoint to the upstream control panel.
+1. To perform a probe, the kubelet sends an HTTP GET request to the Proc that is running in the container and listening on the given port. 
+1. If the handler for the Proc's status endpoint returns a success code, the kubelet considers the container to be alive and healthy. 
+1. If the handler returns a failure code, the kubelet kills the container and restarts it when `liveness probe` enabled.
+1. If the handler returns a failure code, the kubelet mark the container is not available for serving request when `readiness probe` enabled.
+1. Any code greater than or equal to 200 and less than 400 indicates success. Any other code indicates failure.
+
+#### envagent
+1. enva will serve a http endpoint for status reporting if you provide with command-line flag `status-endpoint` or by setting ENVA_STATUS_ENDPOINT os env
+1. the response of the status-endpoint would be one of `200`, `201`, `410`, in which `200` means pod ready, `201` means enva is running but the `Proc` is starting, `410` means `Proc` is stopped.
+1. please make sure the given port in the endpoint MUST NOT conflict with the `Proc` required ports.
+1. let's say enva is started with `http://127.0.0.1:8503/healthz` as status-endpoint, the k8s liveness or readiness probe would like as follows:
+```yaml
+# liveness
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: 8503
+  failureThreshold: 10
+  periodSeconds: 30
+
+# readiness 
+readinessProbe:
+  httpGet:
+    path: /healthz
+    port: 8503
+  initialDelaySeconds: 30
+  periodSeconds: 30
+```
+
+#### envs
+1. envs provide an endpoint `/healthz` for status reporting, which can be used as the k8s liveness or readiness probe endpoint
+1. let's say the envs is serving at port 9111, the kubernetes readiness probe would like as follows:
+```yaml
+# liveness
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: 9111
+  failureThreshold: 10
+  periodSeconds: 30
+
+# readiness 
+readinessProbe:
+  httpGet:
+    path: /healthz
+    port: 9111
+  initialDelaySeconds: 30
+  periodSeconds: 30
+```
 
 ## Minimized steps
 
@@ -154,7 +207,7 @@ we need to make sure OAuth2 client has been registered & published into env stor
 - [x] Push new service/application docker images to registry
 - [x] Expose OAuth2.0 Client registration via envs API
 - [x] Keep enva running if envs stopped
-- [ ] Health check endpoint for enva
+- [x] Health check endpoint for enva
 - [ ] Add a cli tool to upload env & envf & add-ons files via API call
 - [ ] Support auth & authz with ReadOnly & Admin user permission
 - [ ] Audit on every API call for tracing who/when/what

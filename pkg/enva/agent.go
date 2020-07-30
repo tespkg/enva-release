@@ -7,6 +7,9 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
+	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -77,7 +80,13 @@ var (
 
 	// used for the none-daemon Proc,
 	// so that enva will be able to exist gracefully even there is no statusCh event received.
-	isProcRunning int64
+	procState int64
+)
+
+const (
+	ProcStopped int64 = iota
+	ProcStarting
+	ProcRunning
 )
 
 type exitStatus struct {
@@ -338,8 +347,8 @@ func (a *Agent) Run(ctx context.Context) error {
 			})
 
 			// For none-daemon Proc there might no status event from status channel,
-			// Check isProcRunning here and see if need to exit from here.
-			if atomic.LoadInt64(&isProcRunning) == 0 {
+			// Check procState here and see if need to exit from here.
+			if atomic.LoadInt64(&procState) == ProcStopped {
 				log.Debugf("ctx done exit")
 				return nil
 			}
@@ -413,7 +422,7 @@ func runProc(nameArgs, osEnvs []string, isRunOnlyOnce bool, terminate chan exitS
 	if len(nameArgs) == 0 {
 		return newExitStatus(-1, errors.New("require at least proc name"))
 	}
-
+	atomic.StoreInt64(&procState, ProcStarting)
 	name := nameArgs[0]
 	var args []string
 	if len(nameArgs) > 1 {
@@ -434,7 +443,7 @@ func runProc(nameArgs, osEnvs []string, isRunOnlyOnce bool, terminate chan exitS
 	}()
 
 	log.Infoa("Running ", cmd.Process.Pid, nameArgs)
-	atomic.StoreInt64(&isProcRunning, 1)
+	atomic.StoreInt64(&procState, ProcRunning)
 
 	defaultExtStatusCode := hold
 	if isRunOnlyOnce {
@@ -479,7 +488,7 @@ func runProc(nameArgs, osEnvs []string, isRunOnlyOnce bool, terminate chan exitS
 	}
 
 end:
-	atomic.StoreInt64(&isProcRunning, 0)
+	atomic.StoreInt64(&procState, ProcStopped)
 	return status
 }
 
@@ -617,4 +626,42 @@ func templateEnvFiles(files []envFile, pt PatchTable) ([]envFile, error) {
 	}
 
 	return templateFiles, nil
+}
+
+func (a *Agent) ServeStatusReport(ctx context.Context, endpoint string) error {
+	endpointURL, err := url.Parse(endpoint)
+	if err != nil {
+		return err
+	}
+
+	ln, err := net.Listen("tcp", net.JoinHostPort(endpointURL.Host, endpointURL.Port()))
+	if err != nil {
+		return err
+	}
+
+	http.HandleFunc(endpointURL.Path, func(w http.ResponseWriter, r *http.Request) {
+		// starting.
+		if atomic.LoadInt64(&procState) == ProcStarting {
+			w.WriteHeader(http.StatusCreated)
+			return
+		}
+		// stopped
+		if atomic.LoadInt64(&procState) == ProcStopped {
+			w.WriteHeader(http.StatusGone)
+			return
+		}
+		// running.
+		if atomic.LoadInt64(&procState) == ProcRunning {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+	})
+
+	httpServer := &http.Server{Addr: endpoint}
+	go func() {
+		httpServer.Serve(ln)
+	}()
+
+	<-ctx.Done()
+	return httpServer.Shutdown(ctx)
 }
