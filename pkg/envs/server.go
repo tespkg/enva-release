@@ -125,6 +125,8 @@ func newServer(a *Args, p *patchTable) (*Server, error) {
 		c.Redirect(http.StatusFound, a.StaticAssetPath)
 	})
 
+	ge.GET("/healthz", func(c *gin.Context) {})
+
 	return &Server{
 		ginEngine: ge,
 		args:      a,
