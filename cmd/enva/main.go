@@ -130,37 +130,55 @@ func main() {
 	}
 
 	// Analyze env files
+	var envFilenames []string
 	osEnvFiles := os.Getenv("ENVA_ENV_FILES")
-	if osEnvFiles != "" {
+	if envFiles == "" {
+		envFiles = osEnvFiles
+	} else {
 		envFiles = strings.Join([]string{envFiles, osEnvFiles}, ",")
 	}
-	osEnvTplFiles := os.Getenv("ENVA_ENV_TEMPLATE_FILES")
-	if osEnvTplFiles != "" {
-		envTplFiles = strings.Join([]string{envTplFiles, osEnvTplFiles}, ",")
-	}
-
-	var finalisedEnvFiles []enva.EnvFile
 	parts := strings.Split(envFiles, ",")
-	tplParts := strings.Split(envTplFiles, ",")
-	if len(tplParts) > 0 {
-		if len(tplParts) != len(parts) {
-			log.Fatala("invalid pairs of env-files to env-template-files")
-		}
-	}
-	for i, part := range parts {
+	for _, part := range parts {
 		fn := strings.TrimSpace(part)
 		if fn == "" {
 			continue
 		}
+		envFilenames = append(envFilenames, fn)
+	}
 
-		templateFilePath := ""
-		if len(osEnvTplFiles) > i+1 {
-			templateFilePath = tplParts[i]
+	// Analyze env template files
+	var envTplFilenames []string
+	osEnvTplFiles := os.Getenv("ENVA_ENV_TEMPLATE_FILES")
+	if envTplFiles == "" {
+		envTplFiles = osEnvTplFiles
+	} else {
+		envTplFiles = strings.Join([]string{envTplFiles, osEnvTplFiles}, ",")
+	}
+	parts = strings.Split(envTplFiles, ",")
+	for _, part := range parts {
+		fn := strings.TrimSpace(part)
+		if fn == "" {
+			continue
+		}
+		envTplFilenames = append(envTplFilenames, fn)
+	}
+	if len(envTplFilenames) > 0 {
+		if len(envTplFilenames) != len(envFilenames) {
+			log.Fatala("invalid pairs of env-files to env-template-files")
+		}
+	}
+
+	// finalise env files
+	var finalisedEnvFiles []enva.EnvFile
+	for i, envFilename := range envFilenames {
+		tplFilename := ""
+		if len(envTplFilenames) > i {
+			tplFilename = envTplFilenames[i]
 		}
 
 		finalisedEnvFiles = append(finalisedEnvFiles, enva.EnvFile{
-			TemplateFilePath: templateFilePath,
-			Filename:         fn,
+			TemplateFilePath: tplFilename,
+			Filename:         envFilename,
 		})
 	}
 
