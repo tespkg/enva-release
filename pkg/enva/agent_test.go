@@ -90,7 +90,7 @@ func TestAgentRun(t *testing.T) {
 		},
 	}
 
-	a, err := NewAgent(s, []string{"tail", "-n", "5", "-f", "${env:// .tailFilename }"}, []string{envFilename}, false, DefaultRetry, pt)
+	a, err := NewAgent(s, []string{"tail", "-n", "5", "-f", "${env:// .tailFilename }"}, []EnvFile{{Filename: envFilename}}, false, DefaultRetry, pt)
 	require.Nil(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())

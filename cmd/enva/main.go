@@ -20,6 +20,7 @@ import (
 var (
 	envsAddr             = ""
 	envFiles             = ""
+	envTplFiles          = ""
 	publishedKVs         []string
 	isRunOnlyOnce        bool
 	locationRegistration bool
@@ -33,6 +34,7 @@ var (
 func init() {
 	getopt.FlagLong(&envsAddr, "envs-addr", 'a', "Optional, envs address, eg: http://localhost:8502/a/bc")
 	getopt.FlagLong(&envFiles, "env-files", 'f', `Optional, env files, separated by comma, eg: "path/to/index.html, path/to/config.js"`)
+	getopt.FlagLong(&envTplFiles, "env-tpl-files", 't', `Optional, env template files, separated by comma, eg: "path/to/index.html.tpl, path/to/config.js.tpl", pair to env-files with same index`)
 	getopt.FlagLong(&publishedKVs, "publish", 'p', `Optional, publish kvs, eg: --publish k1=v1 --publish k2=v2`)
 	getopt.FlagLong(&isRunOnlyOnce, "run-only-once", 'r', "Optional, run Proc only once then exit")
 	getopt.FlagLong(&locationRegistration, "location", 'l', "Optional, enable Proc location registration")
@@ -60,6 +62,7 @@ func printUsage(s *getopt.Set, w io.Writer) {
 	fmt.Fprintln(w, `Apart from the Command Options, there are OS Envs supported as well, 
 ENVS_HTTP_ADDR, equivalent of Option "envs-addr", 
 ENVA_ENV_FILES, equivalent of Option "env-files", separated by comma, eg: "path/to/file1, path/to/file2",
+ENVA_ENV_TEMPLATE_FILES, equivalent of Option "env-tpl-files", separated by comma, eg: "path/to/file1.tpl, path/to/file2.tpl, pair to env-files with same index",
 ENVA_PUBLISH, equivalent of Option "publish", separated by comma, eg: "k1=v1, k2=v2",
 ENVA_RUN_ONLY_ONCE, equivalent of Option "run-only-once", eg: ENVA_RUN_ONLY_ONCE=true equal to honor --run-only-once Option.
 ENVA_LOG_LEVEL, equivalent of Option "log-level", eg: ENVA_LOG_LEVEL=debug equal to honor --log-level=debug Command Option.
@@ -131,14 +134,34 @@ func main() {
 	if osEnvFiles != "" {
 		envFiles = strings.Join([]string{envFiles, osEnvFiles}, ",")
 	}
-	var finalisedEnvFiles []string
+	osEnvTplFiles := os.Getenv("ENVA_ENV_TEMPLATE_FILES")
+	if osEnvTplFiles != "" {
+		envTplFiles = strings.Join([]string{envTplFiles, osEnvTplFiles}, ",")
+	}
+
+	var finalisedEnvFiles []enva.EnvFile
 	parts := strings.Split(envFiles, ",")
-	for _, part := range parts {
+	tplParts := strings.Split(envTplFiles, ",")
+	if len(tplParts) > 0 {
+		if len(tplParts) != len(parts) {
+			log.Fatala("invalid pairs of env-files to env-template-files")
+		}
+	}
+	for i, part := range parts {
 		fn := strings.TrimSpace(part)
 		if fn == "" {
 			continue
 		}
-		finalisedEnvFiles = append(finalisedEnvFiles, fn)
+
+		templateFilePath := ""
+		if len(osEnvTplFiles) > i+1 {
+			templateFilePath = tplParts[i]
+		}
+
+		finalisedEnvFiles = append(finalisedEnvFiles, enva.EnvFile{
+			TemplateFilePath: templateFilePath,
+			Filename:         fn,
+		})
 	}
 
 	// Analyze publish key value pair

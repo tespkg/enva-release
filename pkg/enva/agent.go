@@ -101,14 +101,18 @@ func newExitStatus(code int, err error) exitStatus {
 	}
 }
 
-type envFile struct {
-	filename    string
-	needRestart bool
+type EnvFile struct {
+	TemplateFilePath string
+	Filename         string
+
+	isChanged bool
+
+	needRestart bool // TODO: config restart policy from args
 }
 
 type config struct {
 	args     []string
-	envFiles []envFile
+	envFiles []EnvFile
 
 	osEnvVars []string
 }
@@ -117,20 +121,14 @@ func isEnvfArg(arg string) bool {
 	return strings.Contains(arg, "envf-")
 }
 
-func isConfigDeepEqual(old, new config) (updatedEnvFiles []envFile, isOSEnvVarsEq, isArgsEq bool) {
+func isConfigDeepEqual(old, new config) (updatedEnvFiles []EnvFile, isOSEnvVarsEq, isArgsEq bool) {
 	if reflect.DeepEqual(old.osEnvVars, new.osEnvVars) {
 		isOSEnvVarsEq = true
 	}
 
-	if len(old.envFiles) != len(new.envFiles) {
-		updatedEnvFiles = new.envFiles
-	} else {
-		for i := 0; i < len(old.envFiles); i++ {
-			aDoc, _ := ioutil.ReadFile(old.envFiles[i].filename)
-			bDoc, _ := ioutil.ReadFile(new.envFiles[i].filename)
-			if !reflect.DeepEqual(aDoc, bDoc) {
-				updatedEnvFiles = append(updatedEnvFiles, new.envFiles[i])
-			}
+	for _, f := range new.envFiles {
+		if f.isChanged {
+			updatedEnvFiles = append(updatedEnvFiles, f)
 		}
 	}
 
@@ -187,7 +185,7 @@ type Agent struct {
 	rawOSEnvVars []string
 
 	// Template files
-	envTplFiles []envFile
+	envTplFiles []EnvFile
 
 	// Indicate if Proc will run only once or run as a daemon service
 	isRunOnlyOnce bool
@@ -214,15 +212,7 @@ type Agent struct {
 	terminateCh chan exitStatus
 }
 
-func NewAgent(kvs kvs.KVStore, args []string, envFilenames []string, isRunOnlyOnce bool, retry retry, pt PatchTable) (*Agent, error) {
-	// Templating osEnvFiles if there is any and use it later.
-	var envFiles []envFile
-	for _, envFilename := range envFilenames {
-		envFiles = append(envFiles, envFile{
-			filename:    envFilename,
-			needRestart: false, // TODO: get restart policy from the enva start-up args
-		})
-	}
+func NewAgent(kvs kvs.KVStore, args []string, envFiles []EnvFile, isRunOnlyOnce bool, retry retry, pt PatchTable) (*Agent, error) {
 	envTplFiles, err := templateEnvFiles(envFiles, pt)
 	if err != nil {
 		return nil, err
@@ -492,7 +482,7 @@ end:
 	return status
 }
 
-func render(kvStore kvs.KVStore, rawArgs, rawOSEnvVars []string, envTplFiles []envFile, pt PatchTable) (config, error) {
+func render(kvStore kvs.KVStore, rawArgs, rawOSEnvVars []string, envTplFiles []EnvFile, pt PatchTable) (config, error) {
 	// Render os.env
 	osEnvVars := make([]string, len(rawOSEnvVars))
 	for i, osEnv := range rawOSEnvVars {
@@ -532,29 +522,22 @@ func render(kvStore kvs.KVStore, rawArgs, rawOSEnvVars []string, envTplFiles []e
 	}, nil
 }
 
-func renderEnvFiles(kvStore kvs.KVStore, envTplFiles []envFile, pt PatchTable) ([]envFile, error) {
+func renderEnvFiles(kvStore kvs.KVStore, envTplFiles []EnvFile, pt PatchTable) ([]EnvFile, error) {
 	var fds []io.Closer
 	defer func() {
 		for _, fd := range fds {
 			fd.Close()
 		}
 	}()
-	var envFiles []envFile
+	var envFiles []EnvFile
 	for _, file := range envTplFiles {
-		fn := file.filename
+		fn := file.TemplateFilePath
 		input, err := os.Open(fn)
 		if err != nil {
 			return nil, err
 		}
 		fds = append(fds, input)
 
-		// Trim tplDir and create new file
-		dstFn := fn
-		dirPrefix := pt.tplDir()
-		if len(dirPrefix) > 0 {
-			dstFn = fn[len(dirPrefix):]
-		}
-		log.Debugf("render env files from %v to %v", fn, dstFn)
 		tmpfile, err := ioutil.TempFile("", "plian-envf-")
 		if err != nil {
 			return nil, err
@@ -565,6 +548,19 @@ func renderEnvFiles(kvStore kvs.KVStore, envTplFiles []envFile, pt PatchTable) (
 			return nil, err
 		}
 
+		dstFn := file.Filename
+
+		// check if the dst file same with the previous file or not
+		isChanged := false
+		aDoc, _ := ioutil.ReadFile(dstFn)
+		tmpfile.Seek(0, io.SeekStart)
+		bDoc, _ := ioutil.ReadAll(tmpfile)
+		if !reflect.DeepEqual(aDoc, bDoc) {
+			isChanged = true
+		}
+
+		log.Debugf("render env files from %v to %v", fn, dstFn)
+
 		output, err := pt.create(dstFn)
 		if err != nil {
 			return nil, err
@@ -574,9 +570,13 @@ func renderEnvFiles(kvStore kvs.KVStore, envTplFiles []envFile, pt PatchTable) (
 		tmpfile.Seek(0, io.SeekStart)
 		io.Copy(output, tmpfile)
 
-		envFiles = append(envFiles, envFile{
-			filename:    dstFn,
-			needRestart: file.needRestart,
+		tmpfile.Close()
+		os.Remove(tmpfile.Name())
+
+		envFiles = append(envFiles, EnvFile{
+			TemplateFilePath: file.TemplateFilePath,
+			Filename:         dstFn,
+			isChanged:        isChanged,
 		})
 
 	}
@@ -584,13 +584,13 @@ func renderEnvFiles(kvStore kvs.KVStore, envTplFiles []envFile, pt PatchTable) (
 }
 
 // templateEnvFiles Copy all the env files to template dir, use them as the templates files
-func templateEnvFiles(files []envFile, pt PatchTable) ([]envFile, error) {
+func templateEnvFiles(files []EnvFile, pt PatchTable) ([]EnvFile, error) {
 	tplDir := pt.tplDir()
 	if tplDir == "" {
 		return files, nil
 	}
 
-	var templateFiles []envFile
+	var templateFiles []EnvFile
 	var opendFds []io.Closer
 	defer func() {
 		for _, closer := range opendFds {
@@ -599,11 +599,16 @@ func templateEnvFiles(files []envFile, pt PatchTable) ([]envFile, error) {
 	}()
 
 	for _, file := range files {
-		tplFn := filepath.Join(tplDir, file.filename)
+		if file.TemplateFilePath != "" {
+			templateFiles = append(templateFiles, file)
+			continue
+		}
+
+		tplFn := filepath.Join(tplDir, file.Filename)
 		if err := os.MkdirAll(filepath.Dir(tplFn), 0755); err != nil {
 			return nil, fmt.Errorf("mkdir for tpl file: %v failed: %w", tplFn, err)
 		}
-		input, err := os.Open(file.filename)
+		input, err := os.Open(file.Filename)
 		if err != nil {
 			return nil, err
 		}
@@ -619,9 +624,9 @@ func templateEnvFiles(files []envFile, pt PatchTable) ([]envFile, error) {
 			return nil, err
 		}
 
-		templateFiles = append(templateFiles, envFile{
-			filename:    tplFn,
-			needRestart: file.needRestart,
+		templateFiles = append(templateFiles, EnvFile{
+			TemplateFilePath: tplFn,
+			Filename:         file.Filename,
 		})
 	}
 
