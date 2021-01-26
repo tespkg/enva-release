@@ -12,9 +12,8 @@ import (
 	"os"
 	"strings"
 
-	"tespkg.in/kit/log"
-
 	"tespkg.in/envs/pkg/kvs"
+	"tespkg.in/kit/log"
 )
 
 const (

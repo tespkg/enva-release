@@ -1,4 +1,4 @@
-package envs
+package addons
 
 import (
 	"bytes"
@@ -11,12 +11,12 @@ import (
 	"net/http"
 	"regexp"
 
-	"tespkg.in/kit/log"
+	"tespkg.in/envs/pkg/store"
 
 	"github.com/coreos/go-oidc"
 	"golang.org/x/oauth2"
 	"tespkg.in/envs/pkg/kvs"
-	"tespkg.in/envs/pkg/store"
+	"tespkg.in/kit/log"
 )
 
 var nameRegex = regexp.MustCompile(`[\-_a-zA-Z0-9]*`)
@@ -85,7 +85,7 @@ type OAuthRegistrationReq struct {
 	Requests       ClientReqs          `json:"clients"`
 }
 
-func registerOAuthClients(s kvs.KVStore, provider OAuthProviderConfig, reqs ClientReqs) error {
+func RegisterOAuthClients(s kvs.KVStore, provider OAuthProviderConfig, reqs ClientReqs) error {
 	// Get authentication from oidc via client credential flow
 	oidcProvider, err := oidc.NewProvider(context.Background(), provider.Issuer)
 	if err != nil {
@@ -250,14 +250,16 @@ func publishOIDCClient(s kvs.KVStore, key, value string) error {
 	)
 }
 
-type kvStore struct {
+type OidcRegister struct {
 	store.Store
+
+	Namespace string
 }
 
-func (kv *kvStore) Get(key kvs.Key) (string, error) {
-	val, err := kv.Store.Get(
+func (o *OidcRegister) Get(key kvs.Key) (string, error) {
+	val, err := o.Store.Get(
 		store.Key{
-			Namespace: store.DefaultKVNs,
+			Namespace: o.Namespace,
 			Kind:      key.Kind,
 			Name:      key.Name,
 		},
@@ -275,10 +277,10 @@ func (kv *kvStore) Get(key kvs.Key) (string, error) {
 	return value, nil
 }
 
-func (kv *kvStore) Set(key kvs.Key, val string) error {
-	return kv.Store.Set(
+func (o *OidcRegister) Set(key kvs.Key, val string) error {
+	return o.Store.Set(
 		store.Key{
-			Namespace: store.DefaultKVNs,
+			Namespace: o.Namespace,
 			Kind:      key.Kind,
 			Name:      key.Name,
 		},
@@ -286,6 +288,9 @@ func (kv *kvStore) Set(key kvs.Key, val string) error {
 	)
 }
 
-func newKVStore(s store.Store) *kvStore {
-	return &kvStore{Store: s}
+func NewOidcRegister(ns string, store store.Store) *OidcRegister {
+	return &OidcRegister{
+		Store:     store,
+		Namespace: ns,
+	}
 }

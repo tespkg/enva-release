@@ -116,11 +116,6 @@ func newServer(a *Args, p *patchTable) (*Server, error) {
 	ge.PUT("oidcr", handler.OAuthRegistration)
 	ge.GET("example/:typ", AddOnsExample)
 
-	// APIs for application spec, unused yet, maybe remove later
-	ge.GET("specs", handler.GetSpecs)
-	ge.GET("spec/:name", handler.GetSpec)
-	ge.PUT("spec/:name", handler.PutSpec)
-
 	ge.GET("/", func(c *gin.Context) {
 		c.Redirect(http.StatusFound, a.StaticAssetPath)
 	})

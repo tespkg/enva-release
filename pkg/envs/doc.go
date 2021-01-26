@@ -72,6 +72,8 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 					Produces:    []string{"application/json"},
 					Tags:        []string{keyValTag},
 					Parameters: []openspec.Parameter{
+						openapi.BuildParam("query", "ns", "string", "", false, "kvs").
+							WithParameterDesc("Get keyvals from the given namespace"),
 						openapi.BuildParam("query", "kind", "string", "", false, nil).
 							WithParameterDesc("Get keyvals by kind, supported kinds: env, envf, envo, envof"),
 					},
@@ -92,6 +94,8 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 					Produces:    []string{"application/json"},
 					Tags:        []string{envKeyValTag},
 					Parameters: []openspec.Parameter{
+						openapi.BuildParam("query", "ns", "string", "", false, "kvs").
+							WithParameterDesc("update normal env keyvals into the given namespace"),
 						openapi.BuildParam("body", "body", "", "", true, nil).
 							WithNewSchema(openapi.ArrRefSchema(envKeyValDef)).
 							WithParameterDesc("Update multiple normal env keyvals"),
@@ -113,6 +117,8 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 					Produces:    []string{"application/json"},
 					Tags:        []string{envKeyValTag},
 					Parameters: []openspec.Parameter{
+						openapi.BuildParam("query", "ns", "string", "", false, "kvs").
+							WithParameterDesc("Update a single normal env keyval into the given namespace"),
 						openapi.BuildParam("body", "body", "", "", true, nil).
 							WithNewSchema(openapi.ObjRefSchema(envKeyValDef)).
 							WithParameterDesc("Update a single normal env keyval"),
@@ -133,7 +139,11 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 					Description: "Export all env kind key values",
 					Produces:    []string{"application/json"},
 					Tags:        []string{envKeyValTag},
-					Responses:   openapi.BuildResp(http.StatusOK, openapi.BuildSuccessResp(openapi.FileSchema())),
+					Parameters: []openspec.Parameter{
+						openapi.BuildParam("query", "ns", "string", "", false, "kvs").
+							WithParameterDesc("export all env kind key values from the given namespace"),
+					},
+					Responses: openapi.BuildResp(http.StatusOK, openapi.BuildSuccessResp(openapi.FileSchema())),
 				},
 			},
 			Put: &openspec.Operation{
@@ -145,6 +155,8 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 					Consumes:    []string{"multipart/form-data"},
 					Tags:        []string{envKeyValTag},
 					Parameters: []openspec.Parameter{
+						openapi.BuildParam("query", "ns", "string", "", false, "kvs").
+							WithParameterDesc("import given env kind key values from the given namespace"),
 						openapi.BuildParam("formData", "file", "file", "", true, nil).
 							WithParameterDesc("key values file"),
 					},
@@ -166,6 +178,8 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 					Consumes:    []string{"multipart/form-data"},
 					Tags:        []string{fileKeyValTag},
 					Parameters: []openspec.Parameter{
+						openapi.BuildParam("query", "ns", "string", "", false, "kvs").
+							WithParameterDesc("import given envf kind key value into the given namespace"),
 						openapi.BuildParam("query", "name", "string", "", true, nil).
 							WithParameterDesc("key name for the env file"),
 						openapi.BuildParam("formData", "file", "file", "", true, nil).
@@ -188,6 +202,8 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 					Produces:    []string{"application/json"},
 					Tags:        []string{keyValTag},
 					Parameters: []openspec.Parameter{
+						openapi.BuildParam("query", "ns", "string", "", false, "kvs").
+							WithParameterDesc("get a key from the given namespace"),
 						openapi.BuildParam("path", "fully_qualified_key_name", "string", "", true, nil).
 							WithParameterDesc("Allowed format: kind/name,  supported kind: env, envf, envo"),
 					},
@@ -209,6 +225,8 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 					Consumes:    []string{"multipart/form-data"},
 					Tags:        []string{addOnsTag},
 					Parameters: []openspec.Parameter{
+						openapi.BuildParam("query", "ns", "string", "", false, "kvs").
+							WithParameterDesc("register OAUth2.0 Client information into the given namespace"),
 						openapi.BuildParam("formData", "file", "file", "", true, nil).
 							WithParameterDesc(fmt.Sprintf(`
 OAuth2.0 Registration file, accept env key usage, example file %s

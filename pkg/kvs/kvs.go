@@ -97,11 +97,6 @@ func Render(s KVStore, ir io.Reader, iw io.Writer) error {
 	return render(s, ir, iw, &kvState{}, ioutil.TempFile, ioutil.ReadFile)
 }
 
-// Scan given reader exact all keys & default values
-func Scan(r io.Reader) (KeyVals, error) {
-	return scan(r, ioutil.ReadFile)
-}
-
 func scan(r io.Reader, readFileFunc readFileFunc) (KeyVals, error) {
 	bs, err := ioutil.ReadAll(r)
 	if err != nil {
