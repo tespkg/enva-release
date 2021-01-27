@@ -160,7 +160,7 @@ func fromKVPair(p *api.KVPair) (interface{}, error) {
 	case 0x01:
 		val = string(p.Value)
 	default:
-		return nil, fmt.Errorf("%w %0x", store.ErrUnsupportedValueType, p.Flags)
+		return nil, fmt.Errorf("%w %0x %s", store.ErrUnsupportedValueType, p.Flags, p.Key)
 	}
 
 	return val, nil
