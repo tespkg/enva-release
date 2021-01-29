@@ -1,6 +1,8 @@
 package store
 
-import "errors"
+import (
+	"errors"
+)
 
 const (
 	DefaultKVNs = "kvs"
@@ -13,15 +15,15 @@ var (
 
 // Key represents the key to identify a resource in the store.
 type Key struct {
-	Namespace string
-	Kind      string
-	Name      string
+	Namespace string `json:"namespace,omitempty"`
+	Kind      string `json:"kind"`
+	Name      string `json:"name"`
 }
 
 // KeyVal represents the key & value pair in the store.
 type KeyVal struct {
 	Key
-	Value interface{}
+	Value interface{} `json:"value"`
 }
 
 // KeyVals set of KeyVal

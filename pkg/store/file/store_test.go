@@ -1,46 +1,41 @@
-package etcd
+package file
 
 import (
 	"errors"
-	"net/url"
+	"fmt"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"tespkg.in/envs/pkg/kvs"
 	"tespkg.in/envs/pkg/store"
 )
 
-func getEtcdDsn(t *testing.T) string {
-	etcdDsn := os.Getenv("ETCD_DSN")
-	if etcdDsn == "" {
-		t.Skip("skipping etcd test case, since ETCD_DSN env not found")
+func newMemoryStore(t *testing.T) *ms {
+	s, err := NewStore("file://../../../testdata/file.yaml")
+	require.Nil(t, err)
+	return s.(*ms)
+}
+
+func TestStoreRecovery(t *testing.T) {
+	s := newMemoryStore(t)
+	for i := 1; i <= 5; i++ {
+		val, err := s.Get(store.Key{
+			Kind:      kvs.EnvKind,
+			Namespace: store.DefaultKVNs,
+			Name:      fmt.Sprintf("KEY%d", i),
+		})
+		require.Nil(t, err)
+		require.Equal(t, val, fmt.Sprintf("VAL%d", i))
 	}
-	return etcdDsn
-}
-
-func TestNewEtcdStore(t *testing.T) {
-	dsn := getEtcdDsn(t)
-	u, err := url.Parse(dsn)
-	require.Nil(t, err)
-
-	s, err := NewStore(dsn)
-	require.Nil(t, err)
-	ss := s.(*es)
-	require.Equal(t, strings.TrimPrefix(u.Path, "/"), ss.prefix)
-}
-
-func newEtcdStore(t *testing.T) *es {
-	dsn := getEtcdDsn(t)
-	s, err := NewStore(dsn)
-	require.Nil(t, err)
-	return s.(*es)
 }
 
 func TestSetGet(t *testing.T) {
-	es := newEtcdStore(t)
+	es := newMemoryStore(t)
 	key := store.Key{
 		Kind:      "test",
 		Namespace: "test",
@@ -57,7 +52,7 @@ func TestSetGet(t *testing.T) {
 }
 
 func TestSetOverwrite(t *testing.T) {
-	es := newEtcdStore(t)
+	es := newMemoryStore(t)
 	key := store.Key{
 		Kind:      "test",
 		Namespace: "test",
@@ -83,7 +78,7 @@ func TestSet(t *testing.T) {
 		{"a", nil},
 		{"1", nil},
 	}
-	es := newEtcdStore(t)
+	es := newMemoryStore(t)
 	key := store.Key{
 		Kind:      "test",
 		Namespace: "test",
@@ -98,7 +93,7 @@ func TestSet(t *testing.T) {
 }
 
 func TestGetNotFound(t *testing.T) {
-	es := newEtcdStore(t)
+	es := newMemoryStore(t)
 	key := store.Key{
 		Kind:      "test",
 		Namespace: "test",
@@ -108,7 +103,7 @@ func TestGetNotFound(t *testing.T) {
 	require.True(t, errors.As(err, &store.ErrNotFound))
 }
 
-func setKeyValues(t *testing.T, s *es) {
+func setKeyValues(t *testing.T, s *ms) {
 	var kvals = store.KeyVals{
 		{
 			Key: store.Key{
@@ -151,7 +146,7 @@ func setKeyValues(t *testing.T, s *es) {
 }
 
 func TestGetNsValues(t *testing.T) {
-	es := newEtcdStore(t)
+	es := newMemoryStore(t)
 	setKeyValues(t, es)
 
 	kvals, err := es.GetNsValues("multi-dev")
@@ -180,7 +175,7 @@ func TestGetNsValues(t *testing.T) {
 }
 
 func TestGetNsKindValues(t *testing.T) {
-	es := newEtcdStore(t)
+	es := newMemoryStore(t)
 	setKeyValues(t, es)
 
 	kvals, err := es.GetNsKindValues("multi-dev", "multi-animal")
@@ -199,7 +194,7 @@ func TestGetNsKindValues(t *testing.T) {
 }
 
 func TestGetKindValues(t *testing.T) {
-	es := newEtcdStore(t)
+	es := newMemoryStore(t)
 	setKeyValues(t, es)
 
 	kvals, err := es.GetKindValues("multi-animal")
@@ -222,39 +217,136 @@ func TestGetKindValues(t *testing.T) {
 			Value: "s3",
 		},
 	}
+	sortedKeyVals(expected)
+	sortedKeyVals(kvals)
+	require.Equal(t, expected, kvals)
 	require.Equal(t, expected, kvals)
 }
 
-func TestSetUnsupportedType(t *testing.T) {
-	es := newEtcdStore(t)
-	key := store.Key{
-		Kind:      "",
-		Namespace: "test",
-		Name:      "foo",
+func setEnvKeys(t *testing.T, s *ms) {
+	var kvals = store.KeyVals{
+		{
+			Key: store.Key{
+				Namespace: store.DefaultKVNs,
+				Kind:      kvs.EnvKind,
+				Name:      "s1",
+			},
+			Value: "s1",
+		},
+		{
+			Key: store.Key{
+				Namespace: store.DefaultKVNs,
+				Kind:      kvs.EnvKind,
+				Name:      "s2",
+			},
+			Value: "s2",
+		},
+		{
+			Key: store.Key{
+				Namespace: store.DefaultKVNs,
+				Kind:      kvs.EnvKind,
+				Name:      "s3",
+			},
+			Value: "s3",
+		},
+		{
+			Key: store.Key{
+				Namespace: store.DefaultKVNs,
+				Kind:      kvs.EnvKind,
+				Name:      "s4",
+			},
+			Value: "s4",
+		},
 	}
-	value := []string{"bar"}
 
-	err := es.Set(key, value)
-	require.NotNil(t, err)
-	require.True(t, errors.As(err, &store.ErrUnsupportedValueType))
+	for _, kval := range kvals {
+		err := s.Set(kval.Key, kval.Value)
+		require.Nil(t, err)
+	}
 }
 
-func TestGetUnsupportedType(t *testing.T) {
-	value := "bar"
-	bVal := []byte{0x2}
-	bVal = append(bVal, []byte(value)...)
-	_, err := decodeVal(bVal)
-	require.NotNil(t, err)
-	require.True(t, errors.As(err, &store.ErrUnsupportedValueType))
-}
+func TestPersist(t *testing.T) {
+	file := filepath.Join(os.TempDir(), "temp.yaml")
+	s, err := NewStore("file://" + file)
+	defer os.Remove(file)
 
-func TestExactKey(t *testing.T) {
-	rawKey := "ns/kind/a/b/c"
-	key, err := extractKey("", rawKey)
 	require.Nil(t, err)
-	require.Equal(t, "ns", key.Namespace)
-	require.Equal(t, "kind", key.Kind)
-	require.Equal(t, "a/b/c", key.Name)
+	ms1 := s.(*ms)
+	setEnvKeys(t, ms1)
+
+	err = ms1.Close()
+	require.Nil(t, err)
+
+	data, err := ioutil.ReadFile(file)
+	require.Nil(t, err)
+	require.NotNil(t, data)
+
+	file2 := filepath.Join(os.TempDir(), "temp.yaml")
+	s2, err := NewStore("file://" + file2)
+	require.Nil(t, err)
+	ms2 := s2.(*ms)
+	err = ms2.yaml2Data(file)
+	require.Nil(t, err)
+
+	kvals, err := ms2.GetNsKindValues(store.DefaultKVNs, kvs.EnvKind)
+	require.Nil(t, err)
+	expected := store.KeyVals{
+		{
+			Key: store.Key{
+				Namespace: store.DefaultKVNs,
+				Kind:      kvs.EnvKind,
+				Name:      "s1",
+			},
+			Value: "s1",
+		},
+		{
+			Key: store.Key{
+				Namespace: store.DefaultKVNs,
+				Kind:      kvs.EnvKind,
+				Name:      "s2",
+			},
+			Value: "s2",
+		},
+		{
+			Key: store.Key{
+				Namespace: store.DefaultKVNs,
+				Kind:      kvs.EnvKind,
+				Name:      "s3",
+			},
+			Value: "s3",
+		},
+		{
+			Key: store.Key{
+				Namespace: store.DefaultKVNs,
+				Kind:      kvs.EnvKind,
+				Name:      "s4",
+			},
+			Value: "s4",
+		},
+	}
+	sortedKeyVals(expected)
+	sortedKeyVals(kvals)
+	require.Equal(t, expected, kvals)
+
+	data2, err := ms2.data2Yaml()
+	require.Nil(t, err)
+
+	require.Equal(t, len(data2), len(data))
+}
+
+func TestFilePath(t *testing.T) {
+	dsn := "file:///path/to/file?ns=kvs"
+	path, vals, err := getFilePath(dsn)
+	require.Nil(t, err)
+	require.Equal(t, "/path/to/file", path)
+	require.Equal(t, vals.Get("ns"), "kvs")
+
+	dsn = "file://../../../testdata/file.yaml?ns=kvs"
+	path, vals, err = getFilePath(dsn)
+	require.Nil(t, err)
+	abs, _ := filepath.Abs("../../../testdata/file.yaml")
+	require.Equal(t, abs, path)
+	require.Equal(t, vals.Get("ns"), "kvs")
 }
 
 func sortedKeyVals(kvs store.KeyVals) {

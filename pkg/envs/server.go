@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"tespkg.in/envs/pkg/store"
 	"tespkg.in/envs/pkg/store/consul"
 	"tespkg.in/envs/pkg/store/etcd"
+	"tespkg.in/envs/pkg/store/file"
 	"tespkg.in/kit/log"
 	"tespkg.in/kit/templates"
 )
@@ -25,6 +27,8 @@ type Server struct {
 	ginEngine *gin.Engine
 
 	args *Args
+
+	store store.Store
 }
 
 // replaceable set of functions for fault injection
@@ -67,6 +71,11 @@ func newServer(a *Args, p *patchTable) (*Server, error) {
 		s, err = etcd.NewStore(a.Dsn)
 		if err != nil {
 			return nil, fmt.Errorf("initiate etcd env store failed: %v", err)
+		}
+	case "file":
+		s, err = file.NewStore(a.Dsn)
+		if err != nil {
+			return nil, fmt.Errorf("initiate file env store failed: %v", err)
 		}
 	default:
 		return nil, fmt.Errorf("unknown env store schema: %v", u.Scheme)
@@ -125,6 +134,7 @@ func newServer(a *Args, p *patchTable) (*Server, error) {
 	return &Server{
 		ginEngine: ge,
 		args:      a,
+		store:     s,
 	}, nil
 }
 
@@ -142,6 +152,15 @@ func (s *Server) Wait() error {
 		return fmt.Errorf("server not runnig")
 	}
 
+	sig := make(chan os.Signal)
+	signal.Notify(sig, os.Kill, os.Interrupt)
+	go func() {
+		select {
+		case <-sig:
+			s.shutdown <- nil
+		}
+	}()
+
 	err := <-s.shutdown
 	s.shutdown = nil
 	return err
@@ -149,10 +168,12 @@ func (s *Server) Wait() error {
 
 func (s *Server) Close() {
 	log.Info("Close server")
+
 	if s.shutdown != nil {
 		_ = s.Wait()
 	}
 
+	_ = s.store.Close()
 	_ = log.Sync()
 }
 
