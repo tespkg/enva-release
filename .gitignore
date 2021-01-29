@@ -37,3 +37,5 @@ bin
 vars.yaml
 .static
 cmd/s4
+Dockerfile-local
+Dockerfile-enva-local

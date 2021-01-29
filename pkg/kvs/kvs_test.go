@@ -168,9 +168,9 @@ mariner:
 
 water:
   water:
-    where: "/tmp/tmp-4.out"
+    where: "%s/tmp-4.out"
     nor: "any drop to drink"
-`, os.TempDir(), os.TempDir(), os.TempDir())
+`, os.TempDir(), os.TempDir(), os.TempDir(), os.TempDir())
 
 	// Just for showcase, put a \n in front of the expected when initiating, remove it here.
 	expected = strings.TrimPrefix(expected, "\n")

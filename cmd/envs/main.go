@@ -51,7 +51,7 @@ func runServer(sa *envs.Args) {
 	s.Run()
 	err = s.Wait()
 	if err != nil {
-		log.Fatalf("server unexpectedly terminated: %v\n", err)
+		log.Printf("server unexpectedly terminated: %v\n", err)
 	}
 
 	s.Close()

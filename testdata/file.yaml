@@ -1,0 +1,15 @@
+- kind: env
+  name: KEY1
+  value: VAL1
+- kind: env
+  name: KEY2
+  value: VAL2
+- kind: env
+  name: KEY3
+  value: VAL3
+- kind: env
+  name: KEY4
+  value: VAL4
+- kind: env
+  name: KEY5
+  value: VAL5
