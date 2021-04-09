@@ -11,6 +11,8 @@ variables:
   KUBECONFIG: /etc/deploy/config
   SLACK_CHANNEL: gitlab-notifications
   DOCKER_DRIVER: overlay2
+  manifests_ci_token: $manifests_ci_token_envs
+  manifests_repo: gitlab.com/target-digital-transformation/devops-group/manifests/general/envs.git
 
 stages:
   - unit-test
@@ -35,6 +37,9 @@ include:
   - remote: https://target-digital-transformation.gitlab.io/pipeline/07_v2_deploy_to_staging.yml
   - remote: https://target-digital-transformation.gitlab.io/pipeline/07_v2_deploy_to_prod_odp_azure.yml
   - remote: https://target-digital-transformation.gitlab.io/pipeline/07_v2_deploy_to_prod_eks_fluxble.yml
+  - remote: https://target-digital-transformation.gitlab.io/pipeline/02_v3_deploy_to_dev_via_argocd.yml
+  - remote: https://target-digital-transformation.gitlab.io/pipeline/04_v3_deploy_to_test_via_argocd.yml
+  - remote: https://target-digital-transformation.gitlab.io/pipeline/07_v3_deploy_to_prod_via_argocd.yml
 
 test-coverage:
   image: golang:1.13
@@ -75,43 +80,30 @@ build_image_envs:
     - master
     - tags
 
-dev.meeraspace.com:
-  extends: .deploy_to_dev_v2
-  variables:
-    ##   helm3 install [RELEASE_NAME] [APP_CHART_NAME] -n [NAMESPACE] --set global.env=${environment_name}
-    NAMESPACE: dev-meeraspace-envs
-    environment_name: dev
-    environment_url: https://dev.meeraspace.com
-    nsPrefix: dev-meeraspace
-    baseUrl: dev.meeraspace.com
-    gateway: default/gateway
-  script:
-    - >
-      helm3 upgrade ${RELEASE_NAME} -n ${NAMESPACE} \
-        --set global.nsPrefix=${nsPrefix},global.baseUrl=${baseUrl},global.gateway=${gateway} \
-        --set image.repository=$CI_REGISTRY_IMAGE/${CI_COMMIT_REF_SLUG} \
-        --set-string image.tag=${CI_COMMIT_SHA:0:8} \
-        --debug --wait ./     
-  only:
-    - master
+0-0-dev-gke-dev:
+  interruptible: true
+  extends: .deploy_to_dev_v3_via_argocd
+  
+1-0-test-gke-test:
+  interruptible: true
+  extends: .deploy_to_test_v3_via_argocd
 
-push_incubator_chart:
-  extends: .push_incubator_chart_v2
+#4-0-prod-eks-fluxble-target  it will use values-target.yaml to deploy
+4-0-prod-eks-fluxble-target:
+  stage: deploy_to_prod
+  interruptible: true
+  extends: .deploy_to_prod_v3_via_argocd
 
-test.meeraspace.com:
-  extends: .deploy_to_test_v2
-  variables:
-    NAMESPACE: test-meeraspace-envs
-    environment_name: test
-    environment_url: https://test.meeraspace.com
-    nsPrefix: test-meeraspace
-    baseUrl: test.meeraspace.com
-    gateway: default/gateway
-  script:
-    - >
-      helm3 upgrade ${RELEASE_NAME} -n ${NAMESPACE} \
-        --set global.nsPrefix=${nsPrefix},global.baseUrl=${baseUrl},global.gateway=${gateway} \
-        --debug --wait ./    
+4-0-prod-eks-fluxble-workspace:
+  stage: deploy_to_prod
+  interruptible: true
+  extends: .deploy_to_prod_v3_via_argocd
+
+4-0-prod-eks-fluxble-energy:
+  stage: deploy_to_prod
+  interruptible: true
+  extends: .deploy_to_prod_v3_via_argocd
+
 
 kenya.meeraspace.com:
   extends: .deploy_to_test_v2
