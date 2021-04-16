@@ -72,6 +72,8 @@ build_enva:
     - master
     - tags
   when: manual
+  tags:
+    - woking-physical
 
 build_image_envs:
   extends: .build_single_image
