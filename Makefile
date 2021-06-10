@@ -1,6 +1,7 @@
 SHELL := /bin/bash -o pipefail
 BIN_DIR=${PWD}/.bin
 PB_DIR=${PWD}/pb
+VERSION ?= $(shell ./.gitversion)
 
 .PHONY: help
 help:
@@ -46,7 +47,7 @@ vendor:
 .PHONY: build
 build:
 	@mkdir -p bin
-	@go build -mod vendor -o bin/enva tespkg.in/envs/cmd/enva
+	@go build -mod vendor -ldflags "-X tespkg.in/envs/version.Version=$(VERSION)" -o bin/enva tespkg.in/envs/cmd/enva
 	@go build -mod vendor -o bin/envs tespkg.in/envs/cmd/envs
 
 .PHONY: build-s4

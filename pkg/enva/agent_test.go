@@ -117,3 +117,121 @@ func TestAgentRun(t *testing.T) {
 	wg.Wait()
 	fmt.Println(renderedEnvFile)
 }
+
+func TestIsVarEqual(t *testing.T) {
+	cases := []struct {
+		name       string
+		a          string
+		b          string
+		prepareFun func()
+		expected   bool
+	}{
+		{
+			name:     "1",
+			a:        "foo",
+			b:        "bar",
+			expected: false,
+		},
+		{
+			name:     "2",
+			a:        "foo",
+			b:        "foo",
+			expected: true,
+		},
+		{
+			name: "3",
+			a:    "foo",
+			b:    "/tmp/envf-123.out",
+			prepareFun: func() {
+				_ = ioutil.WriteFile("/tmp/envf-123.out", []byte("123"), 0744)
+			},
+			expected: false,
+		},
+		{
+			name: "4",
+			a:    "/tmp/envf-123.out",
+			b:    "/tmp/envf-345.out",
+			prepareFun: func() {
+				_ = ioutil.WriteFile("/tmp/envf-123.out", []byte("123"), 0744)
+				_ = ioutil.WriteFile("/tmp/envf-345.out", []byte("123"), 0744)
+			},
+			expected: true,
+		},
+		{
+			name: "5",
+			a:    "/tmp/envf-123.out",
+			b:    "/tmp/envf-345.out",
+			prepareFun: func() {
+				_ = ioutil.WriteFile("/tmp/envf-123.out", []byte("123"), 0744)
+				_ = ioutil.WriteFile("/tmp/envf-345.out", []byte("345"), 0744)
+			},
+			expected: false,
+		},
+		{
+			name: "6",
+			a:    "/tmp/envf-123.out /tmp/envf-345.out",
+			b:    "/tmp/envf-456.out /tmp/envf-789.out",
+			prepareFun: func() {
+				_ = ioutil.WriteFile("/tmp/envf-123.out", []byte("123"), 0744)
+				_ = ioutil.WriteFile("/tmp/envf-345.out", []byte("345"), 0744)
+				_ = ioutil.WriteFile("/tmp/envf-456.out", []byte("123"), 0744)
+				_ = ioutil.WriteFile("/tmp/envf-789.out", []byte("345"), 0744)
+			},
+			expected: true,
+		},
+		{
+			name: "7",
+			a:    "/tmp/envf-123.out /tmp/envf-345.out foo",
+			b:    "/tmp/envf-456.out /tmp/envf-789.out foo",
+			prepareFun: func() {
+				_ = ioutil.WriteFile("/tmp/envf-123.out", []byte("123"), 0744)
+				_ = ioutil.WriteFile("/tmp/envf-345.out", []byte("345"), 0744)
+				_ = ioutil.WriteFile("/tmp/envf-456.out", []byte("123"), 0744)
+				_ = ioutil.WriteFile("/tmp/envf-789.out", []byte("345"), 0744)
+			},
+			expected: true,
+		},
+		{
+			name: "8",
+			a:    "/tmp/envf-123.out /tmp/envf-345.out foo",
+			b:    "/tmp/envf-456.out /tmp/envf-789.out bar",
+			prepareFun: func() {
+				_ = ioutil.WriteFile("/tmp/envf-123.out", []byte("123"), 0744)
+				_ = ioutil.WriteFile("/tmp/envf-345.out", []byte("345"), 0744)
+				_ = ioutil.WriteFile("/tmp/envf-456.out", []byte("123"), 0744)
+				_ = ioutil.WriteFile("/tmp/envf-789.out", []byte("345"), 0744)
+			},
+			expected: false,
+		},
+		{
+			name: "9",
+			a:    "/tmp/envf-123.out /tmp/envf-345.out",
+			b:    "/tmp/envf-456.out /tmp/envf-789.out",
+			prepareFun: func() {
+				_ = ioutil.WriteFile("/tmp/envf-123.out", []byte("123"), 0744)
+				_ = ioutil.WriteFile("/tmp/envf-345.out", []byte("345"), 0744)
+				_ = ioutil.WriteFile("/tmp/envf-456.out", []byte("456"), 0744)
+				_ = ioutil.WriteFile("/tmp/envf-789.out", []byte("789"), 0744)
+			},
+			expected: false,
+		},
+		{
+			name: "10",
+			a:    "/tmp/envf-123.out /tmp/envf-345.out",
+			b:    "/tmp/envf-456.out",
+			prepareFun: func() {
+				_ = ioutil.WriteFile("/tmp/envf-123.out", []byte("123"), 0744)
+				_ = ioutil.WriteFile("/tmp/envf-345.out", []byte("345"), 0744)
+				_ = ioutil.WriteFile("/tmp/envf-456.out", []byte("123"), 0744)
+			},
+			expected: false,
+		},
+	}
+	for _, c := range cases {
+		if c.prepareFun != nil {
+			c.prepareFun()
+		}
+		got := isEnvVarEqual(c.a, c.b)
+		require.Equal(t, c.expected, got)
+	}
+}

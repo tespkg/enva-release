@@ -23,6 +23,8 @@ const (
 	// The underlying kind is always env for env & envo cases.
 	EnvoKind = "envo"
 
+	EnvfKindTmpDir = ""
+
 	briefMaxLen = 50
 
 	actionDefault   = "default"
@@ -161,7 +163,7 @@ func render(s KVStore, ir io.Reader, iw io.Writer, kvS *kvState, tmpFunc tempFun
 				return fmt.Errorf("got empty value on required envf key: %v", kv.Key)
 			}
 			// Create a tmp file save the val as it's content, and set the file name to the key
-			f, err := tmpFunc("", kv.Kind+"-*")
+			f, err := tmpFunc(EnvfKindTmpDir, "envf-*.out")
 			if err != nil {
 				return err
 			}

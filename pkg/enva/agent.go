@@ -14,6 +14,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -117,13 +118,39 @@ type config struct {
 	osEnvVars []string
 }
 
-func isEnvfArg(arg string) bool {
-	return strings.Contains(arg, "envf-")
+func parseEnvfVar(variable string) (string, []string) {
+	tmpDir := kvs.EnvfKindTmpDir
+	if tmpDir == "" {
+		tmpDir = os.TempDir()
+	}
+	regF := regexp.MustCompile(fmt.Sprintf(`%s/envf-([0-9]*)\.out`, tmpDir))
+	res := regF.FindAllStringSubmatch(variable, -1)
+	if len(res) == 0 {
+		return variable, nil
+	}
+	var fileNames []string
+	for _, match := range res {
+		filename := match[0]
+		fileNames = append(fileNames, filename)
+		variable = strings.Replace(variable, filename, "", -1)
+	}
+	return variable, fileNames
 }
 
 func isConfigDeepEqual(old, new config) (updatedEnvFiles []EnvFile, isOSEnvVarsEq, isArgsEq bool) {
-	if reflect.DeepEqual(old.osEnvVars, new.osEnvVars) {
-		isOSEnvVarsEq = true
+	isOSEnvVarsEq = true
+	if len(old.osEnvVars) != len(new.osEnvVars) {
+		isOSEnvVarsEq = false
+	}
+	if isOSEnvVarsEq {
+		for i := 0; i < len(old.osEnvVars); i++ {
+			a := old.osEnvVars[i]
+			b := new.osEnvVars[i]
+			if !isEnvVarEqual(a, b) {
+				isOSEnvVarsEq = false
+				break
+			}
+		}
 	}
 
 	for _, f := range new.envFiles {
@@ -140,22 +167,7 @@ func isConfigDeepEqual(old, new config) (updatedEnvFiles []EnvFile, isOSEnvVarsE
 		aArg := old.args[i]
 		bArg := new.args[i]
 
-		isAArgFile, isBArgFile := isEnvfArg(aArg), isEnvfArg(bArg)
-
-		// If both are envf file
-		if isAArgFile && isBArgFile {
-			aDoc, _ := ioutil.ReadFile(aArg)
-			bDoc, _ := ioutil.ReadFile(bArg)
-			if !reflect.DeepEqual(aDoc, bDoc) {
-				log.Infof("Un-equaled aArg: %v and bArg: %v", aArg, bArg)
-				return updatedEnvFiles, isOSEnvVarsEq, false
-			}
-			continue
-		}
-
-		// Not envf file
-		if aArg != bArg {
-			log.Infof("Un-equaled aArg: %v and bArg: %v", aArg, bArg)
+		if !isEnvVarEqual(aArg, bArg) {
 			return updatedEnvFiles, isOSEnvVarsEq, false
 		}
 	}
@@ -163,13 +175,44 @@ func isConfigDeepEqual(old, new config) (updatedEnvFiles []EnvFile, isOSEnvVarsE
 	return updatedEnvFiles, isOSEnvVarsEq, true
 }
 
+func isEnvVarEqual(a, b string) bool {
+	varA, aFileNames := parseEnvfVar(a)
+	varB, bFileNames := parseEnvfVar(b)
+
+	if varA != varB {
+		return false
+	}
+	if len(aFileNames) != len(bFileNames) {
+		return false
+	}
+
+	for idx := range aFileNames {
+		aDoc, _ := ioutil.ReadFile(aFileNames[idx])
+		bDoc, _ := ioutil.ReadFile(bFileNames[idx])
+		if !reflect.DeepEqual(aDoc, bDoc) {
+			log.Infof("Unequaled a: %v and b: %v", a, b)
+			return false
+		}
+	}
+
+	return true
+}
+
 func removeEnvfFile(c config) {
 	for _, arg := range c.args {
-		if !isEnvfArg(arg) {
-			continue
+		_, fileNames := parseEnvfVar(arg)
+		for _, filename := range fileNames {
+			if err := os.RemoveAll(filename); err != nil {
+				log.Warnf("Remove %v failed: %v", filename, err)
+			}
 		}
-		if err := os.RemoveAll(arg); err != nil {
-			log.Warnf("Remove %v failed: %v", arg, err)
+	}
+	for _, osVar := range c.osEnvVars {
+		_, fileNames := parseEnvfVar(osVar)
+		for _, filename := range fileNames {
+			if err := os.RemoveAll(filename); err != nil {
+				log.Warnf("Remove %v failed: %v", filename, err)
+			}
 		}
 	}
 }

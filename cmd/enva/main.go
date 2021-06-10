@@ -10,6 +10,8 @@ import (
 	"sync"
 	"syscall"
 
+	"tespkg.in/envs/version"
+
 	"github.com/pborman/getopt/v2"
 	"tespkg.in/envs/pkg/api"
 	"tespkg.in/envs/pkg/enva"
@@ -71,6 +73,8 @@ ENVA_RUN_ONLY_ONCE, equivalent of Option "run-only-once", eg: ENVA_RUN_ONLY_ONCE
 ENVA_LOG_LEVEL, equivalent of Option "log-level", eg: ENVA_LOG_LEVEL=debug equal to honor --log-level=debug Command Option.
 ENVA_STATUS_ENDPOINT, equivalent of Option "status-endpoint", eg: ENVA_STATUS_ENDPOINT=http://127.0.0.1:8503/healthz equal to honor --status-endpoint=http://127.0.0.1:8503/healthz Command Option.
 If both the command options & env are set at same time, Command Options have priority`)
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "version: "+version.Version)
 	fmt.Fprintln(w)
 }
 

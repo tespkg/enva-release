@@ -30,6 +30,7 @@ cd ${ASSETS_DOCKERFILE_DIR}/openjdk-8-jre-slim && docker build ${BUILD_ARGS} -t 
 cd ${ASSETS_DOCKERFILE_DIR}/openjdk-11-jre-slim && docker build ${BUILD_ARGS} -t registry.tespkg.in/library/openjdk:11-jre-slim .
 cd ${ASSETS_DOCKERFILE_DIR}/python-3.6.10 && docker build ${BUILD_ARGS} -t registry.tespkg.in/library/python:3.6.10 .
 cd ${ASSETS_DOCKERFILE_DIR}/python-3.6.10-alpine3.10 && docker build ${BUILD_ARGS} -t registry.tespkg.in/library/python:3.6.10-alpine3.10 .
+cd ${ASSETS_DOCKERFILE_DIR}/mongodb-bi-connector && docker build ${BUILD_ARGS} -t registry.tespkg.in/library/mongodb-bi-connector .
 
 if [[ $# == 1 ]] && [[ $1 == "true" ]]; then
     echo "Push base images..."
@@ -51,5 +52,6 @@ if [[ $# == 1 ]] && [[ $1 == "true" ]]; then
     docker push registry.tespkg.in/library/openjdk:11-jre-slim
     docker push registry.tespkg.in/library/python:3.6.10
     docker push registry.tespkg.in/library/python:3.6.10-alpine3.10
+    docker push registry.tespkg.in/library/mongodb-bi-connector
 fi
 
