@@ -30,6 +30,8 @@ type Config struct {
 	// Scheme is the URI scheme for the envs
 	Scheme string
 
+	Namespace string
+
 	// HTTPClient is the client to use. Default will be
 	// used if not provided.
 	HTTPClient *http.Client
@@ -205,7 +207,9 @@ func (c *Client) newRequest(method, path string) *request {
 			Host:   c.config.Address,
 			Path:   path,
 		},
-		params: make(map[string][]string),
+		params: map[string][]string{
+			"ns": {c.config.Namespace},
+		},
 		header: make(http.Header),
 	}
 	return r

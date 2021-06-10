@@ -19,6 +19,7 @@ import (
 
 var (
 	envsAddr             = ""
+	envsNamespace        = ""
 	envFiles             = ""
 	envTplFiles          = ""
 	publishedKVs         []string
@@ -33,6 +34,7 @@ var (
 
 func init() {
 	getopt.FlagLong(&envsAddr, "envs-addr", 'a', "Optional, envs address, eg: http://localhost:8502/a/bc")
+	getopt.FlagLong(&envsNamespace, "envs-namespace", 'n', "Optional, envs namespace, eg: dev")
 	getopt.FlagLong(&envFiles, "env-files", 'f', `Optional, env files, separated by comma, eg: "path/to/index.html, path/to/config.js"`)
 	getopt.FlagLong(&envTplFiles, "env-tpl-files", 't', `Optional, env template files, separated by comma, eg: "path/to/index.html.tpl, path/to/config.js.tpl", pair to env-files with same index`)
 	getopt.FlagLong(&publishedKVs, "publish", 'p', `Optional, publish kvs, eg: --publish k1=v1 --publish k2=v2`)
@@ -61,6 +63,7 @@ func printUsage(s *getopt.Set, w io.Writer) {
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, `Apart from the Command Options, there are OS Envs supported as well, 
 ENVS_HTTP_ADDR, equivalent of Option "envs-addr", 
+ENVS_NAMESPACE, equivalent of Option "envs-namespace", 
 ENVA_ENV_FILES, equivalent of Option "env-files", separated by comma, eg: "path/to/file1, path/to/file2",
 ENVA_ENV_TEMPLATE_FILES, equivalent of Option "env-tpl-files", separated by comma, eg: "path/to/file1.tpl, path/to/file2.tpl, pair to env-files with same index",
 ENVA_PUBLISH, equivalent of Option "publish", separated by comma, eg: "k1=v1, k2=v2",
@@ -122,8 +125,12 @@ func main() {
 	if envsAddr == "" {
 		envsAddr = os.Getenv("ENVS_HTTP_ADDR")
 	}
+	if envsNamespace == "" {
+		envsNamespace = os.Getenv("ENVS_NAMESPACE")
+	}
 	kvsClient, err := api.NewClient(&api.Config{
-		Address: envsAddr,
+		Address:   envsAddr,
+		Namespace: envsNamespace,
 	})
 	if err != nil {
 		log.Fatala("Initiate envs client failed", err)
