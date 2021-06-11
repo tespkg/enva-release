@@ -85,8 +85,16 @@ build_image_envs:
 0-0-dev-gke-dev:
   interruptible: true
   extends: .deploy_to_dev_v3_via_argocd
+
+0-0-dev-gke-dev2:
+  interruptible: true
+  extends: .deploy_to_dev_v3_via_argocd
   
 1-0-test-gke-test:
+  interruptible: true
+  extends: .deploy_to_test_v3_via_argocd
+
+1-0-test-gke-test2:
   interruptible: true
   extends: .deploy_to_test_v3_via_argocd
 
@@ -125,23 +133,6 @@ request_to_internal.meeraspace.com:
     SLACK_CHANNEL: release-notifications
 
 
-internal.meeraspace.com:
-  extends: .deploy_to_staging_v2
-  variables:
-    NAMESPACE: internal-meeraspace-envs
-    environment_name: internal
-    environment_url: https://internal.meeraspace.com
-    SLACK_CHANNEL: release-notifications
-    nsPrefix: internal-meeraspace
-    baseUrl: internal.meeraspace.com
-    gateway: default/gateway
-  script:
-    - >
-      helm3 upgrade ${RELEASE_NAME} -n ${NAMESPACE} \
-        --set global.nsPrefix=${nsPrefix},global.baseUrl=${baseUrl},global.gateway=${gateway} \
-        --debug --wait ./      
-  when: manual
-
 energy.fluxble.com:
   extends: .deploy_to_staging_v2
   variables:
@@ -163,26 +154,6 @@ energy.fluxble.com:
         --debug --wait ./      
   when: manual
 
-target.fluxble.com:
-  extends: .deploy_to_staging_v2
-  variables:
-    NAMESPACE: target-fluxble-envs
-    environment_name: target
-    environment_url: https://target.fluxble.com
-    SLACK_CHANNEL: release-notifications
-    nsPrefix: target-fluxble
-    baseUrl: target.fluxble.com
-    gateway: default/gateway
-    consulHTTPAddr: consul.global-fluxble-consul:8500
-    dbname: envstarget
-  script:
-    - >
-      helm3 upgrade ${RELEASE_NAME} -n ${NAMESPACE} \
-        --set global.nsPrefix=${nsPrefix},global.baseUrl=${baseUrl},global.gateway=${gateway} \
-        --set image.extraEnv.dbname=${dbname} \
-        --set image.extraENVRulehandled.consulHTTPAddr=${consulHTTPAddr} \
-        --debug --wait ./      
-  when: manual
 
 global.fluxble.com:
   extends: .deploy_to_staging_v2
