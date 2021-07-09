@@ -2,6 +2,7 @@ package envs
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -92,7 +93,11 @@ func (h *Handler) PutKey(c *gin.Context) {
 	}
 
 	ns := getNamespace(c)
-	storeKVal := kv2storeKV(ns, kval)
+	storeKVal, err := kv2storeKV(ns, kval, getIsJson(c))
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("parse key: %v failed: %v", kval.Name, err))
+		return
+	}
 	if err := h.Set(storeKVal.Key, storeKVal.Value); err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("set key: %v failed: %v", storeKVal.Key, err))
 		return
@@ -115,7 +120,11 @@ func (h *Handler) PutEnvKey(c *gin.Context) {
 		},
 		Value: envKVal.Value,
 	}
-	storeKVal := kv2storeKV(ns, kval)
+	storeKVal, err := kv2storeKV(ns, kval, getIsJson(c))
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("parse key: %v failed: %v", kval.Name, err))
+		return
+	}
 	if err := h.Set(storeKVal.Key, storeKVal.Value); err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("set key: %v failed: %v", storeKVal.Key, err))
 		return
@@ -141,7 +150,11 @@ func (h *Handler) PutEnvKeys(c *gin.Context) {
 		})
 	}
 	ns := getNamespace(c)
-	storeKVals := kvs2storeKVs(ns, kvals)
+	storeKVals, err := kvs2storeKVs(ns, kvals, getIsJson(c))
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("parse keys failed: %v", err))
+		return
+	}
 	for _, kval := range storeKVals {
 		if err := h.Set(kval.Key, kval.Value); err != nil {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("set key: %v failed: %v", kval.Key, err))
@@ -244,7 +257,11 @@ func (h *Handler) ImportEnvKVS(c *gin.Context) {
 	}
 
 	ns := getNamespace(c)
-	storeKVals := kvs2storeKVs(ns, kvals)
+	storeKVals, err := kvs2storeKVs(ns, kvals, getIsJson(c))
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("parse keys failed: %v", err))
+		return
+	}
 	for _, kval := range storeKVals {
 		if err := h.Set(kval.Key, kval.Value); err != nil {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("set key %v failed: %v", kval.Key, err))
@@ -311,7 +328,11 @@ func (h *Handler) PutEnvfKey(c *gin.Context) {
 		Value: string(data),
 	}
 	ns := getNamespace(c)
-	storeKVal := kv2storeKV(ns, kval)
+	storeKVal, err := kv2storeKV(ns, kval, getIsJson(c))
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("parse key: %v failed: %v", kval.Name, err))
+		return
+	}
 	if err := h.Set(storeKVal.Key, storeKVal.Value); err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("set key: %v failed: %v", storeKVal.Key, err))
 		return
@@ -403,23 +424,36 @@ func storeKV2kv(kval store.KeyVal) kvs.KeyVal {
 	}
 }
 
-func kvs2storeKVs(ns string, kvals kvs.KeyVals) store.KeyVals {
+func kvs2storeKVs(ns string, kvals kvs.KeyVals, isJson bool) (store.KeyVals, error) {
 	storeKVals := store.KeyVals{}
 	for _, kval := range kvals {
-		storeKVals = append(storeKVals, kv2storeKV(ns, kval))
+		storeKVal, err := kv2storeKV(ns, kval, isJson)
+		if err != nil {
+			return nil, err
+		}
+		storeKVals = append(storeKVals, storeKVal)
 	}
-	return storeKVals
+	return storeKVals, nil
 }
 
-func kv2storeKV(ns string, kval kvs.KeyVal) store.KeyVal {
+func kv2storeKV(ns string, kval kvs.KeyVal, isJson bool) (store.KeyVal, error) {
+	value := kval.Value
+	if isJson {
+		m := make(map[string]interface{})
+		if err := json.Unmarshal([]byte(value), &m); err != nil {
+			return store.KeyVal{}, fmt.Errorf("invalid json, err: %v", err)
+		}
+		finalizedValue, _ := json.Marshal(&m)
+		value = string(finalizedValue)
+	}
 	return store.KeyVal{
 		Key: store.Key{
 			Namespace: ns,
 			Kind:      kval.Kind,
 			Name:      kval.Name,
 		},
-		Value: kval.Value,
-	}
+		Value: value,
+	}, nil
 }
 
 func jsonErrorf(format string, a ...interface{}) interface{} {
@@ -436,4 +470,9 @@ func getNamespace(c *gin.Context) string {
 		ns = store.DefaultKVNs
 	}
 	return ns
+}
+
+func getIsJson(c *gin.Context) bool {
+	v := c.Query("json")
+	return v == "true"
 }

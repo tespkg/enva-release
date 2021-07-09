@@ -96,6 +96,8 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 					Parameters: []openspec.Parameter{
 						openapi.BuildParam("query", "ns", "string", "", false, "kvs").
 							WithParameterDesc("update normal env keyvals into the given namespace"),
+						openapi.BuildParam("query", "json", "bool", "", false, false).
+							WithParameterDesc("specify if the content of the given key is json that need to trim indent"),
 						openapi.BuildParam("body", "body", "", "", true, nil).
 							WithNewSchema(openapi.ArrRefSchema(envKeyValDef)).
 							WithParameterDesc("Update multiple normal env keyvals"),
@@ -119,6 +121,8 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 					Parameters: []openspec.Parameter{
 						openapi.BuildParam("query", "ns", "string", "", false, "kvs").
 							WithParameterDesc("Update a single normal env keyval into the given namespace"),
+						openapi.BuildParam("query", "json", "bool", "", false, false).
+							WithParameterDesc("specify if the content of the given key is json that need to trim indent"),
 						openapi.BuildParam("body", "body", "", "", true, nil).
 							WithNewSchema(openapi.ObjRefSchema(envKeyValDef)).
 							WithParameterDesc("Update a single normal env keyval"),
@@ -157,6 +161,8 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 					Parameters: []openspec.Parameter{
 						openapi.BuildParam("query", "ns", "string", "", false, "kvs").
 							WithParameterDesc("import given env kind key values from the given namespace"),
+						openapi.BuildParam("query", "json", "bool", "", false, false).
+							WithParameterDesc("specify if the content of the given key is json that need to trim indent"),
 						openapi.BuildParam("formData", "file", "file", "", true, nil).
 							WithParameterDesc("key values file"),
 					},
@@ -180,6 +186,8 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 					Parameters: []openspec.Parameter{
 						openapi.BuildParam("query", "ns", "string", "", false, "kvs").
 							WithParameterDesc("import given envf kind key value into the given namespace"),
+						openapi.BuildParam("query", "json", "bool", "", false, false).
+							WithParameterDesc("specify if the content of the given key is json that need to trim indent"),
 						openapi.BuildParam("query", "name", "string", "", true, nil).
 							WithParameterDesc("key name for the env file"),
 						openapi.BuildParam("formData", "file", "file", "", true, nil).
