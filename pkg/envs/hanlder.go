@@ -439,12 +439,11 @@ func kvs2storeKVs(ns string, kvals kvs.KeyVals, isJson bool) (store.KeyVals, err
 func kv2storeKV(ns string, kval kvs.KeyVal, isJson bool) (store.KeyVal, error) {
 	value := kval.Value
 	if isJson {
-		m := make(map[string]interface{})
-		if err := json.Unmarshal([]byte(value), &m); err != nil {
-			return store.KeyVal{}, fmt.Errorf("invalid json, err: %v", err)
+		parsedValue, err := parseJsonValue(value)
+		if err != nil {
+			return store.KeyVal{}, err
 		}
-		finalizedValue, _ := json.Marshal(&m)
-		value = string(finalizedValue)
+		value = parsedValue
 	}
 	return store.KeyVal{
 		Key: store.Key{
@@ -454,6 +453,22 @@ func kv2storeKV(ns string, kval kvs.KeyVal, isJson bool) (store.KeyVal, error) {
 		},
 		Value: value,
 	}, nil
+}
+
+func parseJsonValue(value string) (string, error) {
+	// try top-level json array first
+	var am []interface{}
+	if err := json.Unmarshal([]byte(value), &am); err == nil {
+		finalizedValue, _ := json.Marshal(&am)
+		return string(finalizedValue), nil
+	}
+	// try top-level json object
+	m := make(map[string]interface{})
+	if err := json.Unmarshal([]byte(value), &m); err != nil {
+		return "", fmt.Errorf("invalid json, err: %v", err)
+	}
+	finalizedValue, _ := json.Marshal(&m)
+	return string(finalizedValue), nil
 }
 
 func jsonErrorf(format string, a ...interface{}) interface{} {
