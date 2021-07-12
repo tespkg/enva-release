@@ -119,6 +119,10 @@ build_image_envs:
   interruptible: true
   extends: .deploy_to_prod_v3_via_argocd
 
+6-0-prod-odpazure-omangov:
+  stage: deploy_to_prod
+  interruptible: true
+  extends: .deploy_to_prod_v3_via_argocd
 
 
 kenya.meeraspace.com:
