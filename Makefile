@@ -20,8 +20,13 @@ help:
 	@echo "    build-images                Build docker images with/without push option"
 	@echo ""
 
+.PHONY: install-deps
+install-deps:
+	@mkdir -p .bin
+	@GOBIN=$(PWD)/.bin go install -v github.com/golang/mock/mockgen
+
 .PHONY: generate-mock
-generate-mock:
+generate-mock: install-deps
 	@rm -f ./pkg/store/store_mock.go
 	@rm -f ./pkg/kvs/mock/kvs_mock.go
 	@.bin/mockgen -package store -destination pkg/store/store_mock.go -source pkg/store/store.go

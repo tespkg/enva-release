@@ -37,4 +37,5 @@ type Store interface {
 	GetNsKindValues(namespace, kind string) (KeyVals, error)
 	Delete(key Key) error
 	Close() error
+	ListByPrefix(prefix Key) (KeyVals, error)
 }

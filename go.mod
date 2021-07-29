@@ -13,10 +13,11 @@ require (
 	github.com/golang/mock v1.2.0
 	github.com/hashicorp/consul/api v1.3.0
 	github.com/pborman/getopt v0.0.0-20190409184431-ee0cd42419d3
+	github.com/prometheus/client_golang v1.11.0
 	github.com/spf13/cobra v0.0.5
 	github.com/stretchr/testify v1.4.0
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
-	gopkg.in/yaml.v2 v2.2.8
+	gopkg.in/yaml.v2 v2.3.0
 	tespkg.in/kit v1.1.2
 )

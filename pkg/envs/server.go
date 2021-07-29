@@ -121,10 +121,6 @@ func newServer(a *Args, p *patchTable) (*Server, error) {
 	// APIs for envf kind key
 	ge.PUT("envfkey", handler.PutEnvfKey)
 
-	// APIs for add-ons
-	ge.PUT("oidcr", handler.OAuthRegistration)
-	ge.GET("example/:typ", AddOnsExample)
-
 	ge.GET("/", func(c *gin.Context) {
 		c.Redirect(http.StatusFound, a.StaticAssetPath)
 	})
