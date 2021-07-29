@@ -277,7 +277,7 @@ func (c *Client) Get(key kvs.Key, isPrefix bool) (string, error) {
 		if !strings.HasSuffix(key.Name, "/") {
 			// by convention, we use "/" to concat key and sub-key in both Set and Get side.
 			// adding a "/" to the tail of the key, to make the replied top-level keys are been trimmed with "/".
-			// e.g, the higher-level caller publish/set foor/bar = alice when set,
+			// e.g, the higher-level caller publish/set foo/bar = alice,
 			// by convention, during the get, by specifying prefix = foo, it will get foo = {"bar": "alice"} as the response.
 			key.Name = key.Name + "/"
 		}
