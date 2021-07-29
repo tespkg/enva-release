@@ -21,6 +21,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
 	"golang.org/x/time/rate"
 	"tespkg.in/envs/pkg/kvs"
 	"tespkg.in/kit/log"
@@ -676,18 +678,19 @@ func templateEnvFiles(files []EnvFile, pt PatchTable) ([]EnvFile, error) {
 	return templateFiles, nil
 }
 
-func (a *Agent) ServeStatusReport(ctx context.Context, endpoint string) error {
+func (a *Agent) ServeMetrics(ctx context.Context, endpoint string) error {
 	endpointURL, err := url.Parse(endpoint)
 	if err != nil {
 		return err
 	}
 
-	ln, err := net.Listen("tcp", net.JoinHostPort(endpointURL.Host, endpointURL.Port()))
+	ln, err := net.Listen("tcp", endpointURL.Host)
 	if err != nil {
 		return err
 	}
 
-	http.HandleFunc(endpointURL.Path, func(w http.ResponseWriter, r *http.Request) {
+	http.Handle("/metrics", promhttp.Handler())
+	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		// starting.
 		if atomic.LoadInt64(&procState) == ProcStarting {
 			w.WriteHeader(http.StatusCreated)
@@ -704,7 +707,6 @@ func (a *Agent) ServeStatusReport(ctx context.Context, endpoint string) error {
 			return
 		}
 	})
-
 	httpServer := &http.Server{Addr: endpoint}
 	go func() {
 		httpServer.Serve(ln)

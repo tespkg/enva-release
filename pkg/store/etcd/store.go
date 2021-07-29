@@ -105,6 +105,10 @@ func (s *es) list(prefix string) (store.KeyVals, error) {
 	return kvals, nil
 }
 
+func (c *es) ListByPrefix(prefix store.Key) (store.KeyVals, error) {
+	return c.list(parseKey(c.prefix, prefix))
+}
+
 func (s *es) GetKindValues(kind string) (store.KeyVals, error) {
 	r, err := s.db.Get(context.Background(), s.prefix, clientv3.WithPrefix())
 	if err != nil {

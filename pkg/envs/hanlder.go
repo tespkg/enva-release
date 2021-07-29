@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -16,19 +17,61 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/gin-gonic/gin"
 	goyaml "gopkg.in/yaml.v2"
-	"tespkg.in/envs/pkg/addons"
 	"tespkg.in/envs/pkg/kvs"
 	"tespkg.in/envs/pkg/store"
 )
 
 type Handler struct {
-	store.Store
+	s store.Store
 }
 
 func NewHandler(s store.Store) *Handler {
 	return &Handler{
-		Store: s,
+		s: s,
 	}
+}
+
+func (h *Handler) listByPrefix(c *gin.Context, prefix store.Key, trimPrefix bool) {
+	keyVals, err := h.s.ListByPrefix(prefix)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			c.AbortWithStatusJSON(http.StatusNotFound, jsonErrorf("prefix %v not found", prefix))
+			return
+		}
+		c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("get by prefix: %v failed: %v", prefix, err))
+		return
+	}
+	res := make(kvs.KeyVals, 0, len(keyVals))
+	for _, v := range keyVals {
+		val, ok := v.Value.(string)
+		if !ok {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("invalid value type: %s for %s", reflect.TypeOf(val), val))
+			return
+		}
+		kName := v.Name
+		if trimPrefix {
+			kName = strings.TrimPrefix(kName, prefix.Name)
+		}
+		res = append(res, kvs.KeyVal{
+			Key: kvs.Key{
+				Kind: prefix.Kind,
+				Name: kName,
+			},
+			Value: val,
+		})
+	}
+	marshaled, err := json.Marshal(res)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("marshal KeyVals failed: %v", res))
+		return
+	}
+	c.JSON(http.StatusOK, kvs.KeyVal{
+		Key: kvs.Key{
+			Kind: prefix.Kind,
+			Name: prefix.Name,
+		},
+		Value: string(marshaled),
+	})
 }
 
 func (h *Handler) GetKey(c *gin.Context) {
@@ -40,11 +83,19 @@ func (h *Handler) GetKey(c *gin.Context) {
 		return
 	}
 	kind, name := parts[0], parts[1]
-	val, err := h.Get(store.Key{
+	isPrefix := c.Query(`is_prefix`) == `true`
+	trimPrefix := c.Query(`trim_prefix`) == `true`
+	key := store.Key{
 		Namespace: ns,
 		Kind:      kind,
 		Name:      name,
-	})
+	}
+	if isPrefix {
+		h.listByPrefix(c, key, trimPrefix)
+		return
+	}
+
+	val, err := h.s.Get(key)
 	if err != nil {
 		if errors.Is(err, store.ErrNotFound) {
 			c.AbortWithStatusJSON(http.StatusNotFound, jsonErrorf("%v not found", rawKey))
@@ -70,13 +121,13 @@ func (h *Handler) GetKeys(c *gin.Context) {
 	var kvals store.KeyVals
 	var err error
 	if kind == "" {
-		kvals, err = h.GetNsValues(ns)
+		kvals, err = h.s.GetNsValues(ns)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("get ns values failed: %v", err))
 			return
 		}
 	} else {
-		kvals, err = h.GetNsKindValues(ns, kind)
+		kvals, err = h.s.GetNsKindValues(ns, kind)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("get ns kind values failed: %v", err))
 			return
@@ -98,7 +149,7 @@ func (h *Handler) PutKey(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("parse key: %v failed: %v", kval.Name, err))
 		return
 	}
-	if err := h.Set(storeKVal.Key, storeKVal.Value); err != nil {
+	if err := h.s.Set(storeKVal.Key, storeKVal.Value); err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("set key: %v failed: %v", storeKVal.Key, err))
 		return
 	}
@@ -125,7 +176,7 @@ func (h *Handler) PutEnvKey(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("parse key: %v failed: %v", kval.Name, err))
 		return
 	}
-	if err := h.Set(storeKVal.Key, storeKVal.Value); err != nil {
+	if err := h.s.Set(storeKVal.Key, storeKVal.Value); err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("set key: %v failed: %v", storeKVal.Key, err))
 		return
 	}
@@ -156,7 +207,7 @@ func (h *Handler) PutEnvKeys(c *gin.Context) {
 		return
 	}
 	for _, kval := range storeKVals {
-		if err := h.Set(kval.Key, kval.Value); err != nil {
+		if err := h.s.Set(kval.Key, kval.Value); err != nil {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("set key: %v failed: %v", kval.Key, err))
 			return
 		}
@@ -166,7 +217,7 @@ func (h *Handler) PutEnvKeys(c *gin.Context) {
 
 func (h *Handler) ExportEnvKVS(c *gin.Context) {
 	ns := getNamespace(c)
-	storeKVals, err := h.GetNsKindValues(ns, kvs.EnvKind)
+	storeKVals, err := h.s.GetNsKindValues(ns, kvs.EnvKind)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("iterate env kind keys failed: %v", err))
 		return
@@ -263,7 +314,7 @@ func (h *Handler) ImportEnvKVS(c *gin.Context) {
 		return
 	}
 	for _, kval := range storeKVals {
-		if err := h.Set(kval.Key, kval.Value); err != nil {
+		if err := h.s.Set(kval.Key, kval.Value); err != nil {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("set key %v failed: %v", kval.Key, err))
 			return
 		}
@@ -333,76 +384,10 @@ func (h *Handler) PutEnvfKey(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("parse key: %v failed: %v", kval.Name, err))
 		return
 	}
-	if err := h.Set(storeKVal.Key, storeKVal.Value); err != nil {
+	if err := h.s.Set(storeKVal.Key, storeKVal.Value); err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("set key: %v failed: %v", storeKVal.Key, err))
 		return
 	}
-	c.JSON(http.StatusOK, struct{}{})
-}
-
-func (h *Handler) OAuthRegistration(c *gin.Context) {
-	multiForm, err := c.MultipartForm()
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("invalid multipart form: %v", err))
-		return
-	}
-
-	var filenames []string
-	var fds []multipart.File
-	defer func() {
-		for _, fd := range fds {
-			fd.Close()
-		}
-	}()
-
-	for _, fs := range multiForm.File {
-		for _, f := range fs {
-			filename := f.Filename
-			filenames = append(filenames, filename)
-			fd, err := f.Open()
-			if err != nil {
-				c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("open file: %v failed: %v", filename, err))
-				return
-			}
-			fds = append(fds, fd)
-		}
-	}
-
-	if len(filenames) == 0 {
-		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("no file was found"))
-		return
-	}
-	if len(filenames) > 1 {
-		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("multiple files unsupported yet"))
-		return
-	}
-
-	// Render the imported file content if there is any env key need to render from envs
-	ns := getNamespace(c)
-	oidcr := addons.NewOidcRegister(ns, h.Store)
-	out := bytes.Buffer{}
-	if err := kvs.Render(oidcr, fds[0], &out); err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("invalid file content: %v", err))
-		return
-	}
-
-	req := addons.OAuthRegistrationReq{}
-	if err := yaml.Unmarshal(out.Bytes(), &req); err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("invalid file content: %v", err))
-		return
-	}
-
-	provider := req.ProviderConfig
-	if provider.Issuer == "" {
-		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("empty oidc issuer"))
-		return
-	}
-
-	if err := addons.RegisterOAuthClients(oidcr, req.ProviderConfig, req.Requests); err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("register OAuth client failed: %v", err))
-		return
-	}
-
 	c.JSON(http.StatusOK, struct{}{})
 }
 

@@ -10,12 +10,11 @@ import (
 	"sync"
 	"syscall"
 
-	"tespkg.in/envs/version"
-
 	"github.com/pborman/getopt/v2"
 	"tespkg.in/envs/pkg/api"
 	"tespkg.in/envs/pkg/enva"
 	"tespkg.in/envs/pkg/kvs"
+	"tespkg.in/envs/version"
 	"tespkg.in/kit/log"
 )
 
@@ -29,7 +28,7 @@ var (
 	locationRegistration bool
 	logLevel             string
 	help                 bool
-	statusEndpoint       string
+	metricsEndpoint      string
 
 	logOptions = log.DefaultOptions()
 )
@@ -43,8 +42,8 @@ func init() {
 	getopt.FlagLong(&isRunOnlyOnce, "run-only-once", 'r', "Optional, run Proc only once then exit")
 	getopt.FlagLong(&locationRegistration, "location", 'l', "Optional, enable Proc location registration")
 	getopt.FlagLong(&logLevel, "log-level", 'v', "Optional, log level, can be one of debug, info, warn, error, fatal, none")
+	getopt.FlagLong(&metricsEndpoint, "metrics-endpoint", 's', "Optional, start a HTTP server to serve metrics endpoints, i.e, /healthz and /metrics")
 	getopt.FlagLong(&help, "help", 'h', "Optional, display usage")
-	getopt.FlagLong(&statusEndpoint, "status-endpoint", 's', "Optional, start an HTTP server for reporting status")
 	getopt.SetUsage(func() {
 		s := getopt.CommandLine
 		printUsage(s, os.Stderr)
@@ -71,7 +70,7 @@ ENVA_ENV_TEMPLATE_FILES, equivalent of Option "env-tpl-files", separated by comm
 ENVA_PUBLISH, equivalent of Option "publish", separated by comma, eg: "k1=v1, k2=v2",
 ENVA_RUN_ONLY_ONCE, equivalent of Option "run-only-once", eg: ENVA_RUN_ONLY_ONCE=true equal to honor --run-only-once Option.
 ENVA_LOG_LEVEL, equivalent of Option "log-level", eg: ENVA_LOG_LEVEL=debug equal to honor --log-level=debug Command Option.
-ENVA_STATUS_ENDPOINT, equivalent of Option "status-endpoint", eg: ENVA_STATUS_ENDPOINT=http://127.0.0.1:8503/healthz equal to honor --status-endpoint=http://127.0.0.1:8503/healthz Command Option.
+ENVA_METRICS_ENDPOINT, equivalent of Option "metrics-endpoint", eg: ENVA_METRICS_ENDPOINT=http://127.0.0.1:8503 equal to honor --metrics-endpoint=http://127.0.0.1:8503 Command Option.
 If both the command options & env are set at same time, Command Options have priority`)
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "version: "+version.Version)
@@ -231,10 +230,6 @@ func main() {
 		}
 	}
 
-	if statusEndpoint == "" {
-		statusEndpoint = os.Getenv("ENVA_STATUS_ENDPOINT")
-	}
-
 	// Get Proc options & args from env store and start the Proc.
 	// Name conversion for the options & args, eg:
 	// enva --envs-addr http://localhost:9112 \
@@ -277,11 +272,14 @@ func main() {
 		log.Debuga("exit from watch")
 	}()
 
-	if statusEndpoint != "" {
+	if metricsEndpoint == "" {
+		metricsEndpoint = os.Getenv("ENVA_METRICS_ENDPOINT")
+	}
+	if metricsEndpoint != "" {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			if err := a.ServeStatusReport(ctx, statusEndpoint); err != nil {
+			if err := a.ServeMetrics(ctx, metricsEndpoint); err != nil {
 				log.Fatala(err)
 			}
 		}()

@@ -16,3 +16,7 @@ water:
   water:
     where: "${envf:// .everywhere | overwrite /tmp/path/to/everywhere/file }"
     nor: "any drop to drink"
+
+prefix:
+  - '${env:// .prefixKey | prefix }'
+  - "${env:// .prefixKey1 | prefix}"

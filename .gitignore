@@ -39,3 +39,4 @@ vars.yaml
 cmd/s4
 Dockerfile-local
 Dockerfile-enva-local
+.run

@@ -221,3 +221,61 @@ func TestExactKey(t *testing.T) {
 	require.Equal(t, "kind", key.Kind)
 	require.Equal(t, "a/b/c", key.Name)
 }
+
+func setKeyValuesForPrefix(t *testing.T, s *cs) {
+	var kvals = store.KeyVals{
+		{
+			Key: store.Key{
+				Namespace: "prefix-dev",
+				Kind:      "prefix-animal",
+				Name:      "s/s1",
+			},
+			Value: "s1",
+		},
+		{
+			Key: store.Key{
+				Namespace: "prefix-dev",
+				Kind:      "prefix-nuts",
+				Name:      "s/s2",
+			},
+			Value: "s2",
+		},
+		{
+			Key: store.Key{
+				Namespace: "prefix-dev",
+				Kind:      "prefix-animal",
+				Name:      "s/s3",
+			},
+			Value: "s3",
+		},
+		{
+			Key: store.Key{
+				Namespace: "prefix-dev",
+				Kind:      "prefix-nuts",
+				Name:      "ss4",
+			},
+			Value: "s4",
+		},
+	}
+
+	for _, kval := range kvals {
+		err := s.Set(kval.Key, kval.Value)
+		require.Nil(t, err)
+	}
+}
+func TestListByPrefix(t *testing.T) {
+	cs := newConsulStore(t)
+	setKeyValuesForPrefix(t, cs)
+	kvs, err := cs.ListByPrefix(store.Key{
+		Namespace: "prefix-dev",
+		Kind:      "prefix-nuts",
+		Name:      "s",
+	})
+	require.Nil(t, err, err)
+	require.Equal(t, 2, len(kvs))
+	vals := []interface{}{}
+	for _, v := range kvs {
+		vals = append(vals, v.Value)
+	}
+	require.ElementsMatch(t, []interface{}{`s2`, `s4`}, vals)
+}

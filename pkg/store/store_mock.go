@@ -34,6 +34,7 @@ func (m *MockStore) EXPECT() *MockStoreMockRecorder {
 
 // Set mocks base method
 func (m *MockStore) Set(key Key, val interface{}) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Set", key, val)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -41,11 +42,13 @@ func (m *MockStore) Set(key Key, val interface{}) error {
 
 // Set indicates an expected call of Set
 func (mr *MockStoreMockRecorder) Set(key, val interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Set", reflect.TypeOf((*MockStore)(nil).Set), key, val)
 }
 
 // Get mocks base method
 func (m *MockStore) Get(key Key) (interface{}, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get", key)
 	ret0, _ := ret[0].(interface{})
 	ret1, _ := ret[1].(error)
@@ -54,11 +57,13 @@ func (m *MockStore) Get(key Key) (interface{}, error) {
 
 // Get indicates an expected call of Get
 func (mr *MockStoreMockRecorder) Get(key interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockStore)(nil).Get), key)
 }
 
 // GetNsValues mocks base method
 func (m *MockStore) GetNsValues(namespace string) (KeyVals, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetNsValues", namespace)
 	ret0, _ := ret[0].(KeyVals)
 	ret1, _ := ret[1].(error)
@@ -67,11 +72,13 @@ func (m *MockStore) GetNsValues(namespace string) (KeyVals, error) {
 
 // GetNsValues indicates an expected call of GetNsValues
 func (mr *MockStoreMockRecorder) GetNsValues(namespace interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNsValues", reflect.TypeOf((*MockStore)(nil).GetNsValues), namespace)
 }
 
 // GetKindValues mocks base method
 func (m *MockStore) GetKindValues(kind string) (KeyVals, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetKindValues", kind)
 	ret0, _ := ret[0].(KeyVals)
 	ret1, _ := ret[1].(error)
@@ -80,11 +87,13 @@ func (m *MockStore) GetKindValues(kind string) (KeyVals, error) {
 
 // GetKindValues indicates an expected call of GetKindValues
 func (mr *MockStoreMockRecorder) GetKindValues(kind interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetKindValues", reflect.TypeOf((*MockStore)(nil).GetKindValues), kind)
 }
 
 // GetNsKindValues mocks base method
 func (m *MockStore) GetNsKindValues(namespace, kind string) (KeyVals, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetNsKindValues", namespace, kind)
 	ret0, _ := ret[0].(KeyVals)
 	ret1, _ := ret[1].(error)
@@ -93,11 +102,13 @@ func (m *MockStore) GetNsKindValues(namespace, kind string) (KeyVals, error) {
 
 // GetNsKindValues indicates an expected call of GetNsKindValues
 func (mr *MockStoreMockRecorder) GetNsKindValues(namespace, kind interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNsKindValues", reflect.TypeOf((*MockStore)(nil).GetNsKindValues), namespace, kind)
 }
 
 // Delete mocks base method
 func (m *MockStore) Delete(key Key) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Delete", key)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -105,11 +116,13 @@ func (m *MockStore) Delete(key Key) error {
 
 // Delete indicates an expected call of Delete
 func (mr *MockStoreMockRecorder) Delete(key interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockStore)(nil).Delete), key)
 }
 
 // Close mocks base method
 func (m *MockStore) Close() error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Close")
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -117,5 +130,21 @@ func (m *MockStore) Close() error {
 
 // Close indicates an expected call of Close
 func (mr *MockStoreMockRecorder) Close() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockStore)(nil).Close))
+}
+
+// ListByPrefix mocks base method
+func (m *MockStore) ListByPrefix(prefix Key) (KeyVals, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListByPrefix", prefix)
+	ret0, _ := ret[0].(KeyVals)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListByPrefix indicates an expected call of ListByPrefix
+func (mr *MockStoreMockRecorder) ListByPrefix(prefix interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByPrefix", reflect.TypeOf((*MockStore)(nil).ListByPrefix), prefix)
 }

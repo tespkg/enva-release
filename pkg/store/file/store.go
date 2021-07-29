@@ -137,6 +137,35 @@ func (s *ms) GetNsKindValues(namespace, kind string) (store.KeyVals, error) {
 	return kvs, nil
 }
 
+func (s *ms) ListByPrefix(prefix store.Key) (store.KeyVals, error) {
+	s.RLock()
+	defer s.RUnlock()
+
+	nsData, ok := s.data[prefix.Namespace]
+	if !ok {
+		return nil, store.ErrNotFound
+	}
+	kindData, ok := nsData[prefix.Kind]
+	if !ok {
+		return nil, store.ErrNotFound
+	}
+	var kvs store.KeyVals
+	for name, val := range kindData {
+		if !strings.HasPrefix(name, prefix.Name) {
+			continue
+		}
+		kvs = append(kvs, store.KeyVal{
+			Key: store.Key{
+				Namespace: prefix.Namespace,
+				Kind:      prefix.Kind,
+				Name:      name,
+			},
+			Value: val,
+		})
+	}
+	return kvs, nil
+}
+
 func (s *ms) Delete(key store.Key) error {
 	s.Lock()
 	defer s.Unlock()

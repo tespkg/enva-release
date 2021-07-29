@@ -114,6 +114,22 @@ func TestScan(t *testing.T) {
 			Value:      "content of /tmp/path/to/everywhere/file",
 			actionType: actionOverwrite,
 		},
+		{
+			Key: Key{
+				Kind: EnvKind,
+				Name: "prefixKey",
+			},
+			Value:      nonePlaceHolder,
+			actionType: actionPrefix,
+		},
+		{
+			Key: Key{
+				Kind: EnvKind,
+				Name: "prefixKey1",
+			},
+			Value:      nonePlaceHolder,
+			actionType: actionPrefix,
+		},
 	}
 
 	require.Equal(t, expected, kvs)
@@ -126,20 +142,22 @@ func TestRender(t *testing.T) {
 	s := NewMockKVStore(mockCtrl)
 
 	se := s.EXPECT()
-	se.Get(Key{Kind: EnvKind, Name: "poet"}).Return("poet", nil).AnyTimes()
-	se.Get(Key{Kind: EnvKind, Name: "title"}).Return("title", nil).AnyTimes()
-	se.Get(Key{Kind: EnvKind, Name: "at"}).Return("", ErrNotFound).AnyTimes()
+	se.Get(Key{Kind: EnvKind, Name: "poet"}, false).Return("poet", nil).AnyTimes()
+	se.Get(Key{Kind: EnvKind, Name: "title"}, false).Return("title", nil).AnyTimes()
+	se.Get(Key{Kind: EnvKind, Name: "at"}, false).Return("", ErrNotFound).AnyTimes()
 	se.Set(Key{Kind: EnvKind, Name: "at"}, "atAT").Return(nil).AnyTimes()
-	se.Get(Key{Kind: EnvfKind, Name: "length"}).Return("", ErrNotFound).AnyTimes()
+	se.Get(Key{Kind: EnvfKind, Name: "length"}, false).Return("", ErrNotFound).AnyTimes()
 	se.Set(Key{Kind: EnvfKind, Name: "length"}, "content of /tmp/path/to/length/file").Return(nil).AnyTimes()
-	se.Get(Key{Kind: EnvKind, Name: "_did"}).Return("did", nil).AnyTimes()
+	se.Get(Key{Kind: EnvKind, Name: "_did"}, false).Return("did", nil).AnyTimes()
 	se.Set(Key{Kind: EnvKind, Name: "cRoSs"}, "cross").Return(nil).AnyTimes()
-	se.Get(Key{Kind: EnvfKind, Name: "an"}).Return("an", nil).AnyTimes()
-	se.Get(Key{Kind: EnvKind, Name: "Albatross"}).Return("${env://.nestedAlbatross}", nil).AnyTimes()
-	se.Get(Key{Kind: EnvKind, Name: "nestedAlbatross"}).Return("nested Albatross", nil).AnyTimes()
-	se.Get(Key{Kind: EnvKind, Name: "crossbow"}).Return("crossbow", nil).AnyTimes()
-	se.Get(Key{Kind: EnvfKind, Name: "ALBATROSS"}).Return("ALBATROSS", nil).AnyTimes()
+	se.Get(Key{Kind: EnvfKind, Name: "an"}, false).Return("an", nil).AnyTimes()
+	se.Get(Key{Kind: EnvKind, Name: "Albatross"}, false).Return("${env://.nestedAlbatross}", nil).AnyTimes()
+	se.Get(Key{Kind: EnvKind, Name: "nestedAlbatross"}, false).Return("nested Albatross", nil).AnyTimes()
+	se.Get(Key{Kind: EnvKind, Name: "crossbow"}, false).Return("crossbow", nil).AnyTimes()
+	se.Get(Key{Kind: EnvfKind, Name: "ALBATROSS"}, false).Return("ALBATROSS", nil).AnyTimes()
 	se.Set(Key{Kind: EnvfKind, Name: "everywhere"}, "content of /tmp/path/to/everywhere/file").Return(nil).AnyTimes()
+	se.Get(Key{Kind: EnvKind, Name: "prefixKey"}, true).Return(`{"key1":"val1","key2":"val2"}`, nil)
+	se.Get(Key{Kind: EnvKind, Name: "prefixKey1"}, true).Return(`{"key1":"val1","key2":"val2"}`, nil)
 
 	idx := 0
 	buf := &bytes.Buffer{}
@@ -170,6 +188,10 @@ water:
   water:
     where: "%s/tmp-4.out"
     nor: "any drop to drink"
+
+prefix:
+  - '{"key1":"val1","key2":"val2"}'
+  - "{"key1":"val1","key2":"val2"}"
 `, os.TempDir(), os.TempDir(), os.TempDir(), os.TempDir())
 
 	// Just for showcase, put a \n in front of the expected when initiating, remove it here.
@@ -198,6 +220,7 @@ func TestRegex(t *testing.T) {
 		`Hi, this is ${envf://.config|default /usr/local/config/config.yaml}, I'm speaking to ${env:// .clientID | default alice }'`,
 		`Hi, this is ${envf:// .config }, I'm speaking to ${env:// .clientID | default alice }'`,
 		`Hi, this is ${envf:// .config }, I'm speaking to ${env:// .clientID | default ~!@#$%^&*()_+-={}[]|\:";'<>?,./'" }'`,
+		`Hi, this is ${envf:// .config }, I'm speaking to ${env:// .clientID | prefix }'`,
 	}
 
 	for idx, c := range cases {
@@ -215,5 +238,60 @@ func TestRegex(t *testing.T) {
 			return fmt.Sprintf("${env%s:// .%s }", res[0][1], res[0][2])
 		})
 		fmt.Println(idx, " new ", newStr)
+	}
+}
+
+func TestKeyVals_MarshalJSON(t *testing.T) {
+	cases := []struct {
+		in       KeyVals
+		expected string
+	}{
+		{
+			in: KeyVals{{
+				Key:   Key{Name: `field1`},
+				Value: `string`,
+			}},
+			expected: `{"field1":"string"}`,
+		},
+		{
+			in: KeyVals{{
+				Key:   Key{Name: `field1`},
+				Value: `"string"`,
+			}},
+			expected: `{"field1":"string"}`,
+		},
+		{
+			in: KeyVals{
+				{
+					Key:   Key{Name: `field2`},
+					Value: `["a"]`,
+				},
+				{
+					Key:   Key{Name: `field1`},
+					Value: `string`,
+				},
+			},
+			expected: `{"field1":"string","field2":["a"]}`,
+		},
+		{
+			in: KeyVals{{
+				Key:   Key{Name: `field1`},
+				Value: `true`,
+			}},
+			expected: `{"field1":true}`,
+		},
+		{
+			in: KeyVals{{
+				Key:   Key{Name: `field1`},
+				Value: `"true"`,
+			}},
+			expected: `{"field1":"true"}`,
+		},
+	}
+
+	for _, v := range cases {
+		out, err := v.in.MarshalJSON()
+		require.Nil(t, err, err)
+		require.Equal(t, v.expected, string(out), string(out))
 	}
 }

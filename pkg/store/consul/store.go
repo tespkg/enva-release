@@ -95,6 +95,10 @@ func (c *cs) list(prefix string) (store.KeyVals, error) {
 	return kvals, nil
 }
 
+func (c *cs) ListByPrefix(prefix store.Key) (store.KeyVals, error) {
+	return c.list(parseKey(c.prefix, prefix))
+}
+
 func (c *cs) GetKindValues(kind string) (store.KeyVals, error) {
 	if kind == "" {
 		return nil, errors.New("empty kind, not allowed")

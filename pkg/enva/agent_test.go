@@ -40,22 +40,24 @@ func TestAgentRun(t *testing.T) {
 	s := kvs.NewMockKVStore(mockCtrl)
 
 	se := s.EXPECT()
-	se.Get(kvs.Key{Kind: kvs.EnvKind, Name: "tailFilename"}).Return("agent_test.go", nil).AnyTimes()
+	se.Get(kvs.Key{Kind: kvs.EnvKind, Name: "tailFilename"}, false).Return("agent_test.go", nil).AnyTimes()
 
-	se.Get(kvs.Key{Kind: kvs.EnvKind, Name: "poet"}).Return("poet", nil).AnyTimes()
-	se.Get(kvs.Key{Kind: kvs.EnvKind, Name: "title"}).Return("title", nil).AnyTimes()
-	se.Get(kvs.Key{Kind: kvs.EnvKind, Name: "at"}).Return("", kvs.ErrNotFound).AnyTimes()
+	se.Get(kvs.Key{Kind: kvs.EnvKind, Name: "poet"}, false).Return("poet", nil).AnyTimes()
+	se.Get(kvs.Key{Kind: kvs.EnvKind, Name: "title"}, false).Return("title", nil).AnyTimes()
+	se.Get(kvs.Key{Kind: kvs.EnvKind, Name: "at"}, false).Return("", kvs.ErrNotFound).AnyTimes()
 	se.Set(kvs.Key{Kind: kvs.EnvKind, Name: "at"}, "atAT").Return(nil).AnyTimes()
-	se.Get(kvs.Key{Kind: kvs.EnvfKind, Name: "length"}).Return("", kvs.ErrNotFound).AnyTimes()
+	se.Get(kvs.Key{Kind: kvs.EnvfKind, Name: "length"}, false).Return("", kvs.ErrNotFound).AnyTimes()
 	se.Set(kvs.Key{Kind: kvs.EnvfKind, Name: "length"}, "content of /tmp/path/to/length/file").Return(nil).AnyTimes()
-	se.Get(kvs.Key{Kind: kvs.EnvKind, Name: "_did"}).Return("did", nil).AnyTimes()
+	se.Get(kvs.Key{Kind: kvs.EnvKind, Name: "_did"}, false).Return("did", nil).AnyTimes()
 	se.Set(kvs.Key{Kind: kvs.EnvKind, Name: "cRoSs"}, "cross").Return(nil).AnyTimes()
-	se.Get(kvs.Key{Kind: kvs.EnvfKind, Name: "an"}).Return("an", nil).AnyTimes()
-	se.Get(kvs.Key{Kind: kvs.EnvKind, Name: "Albatross"}).Return("${env://.nestedAlbatross}", nil).AnyTimes()
-	se.Get(kvs.Key{Kind: kvs.EnvKind, Name: "nestedAlbatross"}).Return("nested Albatross", nil).AnyTimes()
-	se.Get(kvs.Key{Kind: kvs.EnvKind, Name: "crossbow"}).Return("crossbow", nil).AnyTimes()
-	se.Get(kvs.Key{Kind: kvs.EnvfKind, Name: "ALBATROSS"}).Return("ALBATROSS", nil).AnyTimes()
+	se.Get(kvs.Key{Kind: kvs.EnvfKind, Name: "an"}, false).Return("an", nil).AnyTimes()
+	se.Get(kvs.Key{Kind: kvs.EnvKind, Name: "Albatross"}, false).Return("${env://.nestedAlbatross}", nil).AnyTimes()
+	se.Get(kvs.Key{Kind: kvs.EnvKind, Name: "nestedAlbatross"}, false).Return("nested Albatross", nil).AnyTimes()
+	se.Get(kvs.Key{Kind: kvs.EnvKind, Name: "crossbow"}, false).Return("crossbow", nil).AnyTimes()
+	se.Get(kvs.Key{Kind: kvs.EnvfKind, Name: "ALBATROSS"}, false).Return("ALBATROSS", nil).AnyTimes()
 	se.Set(kvs.Key{Kind: kvs.EnvfKind, Name: "everywhere"}, "content of /tmp/path/to/everywhere/file").Return(nil).AnyTimes()
+	se.Get(kvs.Key{Kind: kvs.EnvKind, Name: "prefixKey"}, true).Return(`{"prefixKey/key1":"val1","prefixKey/key2":"val2"}`, nil)
+	se.Get(kvs.Key{Kind: kvs.EnvKind, Name: "prefixKey1"}, true).Return(`{"prefixKey1/key1":"val1","prefixKey1/key2":"val2"}`, nil)
 
 	lengthFile := "/tmp/path/to/length/file"
 	err := os.MkdirAll(filepath.Dir(lengthFile), 0755)
@@ -232,6 +234,9 @@ func TestIsVarEqual(t *testing.T) {
 			c.prepareFun()
 		}
 		got := isEnvVarEqual(c.a, c.b)
-		require.Equal(t, c.expected, got)
+		if got != c.expected {
+			fmt.Println(c.a, c.b)
+		}
+		require.Equal(t, c.expected, got, c.name)
 	}
 }

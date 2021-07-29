@@ -12,6 +12,9 @@ import (
 	"os"
 	"strings"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+
 	"tespkg.in/envs/pkg/kvs"
 	"tespkg.in/kit/log"
 )
@@ -20,6 +23,21 @@ const (
 	// HTTPAddrEnvName defines an environment variable name which sets
 	// the HTTP address if there is no -http-addr specified.
 	HTTPAddrEnvName = "ENVS_HTTP_ADDR"
+)
+
+const (
+	keyActSet = `set`
+	keyActGet = `get`
+)
+
+var (
+	keyActionCnt = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: `enva_key_actiono_counter`,
+			Help: `counter for enva key action`,
+		},
+		[]string{`key`, `action`},
+	)
 )
 
 // Config is used to configure the creation of a client
@@ -198,7 +216,7 @@ func (r *request) toHTTP() (*http.Request, error) {
 }
 
 // newRequest is used to create a new request
-func (c *Client) newRequest(method, path string) *request {
+func (c *Client) newRequest(method, path string, params map[string]string) *request {
 	r := &request{
 		config: &c.config,
 		method: method,
@@ -211,6 +229,11 @@ func (c *Client) newRequest(method, path string) *request {
 			"ns": {c.config.Namespace},
 		},
 		header: make(http.Header),
+	}
+	if params != nil {
+		for k, v := range params {
+			r.params[k] = append(r.params[k], v)
+		}
 	}
 	return r
 }
@@ -227,8 +250,8 @@ func (c *Client) doRequest(r *request) (*http.Response, error) {
 
 // Query is used to do a GET request against an endpoint
 // and deserialize the response into an interface.
-func (c *Client) query(endpoint string, out interface{}) error {
-	r := c.newRequest(http.MethodGet, endpoint)
+func (c *Client) query(endpoint string, params map[string]string, out interface{}) error {
+	r := c.newRequest(http.MethodGet, endpoint, params)
 	found, resp, err := requireNotFoundOrOK(c.doRequest(r))
 	if err != nil {
 		return err
@@ -245,20 +268,33 @@ func (c *Client) query(endpoint string, out interface{}) error {
 	return nil
 }
 
-func (c *Client) Get(key kvs.Key) (string, error) {
+func (c *Client) Get(key kvs.Key, isPrefix bool) (string, error) {
 	kval := kvs.KeyVal{}
+	params := make(map[string]string, 1)
+	if isPrefix {
+		params[`is_prefix`] = `true`
+		params[`trim_prefix`] = `true`
+		if !strings.HasSuffix(key.Name, "/") {
+			// by convention, we use "/" to concat key and sub-key in both Set and Get side.
+			// adding a "/" to the tail of the key, to make the replied top-level keys are been trimmed with "/".
+			// e.g, the higher-level caller publish/set foor/bar = alice when set,
+			// by convention, during the get, by specifying prefix = foo, it will get foo = {"bar": "alice"} as the response.
+			key.Name = key.Name + "/"
+		}
+	}
 	keyInPath := fmt.Sprintf("%s/%s", key.Kind, key.Name)
 	endpoint := fmt.Sprintf("/key/%s", keyInPath)
 
 	var err error
 	defer func() {
-		log.Debugf("Get value of key %v, value: %v, length: %v, err: %v", key, kval.Value, len(kval.Value), err)
+		log.Debugf("Get value of key %v, is_prefix: %v, value: %v, length: %v, err: %v", key, isPrefix, kval.Value, len(kval.Value), err)
 	}()
 
-	err = c.query(endpoint, &kval)
+	err = c.query(endpoint, params, &kval)
 	if err != nil {
 		return "", err
 	}
+	keyActionCnt.WithLabelValues(key.Name, keyActGet).Inc()
 	return kval.Value, nil
 }
 
@@ -267,7 +303,7 @@ func (c *Client) Set(key kvs.Key, value string) error {
 		Key:   key,
 		Value: value,
 	}
-	r := c.newRequest(http.MethodPut, "/key")
+	r := c.newRequest(http.MethodPut, "/key", nil)
 	r.obj = kval
 
 	var resp *http.Response
@@ -282,6 +318,8 @@ func (c *Client) Set(key kvs.Key, value string) error {
 		return err
 	}
 	resp.Body.Close()
+
+	keyActionCnt.WithLabelValues(key.Name, keyActSet).Inc()
 
 	return nil
 }

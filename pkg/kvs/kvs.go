@@ -2,12 +2,14 @@ package kvs
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 	"text/template"
@@ -29,6 +31,7 @@ const (
 
 	actionDefault   = "default"
 	actionOverwrite = "overwrite"
+	actionPrefix    = `prefix`
 
 	defaultEmptyStub = `''`
 	nonePlaceHolder  = "nonePlaceHolder"
@@ -44,11 +47,11 @@ var (
 )
 
 var (
-	envKeyRegex = regexp.MustCompile(`\${env([of])?:// *\.([_a-zA-Z][_a-zA-Z0-9]*) *(\| *(default|overwrite) ([~!@#$%^&*()\-_+={}\[\]:";'<>,.?/|\\a-zA-Z0-9]*))? *}`)
+	envKeyRegex = regexp.MustCompile(`\${env([of])?:// *\.([_a-zA-Z][_a-zA-Z0-9]*) *(\| *(default|overwrite|prefix) *([~!@#$%^&*()\-_+={}\[\]:";'<>,.?/|\\a-zA-Z0-9]*))? *}`)
 )
 
 type KVStore interface {
-	Get(key Key) (string, error)
+	Get(key Key, isPrefix bool) (string, error)
 	Set(key Key, val string) error
 }
 
@@ -91,6 +94,34 @@ func (kv KeyVal) String() string {
 }
 
 type KeyVals []KeyVal
+
+func (kvs KeyVals) MarshalJSON() ([]byte, error) {
+	out := bytes.NewBuffer([]byte{})
+	var tmp interface{}
+	sort.Slice(kvs, func(i, j int) bool {
+		return kvs[i].Name < kvs[j].Name
+	})
+	out.WriteString(`{`)
+	for k, kv := range kvs {
+		out.WriteString(`"`)
+		out.WriteString(kv.Name)
+		out.WriteString(`":`)
+		if err := json.Unmarshal([]byte(kv.Value), &tmp); err != nil {
+			marshaled, err := json.Marshal(kv.Value)
+			if err != nil {
+				return nil, err
+			}
+			out.Write(marshaled)
+		} else {
+			out.WriteString(kv.Value)
+		}
+		if k != len(kvs)-1 {
+			out.WriteString(`,`)
+		}
+	}
+	out.WriteString(`}`)
+	return []byte(out.String()), nil
+}
 
 type tempFunc func(dir, pattern string) (f *os.File, err error)
 type readFileFunc func(filename string) ([]byte, error)
@@ -218,8 +249,8 @@ func valueOf(s KVStore, key Key, av Action, kvS *kvState, tmpFunc tempFunc, rdFi
 
 	var value string
 	var err error
-
-	if av.Type == actionOverwrite {
+	switch av.Type {
+	case actionOverwrite:
 		if av.Value == nonePlaceHolder {
 			return "", fmt.Errorf("overwrite with none is not allowed")
 		}
@@ -228,8 +259,17 @@ func valueOf(s KVStore, key Key, av Action, kvS *kvState, tmpFunc tempFunc, rdFi
 			return "", fmt.Errorf("overwrite %v with %v failed: %w", key, briefOf(value), err)
 		}
 		log.Debugf("overwrite key %v with value %v, length: %v", rawKey, briefOf(value), len(value))
-	} else {
-		value, err = s.Get(key)
+	case actionPrefix:
+		value, err = s.Get(key, true)
+		if err != nil {
+			if !errors.Is(err, ErrNotFound) {
+				return "", fmt.Errorf("get valueOf by prefix: %v failed: %w", key, err)
+			} else {
+				return ``, nil
+			}
+		}
+	default:
+		value, err = s.Get(key, false)
 		if err != nil && !errors.Is(err, ErrNotFound) {
 			return "", fmt.Errorf("get valueOf %v failed: %w", key, err)
 		}
@@ -301,7 +341,7 @@ func keyFromMatchItem(match []string) (Key, Action) {
 	if actionType == "" {
 		actionType = actionDefault
 	}
-	if actionType != actionDefault && actionType != actionOverwrite {
+	if actionType != actionDefault && actionType != actionOverwrite && actionType != actionPrefix {
 		actionType = actionDefault
 	}
 	return Key{Kind: kind, Name: key}, Action{Type: actionType, Value: actionValue}
