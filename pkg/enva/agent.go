@@ -470,7 +470,7 @@ func runProc(nameArgs, osEnvs []string, isRunOnlyOnce bool, terminate chan exitS
 	cmd.Stderr = os.Stderr
 	cmd.Env = osEnvs
 	if err := cmd.Start(); err != nil {
-		return newExitStatus(-1, errors.New("require at least proc name"))
+		return newExitStatus(-1, fmt.Errorf("start Proc failed: %v", err))
 	}
 	done := make(chan error, 1)
 	go func() {
