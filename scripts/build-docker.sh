@@ -23,6 +23,7 @@ cd ${ASSETS_DOCKERFILE_DIR}/golang1.13-buster && docker build ${BUILD_ARGS} -t r
 cd ${ASSETS_DOCKERFILE_DIR}/golang1.13-buster-orcl && docker build ${BUILD_ARGS} -t registry.tespkg.in/library/golang:1.13-buster-orcl .
 cd ${ASSETS_DOCKERFILE_DIR}/golang1.14 && docker build ${BUILD_ARGS} -t registry.tespkg.in/library/golang:1.14 .
 cd ${ASSETS_DOCKERFILE_DIR}/nginx-alpine && docker build ${BUILD_ARGS} -t registry.tespkg.in/library/nginx:alpine .
+cd ${ASSETS_DOCKERFILE_DIR}/node16-alpine3.13 && docker build ${BUILD_ARGS} -t registry.tespkg.in/library/node:16-alpine3.13 .
 cd ${ASSETS_DOCKERFILE_DIR}/debian-buster-slim && docker build ${BUILD_ARGS} -t registry.tespkg.in/library/debian:buster-slim .
 cd ${ASSETS_DOCKERFILE_DIR}/debian-buster-slim-orcl && docker build ${BUILD_ARGS} -t registry.tespkg.in/library/debian:buster-slim-orcl .
 cd ${ASSETS_DOCKERFILE_DIR}/ubuntu18.04 && docker build ${BUILD_ARGS} -t registry.tespkg.in/library/ubuntu:18.04 .
@@ -45,6 +46,7 @@ if [[ $# == 1 ]] && [[ $1 == "true" ]]; then
     docker push registry.tespkg.in/library/golang:1.13-buster-orcl
     docker push registry.tespkg.in/library/golang:1.14
     docker push registry.tespkg.in/library/nginx:alpine
+    docker push registry.tespkg.in/library/node:16-alpine3.13
     docker push registry.tespkg.in/library/debian:buster-slim
     docker push registry.tespkg.in/library/debian:buster-slim-orcl
     docker push registry.tespkg.in/library/ubuntu:18.04
