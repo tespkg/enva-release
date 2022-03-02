@@ -14,6 +14,7 @@ import (
 	"tespkg.in/envs/pkg/api"
 	"tespkg.in/envs/pkg/enva"
 	"tespkg.in/envs/pkg/kvs"
+	"tespkg.in/envs/pkg/ssparser"
 	"tespkg.in/envs/version"
 	"tespkg.in/kit/log"
 )
@@ -38,7 +39,7 @@ func init() {
 	getopt.FlagLong(&envsNamespace, "envs-namespace", 'n', "Optional, envs namespace, eg: dev")
 	getopt.FlagLong(&envFiles, "env-files", 'f', `Optional, env files, separated by comma, eg: "path/to/index.html, path/to/config.js"`)
 	getopt.FlagLong(&envTplFiles, "env-tpl-files", 't', `Optional, env template files, separated by comma, eg: "path/to/index.html.tpl, path/to/config.js.tpl", pair to env-files with same index`)
-	getopt.FlagLong(&publishedKVs, "publish", 'p', `Optional, publish kvs, eg: --publish k1=v1 --publish k2=v2`)
+	getopt.FlagLong(&publishedKVs, "publish", 'p', `Optional, publish kvs, eg: --publish k1=v1 --publish k2=v2, support os env evaluation in value, e.g k2=$VERSION, or k2=v${VERSION}r1`)
 	getopt.FlagLong(&isRunOnlyOnce, "run-only-once", 'r', "Optional, run Proc only once then exit")
 	getopt.FlagLong(&locationRegistration, "location", 'l', "Optional, enable Proc location registration")
 	getopt.FlagLong(&logLevel, "log-level", 'v', "Optional, log level, can be one of debug, info, warn, error, fatal, none")
@@ -302,9 +303,15 @@ func raise(sig os.Signal) error {
 }
 
 func extractKV(kv string) (k, v string, err error) {
-	ii := strings.Split(kv, "=")
+	ii := strings.SplitN(kv, "=", 2)
 	if len(ii) != 2 {
 		return "", "", fmt.Errorf("invalid ENVA_PUBLISH key value pair, require key=value, got: %v", kv)
 	}
-	return strings.TrimSpace(ii[0]), strings.TrimSpace(ii[1]), nil
+	k = strings.TrimSpace(ii[0])
+	rv := strings.TrimSpace(ii[1])
+	v, err = ssparser.Parse(rv)
+	if err != nil {
+		return "", "", fmt.Errorf("invalid key %v with value: %v, err: %v", k, rv, err)
+	}
+	return k, v, nil
 }
