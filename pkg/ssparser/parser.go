@@ -85,12 +85,14 @@ func (t *tokenizer) tokenize(target string) ([]*token, error) {
 
 const (
 	tokenWhitespace int = iota
+	tokenString
 	tokenLiteral
 	tokenVariable
 )
 
 func shellStringTokenizer() *tokenizer {
 	t := tokenizer{}
+	t.addNil("^'(''|[^'])*'", tokenString)
 	t.addNil("^[a-zA-Z0-9!@#%^&*()_+\\-=\\[\\];:'\"\\\\|,.<>\\/?]*", tokenLiteral)
 	t.add("^\\${?[a-zA-Z_][a-zA-Z0-9_]*}?", tokenVariable, func(s string) error {
 		if s[:2] == "${" {
@@ -122,6 +124,10 @@ func Parse(s string) (string, error) {
 			values = append(values, os.Getenv(val))
 		case tokenLiteral:
 			values = append(values, tok.value)
+		case tokenString:
+			// remove ' from head and tail
+			val := tok.value[1 : len(tok.value)-1]
+			values = append(values, val)
 		default:
 			values = append(values, tok.value)
 		}

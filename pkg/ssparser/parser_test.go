@@ -35,6 +35,19 @@ func TestTokenizer(t *testing.T) {
 			ss:             `"aa'abc'aa"`,
 			expectedTokens: []*token{{typ: tokenLiteral, value: `"aa'abc'aa"`}},
 		},
+		{
+			ss:             `'{"a": {"b": "c}}"'`,
+			expectedTokens: []*token{{typ: tokenString, value: `'{"a": {"b": "c}}"'`}},
+		},
+		{
+			ss:             `'{"a": {"b": "c}}"`,
+			expectedTokens: []*token{{typ: tokenString, value: `'{"a": {"b": "c}}"'`}},
+			invalid:        true,
+		},
+		{
+			ss:      `{"a": {"b": "c"}}"`,
+			invalid: true,
+		},
 	}
 
 	ssTokenizer := shellStringTokenizer()
@@ -73,6 +86,14 @@ func TestParser(t *testing.T) {
 		{
 			ss:       "abc_${TEST}_abc_${TEST}",
 			expected: "abc_foo_abc_foo",
+		},
+		{
+			ss:       `'{"a": {"b": "c"}}"'`,
+			expected: `{"a": {"b": "c"}}"`,
+		},
+		{
+			ss:       `'{"a": {"b": "${TEST}"}}"'`,
+			expected: `{"a": {"b": "${TEST}"}}"`,
 		},
 	}
 
