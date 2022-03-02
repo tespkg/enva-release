@@ -62,12 +62,16 @@ func TestParser(t *testing.T) {
 			expected: "foo",
 		},
 		{
-			ss:       "abc${TEST}abc$TEST",
-			expected: "abcfooabcfoo",
+			ss:       "${TEST}",
+			expected: "foo",
 		},
 		{
-			ss:       "abc${TEST}abc${TEST}",
-			expected: "abcfooabcfoo",
+			ss:       "abc_${TEST}_abc_$TEST",
+			expected: "abc_foo_abc_foo",
+		},
+		{
+			ss:       "abc_${TEST}_abc_${TEST}",
+			expected: "abc_foo_abc_foo",
 		},
 	}
 
