@@ -91,7 +91,7 @@ const (
 
 func shellStringTokenizer() *tokenizer {
 	t := tokenizer{}
-	t.addNil("^[a-zA-Z_][a-zA-Z0-9_.]*", tokenLiteral)
+	t.addNil("^[a-zA-Z0-9!@#%^&*()_+\\-=\\[\\];:\\\\|,.<>\\/?]*", tokenLiteral)
 	t.add("^\\${?[a-zA-Z_][a-zA-Z0-9_]*}?", tokenVariable, func(s string) error {
 		if s[:2] == "${" {
 			if s[len(s)-1:] != "}" {

@@ -211,7 +211,7 @@ func main() {
 	for _, kv := range publishedKVs {
 		k, v, err := extractKV(strings.TrimSpace(kv))
 		if err != nil {
-			log.Fatalf("invalid publish key value pair, require key=value, got: %v", kv)
+			log.Fatalf("invalid publish key value pair, require key=value, got: %v, err: %v", kv, err)
 		}
 
 		// If duplicated key found, command option has priority

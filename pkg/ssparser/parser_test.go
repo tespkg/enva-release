@@ -3,6 +3,7 @@ package ssparser
 import (
 	"os"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -82,4 +83,16 @@ func TestParser(t *testing.T) {
 			require.Equal(t, c.expected, got)
 		})
 	}
+}
+
+func TestSplitN(t *testing.T) {
+	kv := "ssoHTTPAddr=sso-be.dev-meeraspace-sso:5556"
+	ii := strings.SplitN(kv, "=", 2)
+	println(len(ii))
+	for i, v := range ii {
+		println(i, v)
+	}
+	v, err := Parse(ii[1])
+	require.Nil(t, err)
+	require.Equal(t, v, ii[1])
 }
