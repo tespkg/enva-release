@@ -28,12 +28,12 @@ func TestTokenizer(t *testing.T) {
 			invalid: true,
 		},
 		{
-			ss:      "aa'abc'aa",
-			invalid: true,
+			ss:             "aa'abc'aa",
+			expectedTokens: []*token{{typ: tokenLiteral, value: "aa'abc'aa"}},
 		},
 		{
-			ss:      `aa"abc"aa`,
-			invalid: true,
+			ss:             `"aa'abc'aa"`,
+			expectedTokens: []*token{{typ: tokenLiteral, value: `"aa'abc'aa"`}},
 		},
 	}
 
