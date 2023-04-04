@@ -19,116 +19,75 @@ func docOfChapter01(t *testing.T) string {
 }
 
 func TestScan(t *testing.T) {
-	doc := docOfChapter01(t)
-	kvs, err := scan(bytes.NewBufferString(doc), func(filename string) (i []byte, err error) {
+	rd := &rendering{}
+	rd.readFileFunc = func(filename string) (i []byte, err error) {
 		return []byte("content of " + filename), nil
-	})
+	}
+
+	doc := docOfChapter01(t)
+	kvs, err := rd.scan(bytes.NewBufferString(doc))
 	require.Nil(t, err)
 
-	expected := KeyVals{
+	expected := RawKeyVals{
 		{
-			Key: Key{
-				Kind: EnvKind,
-				Name: "poet",
-			},
-			Value:      nonePlaceHolder,
-			actionType: actionDefault,
+			KeyVal: KeyVal{Key: Key{Kind: EnvKind, Name: "poet"}, Value: none},
+			Action: Action{Type: actionDefault, Value: none},
 		},
 		{
-			Key: Key{
-				Kind: EnvoKind,
-				Name: "title",
-			},
-			Value:      nonePlaceHolder,
-			actionType: actionDefault,
+			KeyVal: KeyVal{Key: Key{Kind: EnvoKind, Name: "title"}, Value: none},
+			Action: Action{Type: actionDefault, Value: none},
 		},
 		{
-			Key: Key{
-				Kind: EnvKind,
-				Name: "at",
-			},
-			Value:      "atAT",
-			actionType: actionDefault,
+			KeyVal: KeyVal{Key: Key{Kind: EnvKind, Name: "at"}, Value: "atAT"},
+			Action: Action{Type: actionDefault, Value: "atAT"},
 		},
 		{
-			Key: Key{
-				Kind: EnvfKind,
-				Name: "length",
-			},
-			Value:      "content of /tmp/path/to/length/file",
-			actionType: actionDefault,
+			KeyVal: KeyVal{Key: Key{Kind: EnvfKind, Name: "length"}, Value: "content of /tmp/path/to/length/file"},
+			Action: Action{Type: actionDefault, Value: "/tmp/path/to/length/file"},
 		},
 		{
-			Key: Key{
-				Kind: EnvKind,
-				Name: "_did",
-			},
-			Value:      nonePlaceHolder,
-			actionType: actionDefault,
+			KeyVal: KeyVal{Key: Key{Kind: EnvKind, Name: "_did"}, Value: none},
+			Action: Action{Type: actionDefault, Value: none},
 		},
 		{
-			Key: Key{
-				Kind: EnvKind,
-				Name: "cRoSs",
-			},
-			Value:      "cross",
-			actionType: actionOverwrite,
+			KeyVal: KeyVal{Key: Key{Kind: EnvKind, Name: "cRoSs"}, Value: "cross"},
+			Action: Action{Type: actionOverwrite, Value: "cross"},
 		},
 		{
-			Key: Key{
-				Kind: EnvfKind,
-				Name: "an",
-			},
-			Value:      nonePlaceHolder,
-			actionType: actionDefault,
+			KeyVal: KeyVal{Key: Key{Kind: EnvfKind, Name: "an"}, Value: none},
+			Action: Action{Type: actionDefault, Value: none},
 		},
 		{
-			Key: Key{
-				Kind: EnvKind,
-				Name: "Albatross",
-			},
-			Value:      nonePlaceHolder,
-			actionType: actionDefault,
+			KeyVal: KeyVal{Key: Key{Kind: EnvKind, Name: "Albatross"}, Value: none},
+			Action: Action{Type: actionDefault, Value: none},
 		},
 		{
-			Key: Key{
-				Kind: EnvKind,
-				Name: "crossbow",
-			},
-			Value:      nonePlaceHolder,
-			actionType: actionDefault,
+			KeyVal: KeyVal{Key: Key{Kind: EnvKind, Name: "crossbow"}, Value: none},
+			Action: Action{Type: actionDefault, Value: none},
 		},
 		{
-			Key: Key{
-				Kind: EnvfKind,
-				Name: "ALBATROSS",
-			},
-			Value:      nonePlaceHolder,
-			actionType: actionDefault,
+			KeyVal: KeyVal{Key: Key{Kind: EnvfKind, Name: "ALBATROSS"}, Value: none},
+			Action: Action{Type: actionDefault, Value: none},
 		},
 		{
-			Key: Key{
-				Kind: EnvfKind,
-				Name: "everywhere",
-			},
-			Value:      "content of /tmp/path/to/everywhere/file",
-			actionType: actionOverwrite,
+			KeyVal: KeyVal{Key: Key{Kind: EnvfKind, Name: "everywhere"}, Value: "content of /tmp/path/to/everywhere/file"},
+			Action: Action{Type: actionOverwrite, Value: "/tmp/path/to/everywhere/file"},
 		},
 		{
-			Key: Key{
-				Kind: EnvKind,
-				Name: "prefixKey",
-			},
-			Value:      nonePlaceHolder,
-			actionType: actionPrefix,
+			KeyVal: KeyVal{Key: Key{Kind: EnvKind, Name: "prefixKey"}, Value: none},
+			Action: Action{Type: actionPrefix, Value: none},
 		},
 		{
-			Key: Key{
-				Kind: EnvKind,
-				Name: "prefixKey1",
-			},
-			Value:      nonePlaceHolder,
-			actionType: actionPrefix,
+			KeyVal: KeyVal{Key: Key{Kind: EnvKind, Name: "prefixKey1"}, Value: none},
+			Action: Action{Type: actionPrefix, Value: none},
+		},
+		{
+			KeyVal: KeyVal{Key: Key{Kind: EnvkKind, Name: "secret1"}, Value: none},
+			Action: Action{Type: actionDefault, Value: none},
+		},
+		{
+			KeyVal: KeyVal{Key: Key{Kind: EnvkKind, Name: "secret2"}, Value: "123"},
+			Action: Action{Type: actionDefault, Value: "123"},
 		},
 	}
 
@@ -137,6 +96,11 @@ func TestScan(t *testing.T) {
 
 func TestRender(t *testing.T) {
 	doc := docOfChapter01(t)
+	creds, err := NewCreds()
+	require.Nil(t, err)
+
+	planintext := "123"
+	ciphertext, _ := creds.Encrypt(planintext)
 
 	mockCtrl := gomock.NewController(t)
 	s := NewMockKVStore(mockCtrl)
@@ -158,15 +122,21 @@ func TestRender(t *testing.T) {
 	se.Set(Key{Kind: EnvfKind, Name: "everywhere"}, "content of /tmp/path/to/everywhere/file").Return(nil).AnyTimes()
 	se.Get(Key{Kind: EnvKind, Name: "prefixKey"}, true).Return(`{"key1":"val1","key2":"val2"}`, nil)
 	se.Get(Key{Kind: EnvKind, Name: "prefixKey1"}, true).Return(`{"key1":"val1","key2":"val2"}`, nil)
+	se.Get(Key{Kind: EnvkKind, Name: "secret1"}, false).Return(ciphertext, nil)
+	se.Get(Key{Kind: EnvkKind, Name: "secret2"}, false).Return("", ErrNotFound)
+	se.Set(Key{Kind: EnvkKind, Name: "secret2"}, gomock.Any()).Return(nil)
 
 	idx := 0
 	buf := &bytes.Buffer{}
-	err := render(s, bytes.NewBufferString(doc), buf, &kvState{}, func(dir, pattern string) (f *os.File, err error) {
+	rd := &rendering{s: s, kvS: &kvState{}, cred: creds}
+	rd.tmpFunc = func(dir, pattern string) (f *os.File, err error) {
 		idx++
 		return os.Create(fmt.Sprintf("%s/tmp-%d.out", os.TempDir(), idx))
-	}, func(filename string) (i []byte, err error) {
+	}
+	rd.readFileFunc = func(filename string) (i []byte, err error) {
 		return []byte("content of " + filename), nil
-	})
+	}
+	err = rd.render(bytes.NewBufferString(doc), buf)
 	require.Nil(t, err)
 
 	expected := fmt.Sprintf(`
@@ -192,6 +162,10 @@ water:
 prefix:
   - '{"key1":"val1","key2":"val2"}'
   - "{"key1":"val1","key2":"val2"}"
+
+envk:
+  - "123"
+  - "123"
 `, os.TempDir(), os.TempDir(), os.TempDir(), os.TempDir())
 
 	// Just for showcase, put a \n in front of the expected when initiating, remove it here.
@@ -221,6 +195,7 @@ func TestRegex(t *testing.T) {
 		`Hi, this is ${envf:// .config }, I'm speaking to ${env:// .clientID | default alice }'`,
 		`Hi, this is ${envf:// .config }, I'm speaking to ${env:// .clientID | default ~!@#$%^&*()_+-={}[]|\:";'<>?,./'" }'`,
 		`Hi, this is ${envf:// .config }, I'm speaking to ${env:// .clientID | prefix }'`,
+		`Hi, this is ${envk:// .config }, I'm speaking to ${envk:// .clientID | default abc }'`,
 	}
 
 	for idx, c := range cases {
@@ -228,6 +203,7 @@ func TestRegex(t *testing.T) {
 		for _, i := range res {
 			fmt.Println(idx, len(i), i)
 		}
+		fmt.Println("---")
 	}
 	for idx, c := range cases {
 		newStr := envKeyRegex.ReplaceAllStringFunc(c, func(s string) string {

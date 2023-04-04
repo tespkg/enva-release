@@ -20,3 +20,7 @@ water:
 prefix:
   - '${env:// .prefixKey | prefix }'
   - "${env:// .prefixKey1 | prefix}"
+
+envk:
+  - "${envk:// .secret1 }"
+  - "${envk:// .secret2 | default 123}"

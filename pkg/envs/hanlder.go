@@ -22,12 +22,14 @@ import (
 )
 
 type Handler struct {
-	s store.Store
+	s    store.Store
+	cred *kvs.Creds
 }
 
-func NewHandler(s store.Store) *Handler {
+func NewHandler(s store.Store, creds *kvs.Creds) *Handler {
 	return &Handler{
-		s: s,
+		s:    s,
+		cred: creds,
 	}
 }
 
@@ -142,6 +144,14 @@ func (h *Handler) PutKey(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("parse request body failed: %v", err))
 		return
 	}
+	if kval.Kind == kvs.EnvkKind && getIsPlaintext(c) {
+		ciphertext, err := h.cred.Encrypt(kval.Value)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("encrypt key: %v failed: %v", kval.Name, err))
+			return
+		}
+		kval.Value = ciphertext
+	}
 
 	ns := getNamespace(c)
 	storeKVal, err := kv2storeKV(ns, kval, getIsJson(c))
@@ -156,8 +166,13 @@ func (h *Handler) PutKey(c *gin.Context) {
 	c.JSON(http.StatusOK, struct{}{})
 }
 
+type EnvKeyVal struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
 func (h *Handler) PutEnvKey(c *gin.Context) {
-	var envKVal kvs.EnvKeyVal
+	var envKVal EnvKeyVal
 	if err := c.BindJSON(&envKVal); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("parse request body failed: %v", err))
 		return
@@ -184,7 +199,7 @@ func (h *Handler) PutEnvKey(c *gin.Context) {
 }
 
 func (h *Handler) PutEnvKeys(c *gin.Context) {
-	var envKeyVals []kvs.EnvKeyVal
+	var envKeyVals []EnvKeyVal
 	if err := c.BindJSON(&envKeyVals); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("parse request body failed: %v", err))
 		return
@@ -474,5 +489,10 @@ func getNamespace(c *gin.Context) string {
 
 func getIsJson(c *gin.Context) bool {
 	v := c.Query("json")
+	return v == "true"
+}
+
+func getIsPlaintext(c *gin.Context) bool {
+	v := c.Query("plain")
 	return v == "true"
 }

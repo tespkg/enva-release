@@ -27,7 +27,7 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 	// 3. Definition for spec.
 	specDefs := map[string]openspec.Schema{
 		keyValDef:    openapi.GenerateModel(reflect.ValueOf(kvs.KeyVal{})),
-		envKeyValDef: openapi.GenerateModel(reflect.ValueOf(kvs.EnvKeyVal{})),
+		envKeyValDef: openapi.GenerateModel(reflect.ValueOf(EnvKeyVal{})),
 	}
 
 	tags := []openspec.Tag{
@@ -64,7 +64,7 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 						openapi.BuildParam("query", "ns", "string", "", false, "kvs").
 							WithParameterDesc("Get keyvals from the given namespace"),
 						openapi.BuildParam("query", "kind", "string", "", false, nil).
-							WithParameterDesc("Get keyvals by kind, supported kinds: env, envf, envo, envof"),
+							WithParameterDesc("Get keyvals by kind, supported kinds: env, envf, envo, envk"),
 					},
 					Responses: openapi.BuildResp(http.StatusOK, openapi.BuildSuccessResp(openapi.ArrRefSchema(keyValDef))),
 				},
@@ -78,8 +78,8 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 			Put: &openspec.Operation{
 				OperationProps: openspec.OperationProps{
 					ID:          "PutEnvKeys",
-					Summary:     "Create or Update value of env kind keys",
-					Description: "Create Update value of env kind keys",
+					Summary:     "Create or Update env kind keys",
+					Description: "Create or Update `env kind` keys",
 					Produces:    []string{"application/json"},
 					Tags:        []string{envKeyValTag},
 					Parameters: []openspec.Parameter{
@@ -103,8 +103,8 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 			Put: &openspec.Operation{
 				OperationProps: openspec.OperationProps{
 					ID:          "PutEnvKey",
-					Summary:     "Create or Update value of a single env kind key",
-					Description: "Create or Update value of a single env kind key",
+					Summary:     "Create or Update single env kind key",
+					Description: "Create or Update single `env kind` key",
 					Produces:    []string{"application/json"},
 					Tags:        []string{envKeyValTag},
 					Parameters: []openspec.Parameter{
@@ -129,7 +129,7 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 				OperationProps: openspec.OperationProps{
 					ID:          "ExportEnvKVS",
 					Summary:     "Export all env kind key values",
-					Description: "Export all env kind key values",
+					Description: "Export all `env kind` key values",
 					Produces:    []string{"application/json"},
 					Tags:        []string{envKeyValTag},
 					Parameters: []openspec.Parameter{
@@ -143,7 +143,7 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 				OperationProps: openspec.OperationProps{
 					ID:          "ImportEnvKVS",
 					Summary:     "Import given env kind key values",
-					Description: "Import given env kind key values",
+					Description: "Import given `env kind` key values",
 					Produces:    []string{"application/json"},
 					Consumes:    []string{"multipart/form-data"},
 					Tags:        []string{envKeyValTag},
@@ -168,7 +168,7 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 				OperationProps: openspec.OperationProps{
 					ID:          "PutEnvfKey",
 					Summary:     "Create or Update a envf kind key value",
-					Description: "Create or Update a envf kind key value",
+					Description: "Create or Update a `envf kind` key value",
 					Produces:    []string{"application/json"},
 					Consumes:    []string{"multipart/form-data"},
 					Tags:        []string{fileKeyValTag},
@@ -202,13 +202,40 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 						openapi.BuildParam("query", "ns", "string", "", false, "kvs").
 							WithParameterDesc("get a key from the given namespace"),
 						openapi.BuildParam("path", "fully_qualified_key_name", "string", "", true, nil).
-							WithParameterDesc("Allowed format: kind/name,  supported kind: env, envf"),
+							WithParameterDesc("Allowed format: kind/name,  supported kind: env, envf, envk"),
 						openapi.BuildParam("query", "is_prefix", "bool", "", false, "false").
 							WithParameterDesc("return keyvals with the prefix in json"),
 						openapi.BuildParam("query", "trim_prefix", "bool", "", false, "false").
 							WithParameterDesc("return keyvals with the prefix in json, in which the top-level keys' prefix are been trimmed"),
 					},
 					Responses: openapi.BuildResp(http.StatusOK, openapi.BuildSuccessResp(openapi.ObjRefSchema(keyValDef))),
+				},
+			},
+		},
+	}
+
+	// 7. key PUT
+	pathItems["/key"] = openspec.PathItem{
+		PathItemProps: openspec.PathItemProps{
+			Put: &openspec.Operation{
+				OperationProps: openspec.OperationProps{
+					ID:          "PutKey",
+					Summary:     "Create or Update a single key",
+					Description: "Create or Update a single key, supported kind: env, envf, envk",
+					Produces:    []string{"application/json"},
+					Tags:        []string{keyValTag},
+					Parameters: []openspec.Parameter{
+						openapi.BuildParam("query", "ns", "string", "", false, "kvs").
+							WithParameterDesc("Create or Update a single keyval into the given namespace"),
+						openapi.BuildParam("query", "json", "bool", "", false, false).
+							WithParameterDesc("specify if the content of the given key is json that need to trim indent"),
+						openapi.BuildParam("query", "plain", "bool", "", false, false).
+							WithParameterDesc("indicate if the give value is encrypted or not. if it is not encrypted, the service will use the builtin suite to encrypt it"),
+						openapi.BuildParam("body", "body", "", "", true, nil).
+							WithNewSchema(openapi.ObjRefSchema(keyValDef)).
+							WithParameterDesc("Create or Update a single keyval"),
+					},
+					Responses: openapi.BuildResp(http.StatusOK, openapi.BuildSuccessResp(nil)),
 				},
 			},
 		},

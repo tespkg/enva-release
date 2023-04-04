@@ -21,7 +21,10 @@ const (
 	EnvKind  = "env"
 	EnvfKind = "envf"
 
-	// Optional env ONLY used for checking if the value is required or not when rendering
+	// EnvkKind is used for secret that needs to be stored & transferred in encrypted fashion
+	EnvkKind = "envk"
+
+	// EnvoKind Optional env ONLY used for checking if the value is required or not when rendering
 	// The underlying kind is always env for env & envo cases.
 	EnvoKind = "envo"
 
@@ -33,8 +36,8 @@ const (
 	actionOverwrite = "overwrite"
 	actionPrefix    = `prefix`
 
-	defaultEmptyStub = `''`
-	nonePlaceHolder  = "nonePlaceHolder"
+	empty = `''`
+	none  = "nonePlaceHolder"
 )
 
 var (
@@ -42,12 +45,12 @@ var (
 )
 
 var (
-	leftDlims  = []string{"${env://", "${envo://", "${envf://"}
-	rightDlims = []string{"}", "}", "}"}
+	leftDlims  = []string{"${env://", "${envo://", "${envf://", "${envk://"}
+	rightDlims = []string{"}", "}", "}", "}"}
 )
 
 var (
-	envKeyRegex = regexp.MustCompile(`\${env([of])?:// *\.([_a-zA-Z][_a-zA-Z0-9]*) *(\| *(default|overwrite|prefix) *([~!@#$%^&*()\-_+={}\[\]:";'<>,.?/|\\a-zA-Z0-9]*))? *}`)
+	envKeyRegex = regexp.MustCompile(`\${env([ofk])?:// *\.([_a-zA-Z][_a-zA-Z0-9]*) *(\| *(default|overwrite|prefix) *([~!@#$%^&*()\-_+={}\[\]:";'<>,.?/|\\a-zA-Z0-9]*))? *}`)
 )
 
 type KVStore interface {
@@ -66,7 +69,7 @@ type Action struct {
 }
 
 func (av Action) String() string {
-	return av.Type + " to" + briefOf(av.Value)
+	return av.Type + " to " + briefOf(av.Value)
 }
 
 func (k Key) String() string {
@@ -76,18 +79,11 @@ func (k Key) String() string {
 type KeyVal struct {
 	Key
 	Value string `json:"value"`
-
-	actionType string
-}
-
-type EnvKeyVal struct {
-	Name  string `json:"name"`
-	Value string `json:"value"`
 }
 
 func (kv KeyVal) String() string {
 	value := kv.Value
-	if value == nonePlaceHolder {
+	if value == none {
 		value = ""
 	}
 	return kv.Kind + "/" + kv.Name + "=" + value
@@ -123,14 +119,40 @@ func (kvs KeyVals) MarshalJSON() ([]byte, error) {
 	return []byte(out.String()), nil
 }
 
+type RawKeyVal struct {
+	KeyVal
+	Action
+}
+
+type RawKeyVals []RawKeyVal
+
 type tempFunc func(dir, pattern string) (f *os.File, err error)
 type readFileFunc func(filename string) ([]byte, error)
 
 func Render(s KVStore, ir io.Reader, iw io.Writer) error {
-	return render(s, ir, iw, &kvState{}, ioutil.TempFile, ioutil.ReadFile)
+	cred, err := NewCreds()
+	if err != nil {
+		return err
+	}
+	rd := &rendering{
+		s:            s,
+		kvS:          &kvState{},
+		cred:         cred,
+		tmpFunc:      ioutil.TempFile,
+		readFileFunc: ioutil.ReadFile,
+	}
+	return rd.render(ir, iw)
 }
 
-func scan(r io.Reader, readFileFunc readFileFunc) (KeyVals, error) {
+type rendering struct {
+	s            KVStore
+	kvS          *kvState
+	cred         *Creds
+	tmpFunc      tempFunc
+	readFileFunc readFileFunc
+}
+
+func (rd *rendering) scan(r io.Reader) (RawKeyVals, error) {
 	bs, err := ioutil.ReadAll(r)
 	if err != nil {
 		return nil, err
@@ -138,63 +160,76 @@ func scan(r io.Reader, readFileFunc readFileFunc) (KeyVals, error) {
 	doc := string(bs)
 
 	uniqueKeys := make(map[string]struct{})
-	var kvs KeyVals
+	var rkvs RawKeyVals
 	keyRes := envKeyRegex.FindAllStringSubmatch(doc, -1)
 	for _, keyMatch := range keyRes {
-		k, av := keyFromMatchItem(keyMatch)
-		if k.Kind == EnvfKind && av.Value != "" && av.Value != nonePlaceHolder {
-			bs, err := readFileFunc(av.Value)
+		k, action := keyFromMatchItem(keyMatch)
+		defaultValue := strings.TrimSpace(action.Value)
+		if k.Kind == EnvfKind && action.Value != "" && action.Value != none {
+			b, err := rd.readFileFunc(action.Value)
 			if err != nil {
-				return nil, fmt.Errorf("invalid envf: %v with %v, err: %v", k.Name, av, err)
+				return nil, fmt.Errorf("invalid envf: %v with %v, err: %v", k.Name, action, err)
 			}
-			av.Value = string(bs)
+			defaultValue = string(b)
 		}
 		if _, ok := uniqueKeys[k.String()]; ok {
 			continue
 		}
 		uniqueKeys[k.String()] = struct{}{}
 
-		kvs = append(kvs, KeyVal{
-			Key:        k,
-			Value:      strings.TrimSpace(av.Value),
-			actionType: av.Type,
+		keyVal := KeyVal{
+			Key:   k,
+			Value: defaultValue,
+		}
+		rkvs = append(rkvs, RawKeyVal{
+			KeyVal: keyVal,
+			Action: action,
 		})
 	}
 
-	return kvs, nil
+	return rkvs, nil
 }
 
-func render(s KVStore, ir io.Reader, iw io.Writer, kvS *kvState, tmpFunc tempFunc, rdFileFunc readFileFunc) error {
+func (rd *rendering) render(ir io.Reader, iw io.Writer) error {
 	bs, err := ioutil.ReadAll(ir)
 	if err != nil {
 		return err
 	}
 
-	kvs, err := scan(bytes.NewBuffer(bs), rdFileFunc)
+	rkvs, err := rd.scan(bytes.NewBuffer(bs))
 	if err != nil {
 		return err
 	}
 
 	vars := make(map[string]string)
-	for _, kv := range kvs {
-		val, err := valueOf(s, kv.Key, Action{Type: kv.actionType, Value: kv.Value}, kvS, tmpFunc, rdFileFunc)
+	for _, rkv := range rkvs {
+		val, err := rd.valueOf(rkv)
 		if err != nil {
 			return err
 		}
-		switch kv.Kind {
+		switch rkv.Kind {
 		case EnvKind:
 			if val == "" {
-				return fmt.Errorf("got empty value on required env key: %v", kv.Key)
+				return fmt.Errorf("got empty value on required env key: %v", rkv.Key)
 			}
-			vars[kv.Name] = val
+			vars[rkv.Name] = val
 		case EnvoKind:
-			vars[kv.Name] = val
+			vars[rkv.Name] = val
+		case EnvkKind:
+			if val == "" {
+				return fmt.Errorf("got empty value on required envk key: %v", rkv.Key)
+			}
+			out, err := rd.cred.Decrypt(val)
+			if err != nil {
+				return fmt.Errorf("decrypt secret %v failed: %v", rkv.Name, err)
+			}
+			vars[rkv.Name] = out
 		case EnvfKind:
 			if val == "" {
-				return fmt.Errorf("got empty value on required envf key: %v", kv.Key)
+				return fmt.Errorf("got empty value on required envf key: %v", rkv.Key)
 			}
 			// Create a tmp file save the val as it's content, and set the file name to the key
-			f, err := tmpFunc(EnvfKindTmpDir, "envf-*.out")
+			f, err := rd.tmpFunc(EnvfKindTmpDir, "envf-*.out")
 			if err != nil {
 				return err
 			}
@@ -204,9 +239,9 @@ func render(s KVStore, ir io.Reader, iw io.Writer, kvS *kvState, tmpFunc tempFun
 				return err
 			}
 			f.Close()
-			vars[kv.Name] = f.Name()
+			vars[rkv.Name] = f.Name()
 		default:
-			return fmt.Errorf("unexpected env key kind: %v", kv.Kind)
+			return fmt.Errorf("unexpected env key kind: %v", rkv.Kind)
 		}
 	}
 
@@ -239,8 +274,10 @@ func render(s KVStore, ir io.Reader, iw io.Writer, kvS *kvState, tmpFunc tempFun
 	return nil
 }
 
-func valueOf(s KVStore, key Key, av Action, kvS *kvState, tmpFunc tempFunc, rdFileFunc readFileFunc) (string, error) {
-	rawKey := key
+func (rd *rendering) valueOf(rkv RawKeyVal) (string, error) {
+	rk := rkv.Key
+	key := rkv.Key
+	action := rkv.Action
 	if key.Kind == EnvoKind {
 		// Optional env ONLY used for checking if the value is required or not when rendering
 		// The underlying kind is always env for env & envo cases.
@@ -249,48 +286,50 @@ func valueOf(s KVStore, key Key, av Action, kvS *kvState, tmpFunc tempFunc, rdFi
 
 	var value string
 	var err error
-	switch av.Type {
+	switch action.Type {
 	case actionOverwrite:
-		if av.Value == nonePlaceHolder {
+		val := rkv.KeyVal.Value
+		if val == none {
 			return "", fmt.Errorf("overwrite with none is not allowed")
 		}
-		value, err = set(s, key, av.Value)
+
+		// overwrite with given value
+		value, err = rd.set(key, val)
 		if err != nil {
-			return "", fmt.Errorf("overwrite %v with %v failed: %w", key, briefOf(value), err)
+			return "", fmt.Errorf("overwrite %v with %v failed: %w", rk, briefOf(value), err)
 		}
-		log.Debugf("overwrite key %v with value %v, length: %v", rawKey, briefOf(value), len(value))
+		log.Debugf("overwrite key %v with value %v, length: %v", rk, briefOf(value), len(value))
 	case actionPrefix:
-		value, err = s.Get(key, true)
+		value, err = rd.get(key, true)
 		if err != nil {
 			if !errors.Is(err, ErrNotFound) {
-				return "", fmt.Errorf("get valueOf by prefix: %v failed: %w", key, err)
-			} else {
-				return ``, nil
+				return "", fmt.Errorf("get valueOf by prefix: %v failed: %w", rk, err)
 			}
+			return "", nil
 		}
 	default:
-		value, err = s.Get(key, false)
+		value, err = rd.get(key, false)
 		if err != nil && !errors.Is(err, ErrNotFound) {
-			return "", fmt.Errorf("get valueOf %v failed: %w", key, err)
+			return "", fmt.Errorf("get valueOf %v failed: %w", rk, err)
 		}
 		if errors.Is(err, ErrNotFound) {
-			if rawKey.Kind == EnvoKind {
-				if av.Value != nonePlaceHolder && av.Value != defaultEmptyStub {
-					log.Warnf("ignoring default value: %v on key: %v", av.Value, rawKey)
-				}
-				return "", nil
+			val := rkv.KeyVal.Value
+			if rk.Kind == EnvoKind && val == none {
+				return "", nil // envo(optional key) have no default value, return directly.
 			}
-			value, err = set(s, key, av.Value)
+
+			// set default value
+			value, err = rd.set(key, val)
 			if err != nil {
-				return "", fmt.Errorf("set %v with default: %v failed: %w", key, briefOf(value), err)
+				return "", fmt.Errorf("set %v with default: %v failed: %w", rk, briefOf(value), err)
 			}
-			if av.Value != nonePlaceHolder {
-				log.Infof("Set key %v with default value %v, length: %v", rawKey, briefOf(value), len(value))
+			if val != none {
+				log.Debugf("Set key %v with default value %v, length: %v", rk, briefOf(value), len(value))
 			}
 		}
 	}
 
-	kvS.set(key.Name)
+	rd.kvS.set(key.Name)
 
 	keyRes := envKeyRegex.FindAllStringSubmatch(value, -1)
 	if len(keyRes) == 0 {
@@ -299,52 +338,42 @@ func valueOf(s KVStore, key Key, av Action, kvS *kvState, tmpFunc tempFunc, rdFi
 
 	for _, keyMatch := range keyRes {
 		kv, _ := keyFromMatchItem(keyMatch)
-		if kvS.exists(kv.Name) {
+		if rd.kvS.exists(kv.Name) {
 			return "", fmt.Errorf("cycle key usage found on %v", kv.Name)
 		}
 	}
 
 	i := bytes.NewBufferString(value)
 	out := &bytes.Buffer{}
-	if err := render(s, i, out, kvS, tmpFunc, rdFileFunc); err != nil {
+	if err := rd.render(i, out); err != nil {
 		return "", fmt.Errorf(`render nested key "%v" failed: %w`, briefOf(value), err)
 	}
 
 	return out.String(), nil
 }
 
-func set(s KVStore, key Key, value string) (string, error) {
-	if value == nonePlaceHolder {
+func (rd *rendering) set(key Key, value string) (string, error) {
+	if value == none {
 		return "", nil
 	}
-	if value == defaultEmptyStub {
+	if value == empty {
 		value = ""
 	}
-	if err := s.Set(key, value); err != nil {
+	if key.Kind == EnvkKind {
+		var err error
+		value, err = rd.cred.Encrypt(value)
+		if err != nil {
+			return "", fmt.Errorf("encrypt %v failed: %w", key, err)
+		}
+	}
+	if err := rd.s.Set(key, value); err != nil {
 		return "", fmt.Errorf("set %v with value %v failed: %w", key, briefOf(value), err)
 	}
 	return value, nil
 }
 
-func briefOf(value string) string {
-	if len(value) > briefMaxLen {
-		return value[:briefMaxLen] + "..."
-	}
-	return value
-}
-
-func keyFromMatchItem(match []string) (Key, Action) {
-	kind, key, actionType, actionValue := EnvKind+match[1], match[2], match[4], match[5]
-	if match[3] == "" || match[5] == "" {
-		actionValue = nonePlaceHolder
-	}
-	if actionType == "" {
-		actionType = actionDefault
-	}
-	if actionType != actionDefault && actionType != actionOverwrite && actionType != actionPrefix {
-		actionType = actionDefault
-	}
-	return Key{Kind: kind, Name: key}, Action{Type: actionType, Value: actionValue}
+func (rd *rendering) get(key Key, isPrefix bool) (string, error) {
+	return rd.s.Get(key, isPrefix)
 }
 
 type kvState struct {
@@ -371,4 +400,25 @@ func (kvs *kvState) exists(key string) bool {
 	defer kvs.Unlock()
 	_, ok := kvs.m[stateKey]
 	return ok
+}
+
+func briefOf(value string) string {
+	if len(value) > briefMaxLen {
+		return value[:briefMaxLen] + "..."
+	}
+	return value
+}
+
+func keyFromMatchItem(match []string) (Key, Action) {
+	kind, key, actionType, actionValue := EnvKind+match[1], match[2], match[4], match[5]
+	if match[3] == "" || match[5] == "" {
+		actionValue = none
+	}
+	if actionType == "" {
+		actionType = actionDefault
+	}
+	if actionType != actionDefault && actionType != actionOverwrite && actionType != actionPrefix {
+		actionType = actionDefault
+	}
+	return Key{Kind: kind, Name: key}, Action{Type: actionType, Value: actionValue}
 }

@@ -523,6 +523,8 @@ func runProc(nameArgs, osEnvs []string, isRunOnlyOnce bool, terminate chan exitS
 	}
 
 end:
+	os.Stderr.Sync()
+	_ = os.Stdout.Sync()
 	atomic.StoreInt64(&procState, ProcStopped)
 	return status
 }

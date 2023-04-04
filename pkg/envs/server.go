@@ -13,6 +13,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
+	"tespkg.in/envs/pkg/kvs"
 	"tespkg.in/envs/pkg/store"
 	"tespkg.in/envs/pkg/store/consul"
 	"tespkg.in/envs/pkg/store/etcd"
@@ -55,6 +56,10 @@ func newServer(a *Args, p *patchTable) (*Server, error) {
 		return nil, err
 	}
 
+	creds, err := kvs.NewCreds()
+	if err != nil {
+		return nil, fmt.Errorf("create creds failed: %w", err)
+	}
 	// Connect to env store, i.e, consul.
 	u, err := url.Parse(a.Dsn)
 	if err != nil {
@@ -106,7 +111,7 @@ func newServer(a *Args, p *patchTable) (*Server, error) {
 	})
 
 	// Create APIs handler
-	handler := NewHandler(s)
+	handler := NewHandler(s, creds)
 	// APIs for all key kind
 	ge.GET("key/*fully_qualified_key_name", handler.GetKey)
 	ge.GET("keys", handler.GetKeys)
