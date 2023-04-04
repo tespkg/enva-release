@@ -8,7 +8,6 @@
 In this README:
 
 - [Use cases](#use-cases)
-- [Workflow](#workflow)
 - [Conventions](#conventions)
 - [Tutorials](#tutorials)
 - [Architecture](#architecture)
@@ -23,10 +22,6 @@ In this README:
    directly.
 1. (DevOps)Change config value & restart automatically.
 1. (Dev/DevOps)Centralise/Unify vendor images version.
-1. (BackendDev)Spilt fundamental/basic services and application service into two start-up phase.
-1. (BackendDev)Share same fundamental/basic services during develop multiple service at same time.
-1. (BackendDev)Setup the basic frontend website, such as sso-example-app, acconsole, configurator.
-1. (FrontendDev)Minimised steps to setup local fundamental services for development.
 
 ## Conventions
 
