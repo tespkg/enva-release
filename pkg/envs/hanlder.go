@@ -406,6 +406,63 @@ func (h *Handler) PutEnvfKey(c *gin.Context) {
 	c.JSON(http.StatusOK, struct{}{})
 }
 
+type SecretRequest struct {
+	Plaintexts []string `json:"plaintexts"`
+}
+
+type Secrets struct {
+	Plaintexts  []string `json:"plaintexts"`
+	Ciphertexts []string `json:"ciphertexts"`
+}
+
+func (h *Handler) GenerateSecret(c *gin.Context) {
+	var req SecretRequest
+	if err := c.BindJSON(&req); err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("parse request body failed: %v", err))
+		return
+	}
+
+	var ciphers []string
+	for _, txt := range req.Plaintexts {
+		ciphertext, err := h.cred.Encrypt(txt)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("generate secret failed: %v", err))
+			return
+		}
+		ciphers = append(ciphers, ciphertext)
+	}
+	result := &Secrets{
+		Plaintexts:  req.Plaintexts,
+		Ciphertexts: ciphers,
+	}
+	c.JSON(http.StatusOK, result)
+}
+
+func (h *Handler) VerifySecret(c *gin.Context) {
+	var req Secrets
+	if err := c.BindJSON(&req); err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("parse request body failed: %v", err))
+		return
+	}
+
+	if len(req.Ciphertexts) != len(req.Plaintexts) {
+		c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("invalid request"))
+		return
+	}
+	for i, ciphertext := range req.Ciphertexts {
+		got, err := h.cred.Decrypt(ciphertext)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, jsonErrorf("decrypt secret failed"))
+			return
+		}
+		if got != req.Plaintexts[i] {
+			c.AbortWithStatusJSON(http.StatusBadRequest, jsonErrorf("invalid secret pair at index %v", i))
+			return
+		}
+	}
+	c.JSON(http.StatusOK, struct{}{})
+}
+
 func storeKVs2kvs(kvals store.KeyVals) kvs.KeyVals {
 	specKVals := kvs.KeyVals{}
 	for _, kval := range kvals {

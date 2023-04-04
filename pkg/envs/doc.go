@@ -12,11 +12,14 @@ import (
 )
 
 const (
-	keyValTag     = "KeyVal"
-	envKeyValTag  = "EnvKeyVal"
-	fileKeyValTag = "FileKeyVal"
-	keyValDef     = "keyVal"
-	envKeyValDef  = "envKeyVal"
+	keyValTag                = "KeyVal"
+	envKeyValTag             = "EnvKeyVal"
+	fileKeyValTag            = "FileKeyVal"
+	secretTag                = "Secret"
+	keyValDef                = "keyVal"
+	envKeyValDef             = "envKeyVal"
+	generateSecretRequestDef = "generateSecret"
+	secretsDef               = "secrets"
 )
 
 // GenerateSpec generate openapi spec
@@ -26,8 +29,10 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 	// 2. Definition for spec.Header & spec.Spec & spec.Specs model
 	// 3. Definition for spec.
 	specDefs := map[string]openspec.Schema{
-		keyValDef:    openapi.GenerateModel(reflect.ValueOf(kvs.KeyVal{})),
-		envKeyValDef: openapi.GenerateModel(reflect.ValueOf(EnvKeyVal{})),
+		keyValDef:                openapi.GenerateModel(reflect.ValueOf(kvs.KeyVal{})),
+		envKeyValDef:             openapi.GenerateModel(reflect.ValueOf(EnvKeyVal{})),
+		generateSecretRequestDef: openapi.GenerateModel(reflect.ValueOf(SecretRequest{})),
+		secretsDef:               openapi.GenerateModel(reflect.ValueOf(Secrets{})),
 	}
 
 	tags := []openspec.Tag{
@@ -241,6 +246,47 @@ func GenerateSpec(iw io.Writer, sa openapi.SpecArgs) error {
 		},
 	}
 
+	// 7. generate secret post
+	pathItems["/secret/generate"] = openspec.PathItem{
+		PathItemProps: openspec.PathItemProps{
+			Post: &openspec.Operation{
+				OperationProps: openspec.OperationProps{
+					ID:          "GenerateSecret",
+					Summary:     "Generate secret",
+					Description: "Generate secret with the given plain texts",
+					Produces:    []string{"application/json"},
+					Tags:        []string{secretTag},
+					Parameters: []openspec.Parameter{
+						openapi.BuildParam("body", "body", "", "", true, nil).
+							WithNewSchema(openapi.ObjRefSchema(generateSecretRequestDef)).
+							WithParameterDesc("plain texts"),
+					},
+					Responses: openapi.BuildResp(http.StatusOK, openapi.BuildSuccessResp(openapi.ObjRefSchema(secretsDef))),
+				},
+			},
+		},
+	}
+
+	// 8. verify secret post
+	pathItems["/secret/verify"] = openspec.PathItem{
+		PathItemProps: openspec.PathItemProps{
+			Post: &openspec.Operation{
+				OperationProps: openspec.OperationProps{
+					ID:          "VerifySecret",
+					Summary:     "Verify secret",
+					Description: "Verify secret with the given cipher & plain text pairs",
+					Produces:    []string{"application/json"},
+					Tags:        []string{secretTag},
+					Parameters: []openspec.Parameter{
+						openapi.BuildParam("body", "body", "", "", true, nil).
+							WithNewSchema(openapi.ObjRefSchema(secretsDef)).
+							WithParameterDesc("cipher & plain text pairs"),
+					},
+					Responses: openapi.BuildResp(http.StatusOK, openapi.BuildSuccessResp(nil)),
+				},
+			},
+		},
+	}
 	// Create a swagger spec & set the basic infos
 	swspec := openapi.NewSpec(sa)
 

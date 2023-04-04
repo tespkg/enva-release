@@ -130,6 +130,10 @@ func newServer(a *Args, p *patchTable) (*Server, error) {
 		c.Redirect(http.StatusFound, a.StaticAssetPath)
 	})
 
+	// APIs for secret
+	ge.POST("secret/generate", handler.GenerateSecret)
+	ge.POST("secret/verify", handler.VerifySecret)
+
 	ge.GET("/healthz", func(c *gin.Context) {})
 
 	return &Server{
