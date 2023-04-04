@@ -39,6 +39,12 @@ func TestAgentRun(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	s := kvs.NewMockKVStore(mockCtrl)
 
+	creds, err := kvs.NewCreds()
+	require.Nil(t, err)
+
+	planintext := "123"
+	ciphertext, _ := creds.Encrypt(planintext)
+
 	se := s.EXPECT()
 	se.Get(kvs.Key{Kind: kvs.EnvKind, Name: "tailFilename"}, false).Return("agent_test.go", nil).AnyTimes()
 
@@ -58,9 +64,12 @@ func TestAgentRun(t *testing.T) {
 	se.Set(kvs.Key{Kind: kvs.EnvfKind, Name: "everywhere"}, "content of /tmp/path/to/everywhere/file").Return(nil).AnyTimes()
 	se.Get(kvs.Key{Kind: kvs.EnvKind, Name: "prefixKey"}, true).Return(`{"prefixKey/key1":"val1","prefixKey/key2":"val2"}`, nil)
 	se.Get(kvs.Key{Kind: kvs.EnvKind, Name: "prefixKey1"}, true).Return(`{"prefixKey1/key1":"val1","prefixKey1/key2":"val2"}`, nil)
+	se.Get(kvs.Key{Kind: kvs.EnvkKind, Name: "secret1"}, false).Return(ciphertext, nil)
+	se.Get(kvs.Key{Kind: kvs.EnvkKind, Name: "secret2"}, false).Return("", kvs.ErrNotFound)
+	se.Set(kvs.Key{Kind: kvs.EnvkKind, Name: "secret2"}, gomock.Any()).Return(nil)
 
 	lengthFile := "/tmp/path/to/length/file"
-	err := os.MkdirAll(filepath.Dir(lengthFile), 0755)
+	err = os.MkdirAll(filepath.Dir(lengthFile), 0755)
 	require.Nil(t, err)
 	err = ioutil.WriteFile(lengthFile, []byte("content of "+lengthFile), 0755)
 	require.Nil(t, err)
