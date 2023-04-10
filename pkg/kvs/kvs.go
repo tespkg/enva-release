@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -228,8 +229,9 @@ func (rd *rendering) render(ir io.Reader, iw io.Writer) error {
 			if val == "" {
 				return fmt.Errorf("got empty value on required envf key: %v", rkv.Key)
 			}
+			pattern := tmpPattern(rkv.Action.Value)
 			// Create a tmp file save the val as it's content, and set the file name to the key
-			f, err := rd.tmpFunc(EnvfKindTmpDir, "envf-*.out")
+			f, err := rd.tmpFunc(EnvfKindTmpDir, pattern)
 			if err != nil {
 				return err
 			}
@@ -421,4 +423,26 @@ func keyFromMatchItem(match []string) (Key, Action) {
 		actionType = actionDefault
 	}
 	return Key{Kind: kind, Name: key}, Action{Type: actionType, Value: actionValue}
+}
+
+func tmpPattern(hint string) string {
+	ext := ".out"
+	name := "envf-*"
+	if hint == "" {
+		return name + ext
+	}
+	fn := filepath.Base(hint)
+	i := len(fn) - 1
+	for ; i >= 0 && !os.IsPathSeparator(fn[i]); i-- {
+		if fn[i] == '.' {
+			break
+		}
+	}
+	if i < 0 {
+		return fn + "__" + name + ext
+	}
+	if len(fn[i:]) > 1 {
+		ext = fn[i:]
+	}
+	return fn[:i] + "__" + name + ext
 }

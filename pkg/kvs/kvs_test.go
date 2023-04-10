@@ -271,3 +271,21 @@ func TestKeyVals_MarshalJSON(t *testing.T) {
 		require.Equal(t, v.expected, string(out), string(out))
 	}
 }
+
+func TestTmpPattern(t *testing.T) {
+	cases := []struct {
+		input  string
+		expect string
+	}{
+		{"", "envf-*.out"},
+		{"a/b/c.yaml", "c__envf-*.yaml"},
+		{"/a/b/c.yaml", "c__envf-*.yaml"},
+		{"a/b/c", "c__envf-*.out"},
+		{"a/b/c.", "c__envf-*.out"},
+	}
+
+	for _, v := range cases {
+		got := tmpPattern(v.input)
+		require.Equal(t, v.expect, got)
+	}
+}
