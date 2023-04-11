@@ -249,3 +249,24 @@ func TestIsVarEqual(t *testing.T) {
 		require.Equal(t, c.expected, got, c.name)
 	}
 }
+
+func TestParseEnvfVar(t *testing.T) {
+	kvs.EnvfKindTmpDir = "/tmp"
+	cases := []struct {
+		input  string
+		expect []string
+	}{
+		{"", nil},
+		{"abc /tmp/envf-466593015__config-dmz abc", nil},
+		{"/tmp/envf-466593015__config-dmz", nil},
+		{"/tmp/envf-.yaml", nil},
+		{"/tmp/envf-466593015__config-dmz.yaml", []string{"/tmp/envf-466593015__config-dmz.yaml"}},
+		{"abc /tmp/envf-466593015__config-dmz.yaml abc", []string{"/tmp/envf-466593015__config-dmz.yaml"}},
+	}
+
+	for _, v := range cases {
+		got1, got2 := parseEnvfVar(v.input)
+		_ = got1
+		require.Equal(t, v.expect, got2)
+	}
+}

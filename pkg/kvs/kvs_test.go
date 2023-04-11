@@ -278,10 +278,10 @@ func TestTmpPattern(t *testing.T) {
 		expect string
 	}{
 		{"", "envf-*.out"},
-		{"a/b/c.yaml", "c__envf-*.yaml"},
-		{"/a/b/c.yaml", "c__envf-*.yaml"},
-		{"a/b/c", "c__envf-*.out"},
-		{"a/b/c.", "c__envf-*.out"},
+		{"a/b/c.yaml", "envf-*__c.yaml"},
+		{"/a/b/c.yaml", "envf-*__c.yaml"},
+		{"a/b/c", "envf-*__c.out"},
+		{"a/b/c.", "envf-*__c.out"},
 	}
 
 	for _, v := range cases {

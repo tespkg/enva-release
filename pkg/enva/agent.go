@@ -125,7 +125,7 @@ func parseEnvfVar(variable string) (string, []string) {
 	if tmpDir == "" {
 		tmpDir = os.TempDir()
 	}
-	regF := regexp.MustCompile(fmt.Sprintf(`%s/envf-([0-9]*)\.out`, tmpDir))
+	regF := regexp.MustCompile(fmt.Sprintf(`%s/envf-([^\s]+)\.([^\s]+)`, tmpDir))
 	res := regF.FindAllStringSubmatch(variable, -1)
 	if len(res) == 0 {
 		return variable, nil

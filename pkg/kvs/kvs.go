@@ -29,8 +29,6 @@ const (
 	// The underlying kind is always env for env & envo cases.
 	EnvoKind = "envo"
 
-	EnvfKindTmpDir = ""
-
 	briefMaxLen = 50
 
 	actionDefault   = "default"
@@ -39,6 +37,10 @@ const (
 
 	empty = `''`
 	none  = "nonePlaceHolder"
+)
+
+var (
+	EnvfKindTmpDir = ""
 )
 
 var (
@@ -229,8 +231,8 @@ func (rd *rendering) render(ir io.Reader, iw io.Writer) error {
 			if val == "" {
 				return fmt.Errorf("got empty value on required envf key: %v", rkv.Key)
 			}
-			pattern := tmpPattern(rkv.Action.Value)
 			// Create a tmp file save the val as it's content, and set the file name to the key
+			pattern := tmpPattern(rkv.Action.Value)
 			f, err := rd.tmpFunc(EnvfKindTmpDir, pattern)
 			if err != nil {
 				return err
@@ -427,9 +429,9 @@ func keyFromMatchItem(match []string) (Key, Action) {
 
 func tmpPattern(hint string) string {
 	ext := ".out"
-	name := "envf-*"
+	prefix := "envf-*"
 	if hint == "" {
-		return name + ext
+		return prefix + ext
 	}
 	fn := filepath.Base(hint)
 	i := len(fn) - 1
@@ -439,10 +441,10 @@ func tmpPattern(hint string) string {
 		}
 	}
 	if i < 0 {
-		return fn + "__" + name + ext
+		return prefix + "__" + fn + ext
 	}
 	if len(fn[i:]) > 1 {
 		ext = fn[i:]
 	}
-	return fn[:i] + "__" + name + ext
+	return prefix + "__" + fn[:i] + ext
 }
