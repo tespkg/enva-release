@@ -262,6 +262,8 @@ func TestParseEnvfVar(t *testing.T) {
 		{"/tmp/envf-.yaml", nil},
 		{"/tmp/envf-466593015__config-dmz.yaml", []string{"/tmp/envf-466593015__config-dmz.yaml"}},
 		{"abc /tmp/envf-466593015__config-dmz.yaml abc", []string{"/tmp/envf-466593015__config-dmz.yaml"}},
+		{"abc /tmp/envf-797864530__application.conf abc", []string{"/tmp/envf-797864530__application.conf"}},
+		{"DF_CATALOG_OPTS=-Dconfig.file='/tmp/envf-532473106__application.conf'", []string{"/tmp/envf-532473106__application.conf"}},
 	}
 
 	for _, v := range cases {
