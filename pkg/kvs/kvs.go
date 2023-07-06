@@ -363,13 +363,6 @@ func (rd *rendering) set(key Key, value string) (string, error) {
 	if value == empty {
 		value = ""
 	}
-	if key.Kind == EnvkKind {
-		var err error
-		value, err = rd.cred.Encrypt(value)
-		if err != nil {
-			return "", fmt.Errorf("encrypt %v failed: %w", key, err)
-		}
-	}
 	if err := rd.s.Set(key, value); err != nil {
 		return "", fmt.Errorf("set %v with value %v failed: %w", key, briefOf(value), err)
 	}

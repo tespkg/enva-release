@@ -23,4 +23,4 @@ prefix:
 
 envk:
   - "${envk:// .secret1 }"
-  - "${envk:// .secret2 | default 123}"
+  - "${envk:// .secret2 | default 8mhvKjArTGOVy95gWw5Q6wBui7yOXIb/H5ofA7Qi1g== }"

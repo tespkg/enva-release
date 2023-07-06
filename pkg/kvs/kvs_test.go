@@ -28,6 +28,8 @@ func TestScan(t *testing.T) {
 	kvs, err := rd.scan(bytes.NewBufferString(doc))
 	require.Nil(t, err)
 
+	ciphertext := "8mhvKjArTGOVy95gWw5Q6wBui7yOXIb/H5ofA7Qi1g==" // 123
+
 	expected := RawKeyVals{
 		{
 			KeyVal: KeyVal{Key: Key{Kind: EnvKind, Name: "poet"}, Value: none},
@@ -86,8 +88,8 @@ func TestScan(t *testing.T) {
 			Action: Action{Type: actionDefault, Value: none},
 		},
 		{
-			KeyVal: KeyVal{Key: Key{Kind: EnvkKind, Name: "secret2"}, Value: "123"},
-			Action: Action{Type: actionDefault, Value: "123"},
+			KeyVal: KeyVal{Key: Key{Kind: EnvkKind, Name: "secret2"}, Value: ciphertext},
+			Action: Action{Type: actionDefault, Value: ciphertext},
 		},
 	}
 
@@ -195,7 +197,7 @@ func TestRegex(t *testing.T) {
 		`Hi, this is ${envf:// .config }, I'm speaking to ${env:// .clientID | default alice }'`,
 		`Hi, this is ${envf:// .config }, I'm speaking to ${env:// .clientID | default ~!@#$%^&*()_+-={}[]|\:";'<>?,./'" }'`,
 		`Hi, this is ${envf:// .config }, I'm speaking to ${env:// .clientID | prefix }'`,
-		`Hi, this is ${envk:// .config }, I'm speaking to ${envk:// .clientID | default abc }'`,
+		`Hi, this is ${envk:// .config }, I'm speaking to ${envk:// .clientID | default 8mhvKjArTGOVy95gWw5Q6wBui7yOXIb/H5ofA7Qi1g== }'`,
 	}
 
 	for idx, c := range cases {
