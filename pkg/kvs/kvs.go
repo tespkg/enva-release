@@ -328,6 +328,7 @@ func (rd *rendering) valueof(rkv RawKeyVal) (string, error) {
 			if err != nil {
 				return "", fmt.Errorf("inline overwrie failed: %w", err)
 			}
+			log.Debugf("inline overwrite key %v with value %v, length: %v", rk, briefOf(value), len(value))
 		} else {
 			value, err = rd.get(key, false)
 			if err != nil {
@@ -348,10 +349,10 @@ func (rd *rendering) valueof(rkv RawKeyVal) (string, error) {
 			// set default value
 			value, err = rd.set(key, val)
 			if err != nil {
-				return "", fmt.Errorf("set %v with default: %v failed: %w", rk, briefOf(value), err)
+				return "", fmt.Errorf("set default failed: %w", err)
 			}
 			if val != none {
-				log.Debugf("Set key %v with default value %v, length: %v", rk, briefOf(value), len(value))
+				log.Debugf("set key %v with default value %v, length: %v", rk, briefOf(value), len(value))
 			}
 		}
 	}
