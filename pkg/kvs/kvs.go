@@ -423,10 +423,11 @@ func (kvs *kvState) exists(key string) bool {
 }
 
 func briefOf(value string) string {
+	out := value
 	if len(value) > briefMaxLen {
-		return value[:briefMaxLen] + "..."
+		out = value[:briefMaxLen] + "..."
 	}
-	return value
+	return strings.ReplaceAll(out, "\n", "\\n")
 }
 
 func keyFromMatchItem(match []string) (Key, Action) {
