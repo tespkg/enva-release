@@ -321,15 +321,14 @@ func (rd *rendering) valueof(rkv RawKeyVal) (string, error) {
 		if rk.Kind != EnvfKind {
 			return "", fmt.Errorf("expect inline on envf")
 		}
-		switch rkv.Action.Value {
-		case none:
+		if rkv.Action.Value != none {
 			// act like overwrite when action value is not none
 			val := rkv.KeyVal.Value
 			value, err = rd.set(key, val)
 			if err != nil {
 				return "", fmt.Errorf("inline overwrie failed: %w", err)
 			}
-		default:
+		} else {
 			value, err = rd.get(key, false)
 			if err != nil {
 				return "", fmt.Errorf("get valueof %v failed: %w", rk, err)
