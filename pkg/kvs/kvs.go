@@ -33,7 +33,8 @@ const (
 
 	actionDefault   = "default"
 	actionOverwrite = "overwrite"
-	actionPrefix    = `prefix`
+	actionPrefix    = "prefix"
+	actionInline    = "inline"
 
 	empty = `''`
 	none  = "nonePlaceHolder"
@@ -53,7 +54,7 @@ var (
 )
 
 var (
-	envKeyRegex = regexp.MustCompile(`\${env([ofk])?:// *\.([_a-zA-Z][_a-zA-Z0-9]*) *(\| *(default|overwrite|prefix) *([~!@#$%^&*()\-_+={}\[\]:";'<>,.?/|\\a-zA-Z0-9]*))? *}`)
+	envKeyRegex = regexp.MustCompile(`\${env([ofk])?:// *\.([_a-zA-Z][_a-zA-Z0-9]*) *(\| *(default|overwrite|prefix|inline) *([~!@#$%^&*()\-_+={}\[\]:";'<>,.?/|\\a-zA-Z0-9]*))? *}`)
 )
 
 type KVStore interface {
@@ -169,6 +170,7 @@ func (rd *rendering) scan(r io.Reader) (RawKeyVals, error) {
 		k, action := keyFromMatchItem(keyMatch)
 		defaultValue := strings.TrimSpace(action.Value)
 		if k.Kind == EnvfKind && action.Value != "" && action.Value != none {
+			// read the default file that represented by action.Value
 			b, err := rd.readFileFunc(action.Value)
 			if err != nil {
 				return nil, fmt.Errorf("invalid envf: %v with %v, err: %v", k.Name, action, err)
@@ -206,7 +208,7 @@ func (rd *rendering) render(ir io.Reader, iw io.Writer) error {
 
 	vars := make(map[string]string)
 	for _, rkv := range rkvs {
-		val, err := rd.valueOf(rkv)
+		val, err := rd.valueof(rkv)
 		if err != nil {
 			return err
 		}
@@ -230,6 +232,10 @@ func (rd *rendering) render(ir io.Reader, iw io.Writer) error {
 		case EnvfKind:
 			if val == "" {
 				return fmt.Errorf("got empty value on required envf key: %v", rkv.Key)
+			}
+			if rkv.Action.Type == actionInline {
+				vars[rkv.Name] = val
+				continue
 			}
 			// Create a tmp file save the val as it's content, and set the file name to the key
 			pattern := tmpPattern(rkv.Action.Value)
@@ -278,7 +284,7 @@ func (rd *rendering) render(ir io.Reader, iw io.Writer) error {
 	return nil
 }
 
-func (rd *rendering) valueOf(rkv RawKeyVal) (string, error) {
+func (rd *rendering) valueof(rkv RawKeyVal) (string, error) {
 	rk := rkv.Key
 	key := rkv.Key
 	action := rkv.Action
@@ -300,21 +306,39 @@ func (rd *rendering) valueOf(rkv RawKeyVal) (string, error) {
 		// overwrite with given value
 		value, err = rd.set(key, val)
 		if err != nil {
-			return "", fmt.Errorf("overwrite %v with %v failed: %w", rk, briefOf(value), err)
+			return "", fmt.Errorf("overwrite failed: %w", err)
 		}
 		log.Debugf("overwrite key %v with value %v, length: %v", rk, briefOf(value), len(value))
 	case actionPrefix:
 		value, err = rd.get(key, true)
 		if err != nil {
 			if !errors.Is(err, ErrNotFound) {
-				return "", fmt.Errorf("get valueOf by prefix: %v failed: %w", rk, err)
+				return "", fmt.Errorf("get valueof %v by prefix failed: %w", rk, err)
 			}
 			return "", nil
+		}
+	case actionInline:
+		if rk.Kind != EnvfKind {
+			return "", fmt.Errorf("expect inline on envf")
+		}
+		switch rkv.Action.Value {
+		case none:
+			// act like overwrite when action value is not none
+			val := rkv.KeyVal.Value
+			value, err = rd.set(key, val)
+			if err != nil {
+				return "", fmt.Errorf("inline overwrie failed: %w", err)
+			}
+		default:
+			value, err = rd.get(key, false)
+			if err != nil {
+				return "", fmt.Errorf("get valueof %v failed: %w", rk, err)
+			}
 		}
 	default:
 		value, err = rd.get(key, false)
 		if err != nil && !errors.Is(err, ErrNotFound) {
-			return "", fmt.Errorf("get valueOf %v failed: %w", rk, err)
+			return "", fmt.Errorf("get valueof %v failed: %w", rk, err)
 		}
 		if errors.Is(err, ErrNotFound) {
 			val := rkv.KeyVal.Value
@@ -414,7 +438,7 @@ func keyFromMatchItem(match []string) (Key, Action) {
 	if actionType == "" {
 		actionType = actionDefault
 	}
-	if actionType != actionDefault && actionType != actionOverwrite && actionType != actionPrefix {
+	if actionType != actionDefault && actionType != actionOverwrite && actionType != actionPrefix && actionType != actionInline {
 		actionType = actionDefault
 	}
 	return Key{Kind: kind, Name: key}, Action{Type: actionType, Value: actionValue}
@@ -423,7 +447,7 @@ func keyFromMatchItem(match []string) (Key, Action) {
 func tmpPattern(hint string) string {
 	ext := ".out"
 	prefix := "envf-*"
-	if hint == "" {
+	if hint == "" || hint == none {
 		return prefix + ext
 	}
 	fn := filepath.Base(hint)

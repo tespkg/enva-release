@@ -13,6 +13,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"tespkg.in/envs/pkg/kvs"
 	"tespkg.in/envs/pkg/store"
 	"tespkg.in/envs/pkg/store/consul"
@@ -135,6 +136,8 @@ func newServer(a *Args, p *patchTable) (*Server, error) {
 	ge.POST("secret/verify", handler.VerifySecret)
 
 	ge.GET("/healthz", func(c *gin.Context) {})
+
+	ge.GET("metrics", gin.WrapH(promhttp.Handler()))
 
 	return &Server{
 		ginEngine: ge,

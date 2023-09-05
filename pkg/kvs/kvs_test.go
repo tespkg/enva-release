@@ -76,6 +76,14 @@ func TestScan(t *testing.T) {
 			Action: Action{Type: actionOverwrite, Value: "/tmp/path/to/everywhere/file"},
 		},
 		{
+			KeyVal: KeyVal{Key: Key{Kind: EnvfKind, Name: "inlinekey1"}, Value: none},
+			Action: Action{Type: actionInline, Value: none},
+		},
+		{
+			KeyVal: KeyVal{Key: Key{Kind: EnvfKind, Name: "inlinekey2"}, Value: "content of /tmp/path/to/inlinekey2/file"},
+			Action: Action{Type: actionInline, Value: "/tmp/path/to/inlinekey2/file"},
+		},
+		{
 			KeyVal: KeyVal{Key: Key{Kind: EnvKind, Name: "prefixKey"}, Value: none},
 			Action: Action{Type: actionPrefix, Value: none},
 		},
@@ -122,6 +130,8 @@ func TestRender(t *testing.T) {
 	se.Get(Key{Kind: EnvKind, Name: "crossbow"}, false).Return("crossbow", nil).AnyTimes()
 	se.Get(Key{Kind: EnvfKind, Name: "ALBATROSS"}, false).Return("ALBATROSS", nil).AnyTimes()
 	se.Set(Key{Kind: EnvfKind, Name: "everywhere"}, "content of /tmp/path/to/everywhere/file").Return(nil).AnyTimes()
+	se.Get(Key{Kind: EnvfKind, Name: "inlinekey1"}, false).Return("content of /tmp/path/to/inlinekey1/file", nil).AnyTimes()
+	se.Set(Key{Kind: EnvfKind, Name: "inlinekey2"}, "content of /tmp/path/to/inlinekey2/file").Return(nil).AnyTimes()
 	se.Get(Key{Kind: EnvKind, Name: "prefixKey"}, true).Return(`{"key1":"val1","key2":"val2"}`, nil)
 	se.Get(Key{Kind: EnvKind, Name: "prefixKey1"}, true).Return(`{"key1":"val1","key2":"val2"}`, nil)
 	se.Get(Key{Kind: EnvkKind, Name: "secret1"}, false).Return(ciphertext, nil)
@@ -159,6 +169,8 @@ mariner:
 water:
   water:
     where: "%s/tmp-4.out"
+    inline1: "content of /tmp/path/to/inlinekey1/file"
+    inline2: "content of /tmp/path/to/inlinekey2/file"
     nor: "any drop to drink"
 
 prefix:
