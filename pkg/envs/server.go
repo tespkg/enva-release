@@ -111,33 +111,46 @@ func newServer(a *Args, p *patchTable) (*Server, error) {
 		}
 	})
 
+	const metricPath = "/metrics"
+	pathMappingF := func(c *gin.Context) string {
+		path := c.Request.URL.Path
+		for _, param := range c.Params {
+			if param.Key == "fully_qualified_key_name" {
+				path = strings.Replace(path, param.Value, "/*fully_qualified_key_name", 1)
+				break
+			}
+		}
+		return path
+	}
+	ge.Use(GinMeterHandler("envs", pathMappingF, metricPath))
+
 	// Create APIs handler
 	handler := NewHandler(s, creds)
 	// APIs for all key kind
-	ge.GET("key/*fully_qualified_key_name", handler.GetKey)
-	ge.GET("keys", handler.GetKeys)
-	ge.PUT("key", handler.PutKey)
+	ge.GET("/key/*fully_qualified_key_name", handler.GetKey)
+	ge.GET("/keys", handler.GetKeys)
+	ge.PUT("/key", handler.PutKey)
 
 	// APIs for env kind key
-	ge.PUT("envkey", handler.PutEnvKey)
-	ge.PUT("envkeys", handler.PutEnvKeys)
-	ge.GET("envkvs", handler.ExportEnvKVS)
-	ge.PUT("envkvs", handler.ImportEnvKVS)
+	ge.PUT("/envkey", handler.PutEnvKey)
+	ge.PUT("/envkeys", handler.PutEnvKeys)
+	ge.GET("/envkvs", handler.ExportEnvKVS)
+	ge.PUT("/envkvs", handler.ImportEnvKVS)
 
 	// APIs for envf kind key
-	ge.PUT("envfkey", handler.PutEnvfKey)
+	ge.PUT("/envfkey", handler.PutEnvfKey)
 
 	ge.GET("/", func(c *gin.Context) {
 		c.Redirect(http.StatusFound, a.StaticAssetPath)
 	})
 
 	// APIs for secret
-	ge.POST("secret/generate", handler.GenerateSecret)
-	ge.POST("secret/verify", handler.VerifySecret)
+	ge.POST("/secret/generate", handler.GenerateSecret)
+	ge.POST("/secret/verify", handler.VerifySecret)
 
 	ge.GET("/healthz", func(c *gin.Context) {})
 
-	ge.GET("metrics", gin.WrapH(promhttp.Handler()))
+	ge.GET(metricPath, gin.WrapH(promhttp.Handler()))
 
 	return &Server{
 		ginEngine: ge,
