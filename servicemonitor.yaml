@@ -1,0 +1,17 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: envs
+  labels:
+    app: envs
+    release: rancher-monitoring
+spec:
+  namespaceSelector:
+    matchNames:
+    - dev-meeraspace-envs
+  selector:
+    matchLabels:
+      app: envs
+  endpoints:
+  - port: envs
+    path: /metrics
