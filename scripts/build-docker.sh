@@ -25,6 +25,7 @@ cd ${ASSETS_DOCKERFILE_DIR}/golang1.14 && docker build ${BUILD_ARGS} -t registry
 cd ${ASSETS_DOCKERFILE_DIR}/golang1.15 && docker build ${BUILD_ARGS} -t registry.tespkg.in/library/golang:1.15 .
 cd ${ASSETS_DOCKERFILE_DIR}/nginx-alpine && docker build ${BUILD_ARGS} -t registry.tespkg.in/library/nginx:alpine .
 cd ${ASSETS_DOCKERFILE_DIR}/node16-alpine3.13 && docker build ${BUILD_ARGS} -t registry.tespkg.in/library/node:16-alpine3.13 .
+cd ${ASSETS_DOCKERFILE_DIR}/node20-alpine && docker build ${BUILD_ARGS} -t registry.tespkg.in/library/node:20-alpine .
 cd ${ASSETS_DOCKERFILE_DIR}/debian-buster-slim && docker build ${BUILD_ARGS} -t registry.tespkg.in/library/debian:buster-slim .
 cd ${ASSETS_DOCKERFILE_DIR}/debian-buster-slim-orcl && docker build ${BUILD_ARGS} -t registry.tespkg.in/library/debian:buster-slim-orcl .
 cd ${ASSETS_DOCKERFILE_DIR}/debian-bullseye-slim && docker build ${BUILD_ARGS} -t registry.tespkg.in/library/debian:bullseye-slim .
