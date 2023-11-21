@@ -52,6 +52,7 @@ if [[ $# == 1 ]] && [[ $1 == "true" ]]; then
     docker push registry.tespkg.in/library/golang:1.15
     docker push registry.tespkg.in/library/nginx:alpine
     docker push registry.tespkg.in/library/node:16-alpine3.13
+    docker push registry.tespkg.in/library/node:20-alpine
     docker push registry.tespkg.in/library/debian:buster-slim
     docker push registry.tespkg.in/library/debian:bullseye-slim
     docker push registry.tespkg.in/library/debian:buster-slim-orcl
