@@ -29,6 +29,7 @@ cd ${ASSETS_DOCKERFILE_DIR}/node20-alpine && docker build ${BUILD_ARGS} -t regis
 cd ${ASSETS_DOCKERFILE_DIR}/debian-buster-slim && docker build ${BUILD_ARGS} -t registry.tespkg.in/library/debian:buster-slim .
 cd ${ASSETS_DOCKERFILE_DIR}/debian-buster-slim-orcl && docker build ${BUILD_ARGS} -t registry.tespkg.in/library/debian:buster-slim-orcl .
 cd ${ASSETS_DOCKERFILE_DIR}/debian-bullseye-slim && docker build ${BUILD_ARGS} -t registry.tespkg.in/library/debian:bullseye-slim .
+cd ${ASSETS_DOCKERFILE_DIR}/debian-bookworm-slim && docker build ${BUILD_ARGS} -t registry.tespkg.in/library/debian:bookworm-slim .
 cd ${ASSETS_DOCKERFILE_DIR}/ubuntu18.04 && docker build ${BUILD_ARGS} -t registry.tespkg.in/library/ubuntu:18.04 .
 cd ${ASSETS_DOCKERFILE_DIR}/openjdk-8-jre-slim && docker build ${BUILD_ARGS} -t registry.tespkg.in/library/openjdk:8-jre-slim .
 cd ${ASSETS_DOCKERFILE_DIR}/openjdk-11-jre-slim && docker build ${BUILD_ARGS} -t registry.tespkg.in/library/openjdk:11-jre-slim .
@@ -55,6 +56,7 @@ if [[ $# == 1 ]] && [[ $1 == "true" ]]; then
     docker push registry.tespkg.in/library/node:20-alpine
     docker push registry.tespkg.in/library/debian:buster-slim
     docker push registry.tespkg.in/library/debian:bullseye-slim
+    docker push registry.tespkg.in/library/debian:bookworm-slim
     docker push registry.tespkg.in/library/debian:buster-slim-orcl
     docker push registry.tespkg.in/library/ubuntu:18.04
     docker push registry.tespkg.in/library/openjdk:8-jre-slim
