@@ -2,6 +2,7 @@ package kvs
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -24,6 +25,11 @@ const (
 
 	// EnvkKind is used for secret that needs to be stored & transferred in encrypted fashion
 	EnvkKind = "envk"
+
+	// Envb64Kind is used for value that needs to be injected with base64 encoded value, it
+	// is the consumer of the key responsible for decoding the value.
+	// Like the EnvoKind, the underlying kind is env as well.
+	Envb64Kind = "envb64"
 
 	// EnvoKind Optional env ONLY used for checking if the value is required or not when rendering
 	// The underlying kind is always env for env & envo cases.
@@ -229,6 +235,8 @@ func (rd *rendering) render(ir io.Reader, iw io.Writer) error {
 				return fmt.Errorf("decrypt secret %v failed: %v", rkv.Name, err)
 			}
 			vars[rkv.Name] = out
+		case Envb64Kind:
+			vars[rkv.Name] = base64.StdEncoding.EncodeToString([]byte(val))
 		case EnvfKind:
 			if val == "" {
 				return fmt.Errorf("got empty value on required envf key: %v", rkv.Key)
