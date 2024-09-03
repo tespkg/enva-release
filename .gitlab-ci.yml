@@ -56,6 +56,8 @@ test-coverage:
       fi  
   script:
     - make run-test
+  tags:
+    - k8s
 
 build_enva:
   image: docker:18.09
@@ -72,6 +74,8 @@ build_enva:
     - master
     - tags
   when: manual
+  tags:
+    - k8s
 
 build_image_envs:
   extends: .build_single_image
@@ -79,145 +83,5 @@ build_image_envs:
   only:
     - master
     - tags
-
-0-0-dev-gke-dev:
-  interruptible: true
-  extends: .deploy_to_dev_v3_via_argocd
-
-0-0-dev-gke-dev2:
-  interruptible: true
-  extends: .deploy_to_dev_v3_via_argocd
-  
-1-0-test-gke-test:
-  interruptible: true
-  extends: .deploy_to_test_v3_via_argocd
-
-1-0-test-gke-test2:
-  interruptible: true
-  extends: .deploy_to_test_v3_via_argocd
-
-#4-0-prod-eks-fluxble-target  it will use values-target.yaml to deploy
-4-0-prod-eks-fluxble-target:
-  stage: deploy_to_prod
-  interruptible: true
-  extends: .deploy_to_prod_v3_via_argocd
-
-4-0-prod-eks-fluxble-workspace:
-  stage: deploy_to_prod
-  interruptible: true
-  extends: .deploy_to_prod_v3_via_argocd
-
-4-0-prod-eks-fluxble-energy:
-  stage: deploy_to_prod
-  interruptible: true
-  extends: .deploy_to_prod_v3_via_argocd
-
-4-0-prod-eks-talentsandjobs:
-  stage: deploy_to_prod
-  interruptible: true
-  extends: .deploy_to_prod_v3_via_argocd
-
-6-0-prod-odpazure-omangov:
-  stage: deploy_to_prod
-  interruptible: true
-  extends: .deploy_to_prod_v3_via_argocd
-
-
-kenya.meeraspace.com:
-  extends: .deploy_to_test_v2
-  variables:
-    NAMESPACE: kenya-meeraspace-envs
-    environment_name: kenya
-    environment_url: https://kenya.meeraspace.com
-  when: manual
-
-push_stable_chart:
-  extends: .push_stable_chart_v2
-
-request_to_internal.meeraspace.com:
-  extends: .release_request_v2
-  variables: 
-    environment_url: https://internal.meeraspace.com
-    SLACK_CHANNEL: release-notifications
-
-
-energy.fluxble.com:
-  extends: .deploy_to_staging_v2
-  variables:
-    NAMESPACE: energy-fluxble-envs
-    environment_name: energy
-    environment_url: https://energy.fluxble.com
-    SLACK_CHANNEL: release-notifications
-    nsPrefix: energy-fluxble
-    baseUrl: energy.fluxble.com
-    gateway: default/gateway
-    consulHTTPAddr: consul.global-fluxble-consul:8500
-    dbname: envsenergy
-  script:
-    - >
-      helm3 upgrade ${RELEASE_NAME} -n ${NAMESPACE} \
-        --set global.nsPrefix=${nsPrefix},global.baseUrl=${baseUrl},global.gateway=${gateway} \
-        --set image.extraEnv.dbname=${dbname} \
-        --set image.extraENVRulehandled.consulHTTPAddr=${consulHTTPAddr} \
-        --debug --wait ./      
-  when: manual
-
-
-global.fluxble.com:
-  extends: .deploy_to_staging_v2
-  variables:
-    NAMESPACE: global-fluxble-envs
-    environment_name: global
-    environment_url: https://global.fluxble.com
-    SLACK_CHANNEL: release-notifications
-    nsPrefix: global-fluxble
-    baseUrl: fluxble.com
-    gateway: istio-system/global-gateway
-    consulHTTPAddr: consul.global-fluxble-consul:8500
-    dbname: envs
-  script:
-    - >
-      helm3 upgrade ${RELEASE_NAME} -n ${NAMESPACE} \
-        --set global.nsPrefix=${nsPrefix},global.baseUrl=${baseUrl},global.gateway=${gateway} \
-        --set image.extraEnv.dbname=${dbname} \
-        --set image.extraENVRulehandled.consulHTTPAddr=${consulHTTPAddr} \
-        --debug --wait ./      
-  when: manual
-
-oman.fluxble.com:
-  stage: deploy_to_prod
-  extends: .deploy_to_prod_odp_azure
-  variables:
-    NAMESPACE: oman-fluxble-envs
-    environment_name: oman
-    environment_url: https://oman.fluxble.com
-    SLACK_CHANNEL: gitlab-test
-    nsPrefix: oman-fluxble
-    baseUrl: oman.fluxble.com
-    gateway: istio-system/global-gateway
-    consulHTTPAddr: consul.oman-fluxble-consul:8500
-    dbname: envs    
-  script:
-    - >
-      helm3 upgrade ${RELEASE_NAME} -n ${NAMESPACE} \
-        --set global.nsPrefix=${nsPrefix},global.baseUrl=${baseUrl},global.gateway=${gateway} \
-        --debug --wait ./
-
-omangov.fluxble.com:
-  stage: deploy_to_prod
-  extends: .deploy_to_prod_odp_azure
-  variables:
-    NAMESPACE: omangov-fluxble-envs
-    environment_name: omangov
-    environment_url: https://omangov.fluxble.com
-    SLACK_CHANNEL: gitlab-test
-    nsPrefix: omangov-fluxble
-    baseUrl: omangov.fluxble.com
-    gateway: istio-system/global-gateway
-    consulHTTPAddr: consul.oman-fluxble-consul:8500
-    dbname: envs       
-  script:
-    - >
-      helm3 upgrade ${RELEASE_NAME} -n ${NAMESPACE} \
-        --set global.nsPrefix=${nsPrefix},global.baseUrl=${baseUrl},global.gateway=${gateway} \
-        --debug --wait ./
+  tags:
+    - k8s
