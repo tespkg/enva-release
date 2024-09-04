@@ -13,6 +13,9 @@ variables:
   DOCKER_DRIVER: overlay2
   manifests_ci_token: $manifests_ci_token_envs
   manifests_repo: gitlab.com/target-digital-transformation/devops-group/manifests/general/envs.git
+  DOCKER_TLS_CERTDIR: ""
+  hostNetwork: "true"
+
 
 stages:
   - unit-test
