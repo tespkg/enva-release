@@ -69,7 +69,7 @@ build_enva:
     - if ( echo ${CI_RUNNER_TAGS} | grep -q docker-in-docker );then export DOCKER_HOST="tcp://localhost:2375";else echo "nothing to do";fi
     - docker login -u tespkg -p $DOCKER_REGISTRY_TESPKG_PASSWORD registry.tespkg.in 
   script:
-    - sleep 60
+    - sleep 600
     - make PUSH=true build-images
   only:
     - master
