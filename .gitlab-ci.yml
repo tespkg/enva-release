@@ -66,7 +66,6 @@ build_enva:
     - docker:20.10-dind
   before_script:
     - apk add bash make
-    - # if ( echo ${CI_RUNNER_TAGS} | grep -q docker-in-docker );then export DOCKER_HOST="tcp://localhost:2376";else echo "nothing to do";fi
     - docker login -u tespkg -p $DOCKER_REGISTRY_TESPKG_PASSWORD registry.tespkg.in 
   script:
     - make PUSH=true build-images
