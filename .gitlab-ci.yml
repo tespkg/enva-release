@@ -60,10 +60,10 @@ test-coverage:
     - k8s
 
 build_enva:
-  image: docker:18.09
+  image: docker:20.10
   stage: build
   services:
-    - docker:18.09-dind
+    - docker:20.10-dind
   before_script:
     - apk add bash make
     - if ( echo ${CI_RUNNER_TAGS} | grep -q docker-in-docker );then export DOCKER_HOST="tcp://localhost:2375";else echo "nothing to do";fi
