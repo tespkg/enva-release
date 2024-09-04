@@ -73,7 +73,6 @@ build_enva:
   only:
     - master
     - tags
-  when: manual
   tags:
     - k8s
 

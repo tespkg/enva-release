@@ -1,4 +1,4 @@
-FROM registry.tespkg.in/library/enva:alpine3.10 as basis
+FROM registry.tespkg.in/library/enva:alpine3.10 AS basis
 
 FROM golang:1.13-alpine3.10
 

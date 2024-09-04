@@ -1,4 +1,4 @@
-FROM registry.tespkg.in/library/enva:alpine3.10 as basis
+FROM registry.tespkg.in/library/enva:alpine3.10 AS basis
 
 FROM python:3.6.10-alpine3.10
 

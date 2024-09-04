@@ -1,4 +1,4 @@
-FROM golang:1.13-alpine3.10 as builder
+FROM golang:1.13-alpine3.10 AS builder
 
 RUN apk --no-cache add --update alpine-sdk bash
 
