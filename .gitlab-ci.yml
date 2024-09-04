@@ -50,7 +50,7 @@ test-coverage:
     - export CONSUL_DSN=http://consul:8500/a/bc
     - |
       if ( echo ${CI_RUNNER_TAGS} | grep -q kubernetes ); then
-        export DOCKER_HOST="tcp://localhost:2375"
+        #export DOCKER_HOST="tcp://localhost:2375"
         export ETCD_DSN=etcd://localhost:2379/a/bc
         export CONSUL_DSN=http://localhost:8500/a/bc
       fi  
@@ -66,10 +66,9 @@ build_enva:
     - docker:20.10-dind
   before_script:
     - apk add bash make
-    - if ( echo ${CI_RUNNER_TAGS} | grep -q docker-in-docker );then export DOCKER_HOST="tcp://docker:2376";else echo "nothing to do";fi
+    - # if ( echo ${CI_RUNNER_TAGS} | grep -q docker-in-docker );then export DOCKER_HOST="tcp://localhost:2376";else echo "nothing to do";fi
     - docker login -u tespkg -p $DOCKER_REGISTRY_TESPKG_PASSWORD registry.tespkg.in 
   script:
-    - sleep 60
     - make PUSH=true build-images
   only:
     - master
