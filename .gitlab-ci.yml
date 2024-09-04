@@ -67,7 +67,7 @@ build_enva:
   stage: build
   services:
   - name: docker:20.10.12-dind
-    command: ["-H tcp://0.0.0.0:2375"]
+    command: ["--registry-mirror=https://registry.docker-cn.com", "-H tcp://0.0.0.0:2375"]
   before_script:
     - apk add bash make
     - docker login -u tespkg -p $DOCKER_REGISTRY_TESPKG_PASSWORD registry.tespkg.in
