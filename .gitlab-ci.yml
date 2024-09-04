@@ -66,11 +66,11 @@ build_enva:
   - name: docker:20.10.12-dind
     command: ["--registry-mirror=https://registry.docker-cn.com", "-H tcp://0.0.0.0:2376"]
   before_script:
+    - apk add bash make
+    - docker login -u tespkg -p $DOCKER_REGISTRY_TESPKG_PASSWORD registry.tespkg.in
     - if ( echo ${CI_RUNNER_TAGS} | grep -q docker-in-docker );then echo "export docker 2375" && export DOCKER_HOST="tcp://0.0.0.0:2376";else echo "nothing to do";fi
     - netstat -tunlp
     - for i in $(seq 1 1 100);do netstat -tunlp; if [ `netstat -tunlp|grep 2376|wc -l` -eq 1 ];then break;fi ;sleep 10;done
-    - apk add bash make
-    - docker login -u tespkg -p $DOCKER_REGISTRY_TESPKG_PASSWORD registry.tespkg.in 
   script:
     - make PUSH=true build-images
   only:
