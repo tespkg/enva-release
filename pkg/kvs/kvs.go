@@ -55,12 +55,12 @@ var (
 )
 
 var (
-	leftDlims  = []string{"${env://", "${envo://", "${envf://", "${envk://"}
-	rightDlims = []string{"}", "}", "}", "}"}
+	leftDlims  = []string{"${env://", "${envo://", "${envf://", "${envk://", "${envb64://"}
+	rightDlims = []string{"}", "}", "}", "}", "}"}
 )
 
 var (
-	envKeyRegex = regexp.MustCompile(`\${env([ofk])?:// *\.([_a-zA-Z][_a-zA-Z0-9]*) *(\| *(default|overwrite|prefix|inline) *([~!@#$%^&*()\-_+={}\[\]:";'<>,.?/|\\a-zA-Z0-9]*))? *}`)
+	envKeyRegex = regexp.MustCompile(`\${env([ofk]|b64)?:// *\.([_a-zA-Z][_a-zA-Z0-9]*) *(\| *(default|overwrite|prefix|inline) *([~!@#$%^&*()\-_+={}\[\]:";'<>,.?/|\\a-zA-Z0-9]*))? *}`)
 )
 
 type KVStore interface {
@@ -226,6 +226,9 @@ func (rd *rendering) render(ir io.Reader, iw io.Writer) error {
 			vars[rkv.Name] = val
 		case EnvoKind:
 			vars[rkv.Name] = val
+		case Envb64Kind:
+			out := base64.StdEncoding.EncodeToString([]byte(val))
+			vars[rkv.Name] = out
 		case EnvkKind:
 			if val == "" {
 				return fmt.Errorf("got empty value on required envk key: %v", rkv.Key)
@@ -235,8 +238,6 @@ func (rd *rendering) render(ir io.Reader, iw io.Writer) error {
 				return fmt.Errorf("decrypt secret %v failed: %v", rkv.Name, err)
 			}
 			vars[rkv.Name] = out
-		case Envb64Kind:
-			vars[rkv.Name] = base64.StdEncoding.EncodeToString([]byte(val))
 		case EnvfKind:
 			if val == "" {
 				return fmt.Errorf("got empty value on required envf key: %v", rkv.Key)
@@ -296,9 +297,9 @@ func (rd *rendering) valueof(rkv RawKeyVal) (string, error) {
 	rk := rkv.Key
 	key := rkv.Key
 	action := rkv.Action
-	if key.Kind == EnvoKind {
+	if key.Kind == EnvoKind || key.Kind == Envb64Kind {
 		// Optional env ONLY used for checking if the value is required or not when rendering
-		// The underlying kind is always env for env & envo cases.
+		// The underlying kind is always env for env, envo and envb64 cases.
 		key.Kind = EnvKind
 	}
 

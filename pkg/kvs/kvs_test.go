@@ -99,6 +99,10 @@ func TestScan(t *testing.T) {
 			KeyVal: KeyVal{Key: Key{Kind: EnvkKind, Name: "secret2"}, Value: ciphertext},
 			Action: Action{Type: actionDefault, Value: ciphertext},
 		},
+		{
+			KeyVal: KeyVal{Key: Key{Kind: Envb64Kind, Name: "b64str"}, Value: none},
+			Action: Action{Type: actionDefault, Value: none},
+		},
 	}
 
 	require.Equal(t, expected, kvs)
@@ -137,6 +141,7 @@ func TestRender(t *testing.T) {
 	se.Get(Key{Kind: EnvkKind, Name: "secret1"}, false).Return(ciphertext, nil)
 	se.Get(Key{Kind: EnvkKind, Name: "secret2"}, false).Return("", ErrNotFound)
 	se.Set(Key{Kind: EnvkKind, Name: "secret2"}, gomock.Any()).Return(nil)
+	se.Get(Key{Kind: EnvKind, Name: "b64str"}, gomock.Any()).Return("b64str", nil).AnyTimes()
 
 	idx := 0
 	buf := &bytes.Buffer{}
@@ -180,10 +185,14 @@ prefix:
 envk:
   - "123"
   - "123"
+
+envb64:
+  - "YjY0c3Ry"
 `, os.TempDir(), os.TempDir(), os.TempDir(), os.TempDir())
 
 	// Just for showcase, put a \n in front of the expected when initiating, remove it here.
 	expected = strings.TrimPrefix(expected, "\n")
+	expected = strings.TrimSuffix(expected, "\n")
 	require.Equal(t, expected, buf.String())
 
 	// Check envf with default value
