@@ -1,6 +1,6 @@
-FROM registry.tespkg.in/library/enva:alpine3.10 AS basis
+FROM registry.tespkg.in/library/enva:alpine AS basis
 
-FROM node:20-alpine3.18
+FROM node:20-alpine
 
 RUN apk add --update ca-certificates openssl bash
 

@@ -103,6 +103,10 @@ func TestScan(t *testing.T) {
 			KeyVal: KeyVal{Key: Key{Kind: Envb64Kind, Name: "b64str"}, Value: none},
 			Action: Action{Type: actionDefault, Value: none},
 		},
+		{
+			KeyVal: KeyVal{Key: Key{Kind: Envb64Kind, Name: "b64str1"}, Value: "password"},
+			Action: Action{Type: actionEncrypt, Value: "password"},
+		},
 	}
 
 	require.Equal(t, expected, kvs)
@@ -142,6 +146,7 @@ func TestRender(t *testing.T) {
 	se.Get(Key{Kind: EnvkKind, Name: "secret2"}, false).Return("", ErrNotFound)
 	se.Set(Key{Kind: EnvkKind, Name: "secret2"}, gomock.Any()).Return(nil)
 	se.Get(Key{Kind: EnvKind, Name: "b64str"}, gomock.Any()).Return("b64str", nil).AnyTimes()
+	se.Get(Key{Kind: EnvKind, Name: "b64str1"}, gomock.Any()).Return("b64str1", nil).AnyTimes()
 
 	idx := 0
 	buf := &bytes.Buffer{}
@@ -193,7 +198,19 @@ envb64:
 	// Just for showcase, put a \n in front of the expected when initiating, remove it here.
 	expected = strings.TrimPrefix(expected, "\n")
 	expected = strings.TrimSuffix(expected, "\n")
-	require.Equal(t, expected, buf.String())
+	out := buf.String()
+	ind := strings.LastIndex(out, "\n")
+
+	got := strings.TrimSuffix(out[:ind], "\n")
+	require.Equal(t, expected, got)
+
+	// the encrypted string is not deterministic, so we can't compare it directly.
+	last := out[ind:]
+	from, to := strings.Index(last, "\""), strings.LastIndex(last, "\"")
+	ans := last[from+1 : to]
+	plaintext, err := stdPkdfCreds.Decrypt(ans, "password")
+	require.Nil(t, err)
+	require.Equal(t, "b64str1", plaintext)
 
 	// Check envf with default value
 	bs, err := ioutil.ReadFile(fmt.Sprintf("%s/tmp-1.out", os.TempDir()))

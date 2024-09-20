@@ -1,4 +1,4 @@
-FROM registry.tespkg.in/library/enva:debian-buster-slim AS basis
+FROM registry.tespkg.in/library/enva:debian-slim AS basis
 
 FROM openjdk:11-jre-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \

@@ -100,7 +100,7 @@ func TestGetNotFound(t *testing.T) {
 		Name:      "hello",
 	}
 	_, err := es.Get(key)
-	require.True(t, errors.As(err, &store.ErrNotFound))
+	require.True(t, errors.Is(err, store.ErrNotFound))
 }
 
 func setKeyValues(t *testing.T, s *ms) {

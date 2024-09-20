@@ -7,3 +7,7 @@
 
 *.out
 *.txt
+
+vendor/
+/removecomments
+/snake2camel

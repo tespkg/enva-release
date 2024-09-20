@@ -29,3 +29,4 @@ envk:
 
 envb64:
   - "${envb64:// .b64str }"
+  - "${envb64:// .b64str1 | encrypt password}"

@@ -1,4 +1,4 @@
-FROM golang:1.13-alpine3.10 AS builder
+FROM golang:1.22-alpine AS builder
 
 RUN apk --no-cache add --update alpine-sdk bash
 
@@ -6,7 +6,7 @@ COPY . /build
 WORKDIR /build
 RUN make build
 
-FROM alpine:3.10
+FROM alpine
 
 RUN apk add --update ca-certificates openssl busybox-extras bash
 

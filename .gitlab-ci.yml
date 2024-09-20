@@ -45,7 +45,7 @@ include:
   - remote: https://target-digital-transformation.gitlab.io/pipeline/07_v3_deploy_to_prod_via_argocd.yml
 
 test-coverage:
-  image: golang:1.13
+  image: golang:1.22
   stage: unit-test
   before_script:
     - export PATH=$PATH:$GOPATH/bin

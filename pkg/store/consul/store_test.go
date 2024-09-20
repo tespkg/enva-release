@@ -199,7 +199,7 @@ func TestSetUnsupportedType(t *testing.T) {
 
 	err := cs.Set(key, value)
 	require.NotNil(t, err)
-	require.True(t, errors.As(err, &store.ErrUnsupportedValueType))
+	require.True(t, errors.Is(err, store.ErrUnsupportedValueType))
 }
 
 func TestGetUnsupportedType(t *testing.T) {
@@ -210,7 +210,7 @@ func TestGetUnsupportedType(t *testing.T) {
 	}
 	_, err := fromKVPair(p)
 	require.NotNil(t, err)
-	require.True(t, errors.As(err, &store.ErrUnsupportedValueType))
+	require.True(t, errors.Is(err, store.ErrUnsupportedValueType))
 }
 
 func TestExactKey(t *testing.T) {

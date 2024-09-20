@@ -27,7 +27,19 @@ const (
 	EnvkKind = "envk"
 
 	// Envb64Kind is used for value that needs to be injected with base64 encoded value, it
-	// is the consumer of the key responsible for decoding the value.
+	// is the consumer of the key responsible for decoding the value. i.e., the value stored
+	// in the evns is plain text and injected into it's base64 representation when rendering
+	// it for the consumer.
+	//
+	// It supports `enc` action to encrypt the value before encoding it to base64.
+	//
+	// The encryption method is AES-GCM, the key is derived from the provided password, e.g.,
+	// {envencr:// key | password}. params for the encryption are:
+	//   key size: 32
+	//   iterations: 100000
+	//   salt size: 32
+	//   nonce size: 12
+	//
 	// Like the EnvoKind, the underlying kind is env as well.
 	Envb64Kind = "envb64"
 
@@ -41,6 +53,7 @@ const (
 	actionOverwrite = "overwrite"
 	actionPrefix    = "prefix"
 	actionInline    = "inline"
+	actionEncrypt   = "encrypt"
 
 	empty = `''`
 	none  = "nonePlaceHolder"
@@ -60,7 +73,7 @@ var (
 )
 
 var (
-	envKeyRegex = regexp.MustCompile(`\${env([ofk]|b64)?:// *\.([_a-zA-Z][_a-zA-Z0-9]*) *(\| *(default|overwrite|prefix|inline) *([~!@#$%^&*()\-_+={}\[\]:";'<>,.?/|\\a-zA-Z0-9]*))? *}`)
+	envKeyRegex = regexp.MustCompile(`\${env([ofk]|b64)?:// *\.([_a-zA-Z][_a-zA-Z0-9]*) *(\| *(default|overwrite|prefix|inline|encrypt) *([~!@#$%^&*()\-_+={}\[\]:";'<>,.?/|\\a-zA-Z0-9]*))? *}`)
 )
 
 type KVStore interface {
@@ -228,6 +241,17 @@ func (rd *rendering) render(ir io.Reader, iw io.Writer) error {
 			vars[rkv.Name] = val
 		case Envb64Kind:
 			out := base64.StdEncoding.EncodeToString([]byte(val))
+			if rkv.Action.Type == actionEncrypt {
+				var err error
+				password := rkv.Action.Value
+				if password == "" {
+					return errors.New("empty password for encryption")
+				}
+				out, err = stdPkdfCreds.Encrypt(val, password)
+				if err != nil {
+					return fmt.Errorf("encrypt secret %v failed: %w", rkv.Key.Name, err)
+				}
+			}
 			vars[rkv.Name] = out
 		case EnvkKind:
 			if val == "" {
@@ -448,7 +472,12 @@ func keyFromMatchItem(match []string) (Key, Action) {
 	if actionType == "" {
 		actionType = actionDefault
 	}
-	if actionType != actionDefault && actionType != actionOverwrite && actionType != actionPrefix && actionType != actionInline {
+	if actionType != actionDefault &&
+		actionType != actionOverwrite &&
+		actionType != actionPrefix &&
+		actionType != actionInline &&
+		actionType != actionEncrypt {
+
 		actionType = actionDefault
 	}
 	return Key{Kind: kind, Name: key}, Action{Type: actionType, Value: actionValue}

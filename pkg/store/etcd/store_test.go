@@ -105,7 +105,7 @@ func TestGetNotFound(t *testing.T) {
 		Name:      "hello",
 	}
 	_, err := es.Get(key)
-	require.True(t, errors.As(err, &store.ErrNotFound))
+	require.True(t, errors.Is(err, store.ErrNotFound))
 }
 
 func setKeyValues(t *testing.T, s *es) {
@@ -236,7 +236,7 @@ func TestSetUnsupportedType(t *testing.T) {
 
 	err := es.Set(key, value)
 	require.NotNil(t, err)
-	require.True(t, errors.As(err, &store.ErrUnsupportedValueType))
+	require.True(t, errors.Is(err, store.ErrUnsupportedValueType))
 }
 
 func TestGetUnsupportedType(t *testing.T) {
@@ -245,7 +245,7 @@ func TestGetUnsupportedType(t *testing.T) {
 	bVal = append(bVal, []byte(value)...)
 	_, err := decodeVal(bVal)
 	require.NotNil(t, err)
-	require.True(t, errors.As(err, &store.ErrUnsupportedValueType))
+	require.True(t, errors.Is(err, store.ErrUnsupportedValueType))
 }
 
 func TestExactKey(t *testing.T) {

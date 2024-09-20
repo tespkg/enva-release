@@ -1,4 +1,4 @@
-FROM registry.tespkg.in/library/enva:debian-buster-slim AS basis
+FROM registry.tespkg.in/library/enva:debian-slim AS basis
 
 FROM eclipse-temurin:11
 
