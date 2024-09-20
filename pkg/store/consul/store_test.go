@@ -191,7 +191,7 @@ func TestGetKindValues(t *testing.T) {
 func TestSetUnsupportedType(t *testing.T) {
 	cs := newConsulStore(t)
 	key := store.Key{
-		Kind:      "",
+		Kind:      "dev",
 		Namespace: "test",
 		Name:      "foo",
 	}

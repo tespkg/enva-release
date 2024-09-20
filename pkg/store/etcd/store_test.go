@@ -228,7 +228,7 @@ func TestGetKindValues(t *testing.T) {
 func TestSetUnsupportedType(t *testing.T) {
 	es := newEtcdStore(t)
 	key := store.Key{
-		Kind:      "",
+		Kind:      "dev",
 		Namespace: "test",
 		Name:      "foo",
 	}
