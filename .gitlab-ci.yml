@@ -86,6 +86,7 @@ build_enva:
 
 build_image_envs:
   extends: .build_single_image
+  image: docker:20.10.12
   stage: build
   only:
     - master
