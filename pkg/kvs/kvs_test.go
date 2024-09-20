@@ -208,7 +208,7 @@ envb64:
 	last := out[ind:]
 	from, to := strings.Index(last, "\""), strings.LastIndex(last, "\"")
 	ans := last[from+1 : to]
-	plaintext, err := stdPkdfCreds.Decrypt(ans, "password")
+	plaintext, err := stdPkdfAesCTRCreds.Decrypt(ans, "password")
 	require.Nil(t, err)
 	require.Equal(t, "b64str1", plaintext)
 

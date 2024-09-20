@@ -205,3 +205,95 @@ func (c *PbkdfCreds) Decrypt(encData, password string) (string, error) {
 
 	return string(plaintext), nil
 }
+
+type PbkdfAesCTRCreds struct {
+	saltSize  int
+	nonceSize int
+
+	keySize    int
+	iterations int
+}
+
+var stdPkdfAesCTRCreds = newPbkdfAesCTRCreds(32, 32, 100000)
+
+func newPbkdfAesCTRCreds(saltSize, keySize, iterations int) *PbkdfAesCTRCreds {
+	return &PbkdfAesCTRCreds{
+		saltSize:   saltSize,
+		nonceSize:  aes.BlockSize,
+		keySize:    keySize,
+		iterations: iterations,
+	}
+}
+
+func (c *PbkdfAesCTRCreds) Encrypt(plaintext, password string) (string, error) {
+	// Generate a random salt
+	salt := make([]byte, c.saltSize)
+	if _, err := io.ReadFull(rand.Reader, salt); err != nil {
+		return "", err
+	}
+
+	// Derive the key using PBKDF2
+	key := pbkdf2.Key([]byte(password), salt, c.iterations, c.keySize, sha256.New)
+
+	// Create AES block cipher
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return "", err
+	}
+
+	// Generate a random nonce
+	nonce := make([]byte, c.nonceSize)
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+		return "", err
+	}
+
+	// Create the AES-CTR stream
+	stream := cipher.NewCTR(block, nonce)
+
+	// Encrypt the data
+	ciphertext := make([]byte, len(plaintext))
+	stream.XORKeyStream(ciphertext, []byte(plaintext))
+
+	// Concatenate salt, nonce, and ciphertext for easier transport
+	finalData := append(salt, nonce...)
+	finalData = append(finalData, ciphertext...)
+
+	// Encode to base64 for a compact string representation
+	encData := base64.StdEncoding.EncodeToString(finalData)
+
+	return encData, nil
+}
+
+func (c *PbkdfAesCTRCreds) Decrypt(encData, password string) (string, error) {
+	// Decode the base64-encoded data
+	data, err := base64.StdEncoding.DecodeString(encData)
+	if err != nil {
+		return "", err
+	}
+
+	// Extract the salt, nonce, and ciphertext
+	if len(data) < c.saltSize+c.nonceSize {
+		return "", errors.New("invalid encrypted data")
+	}
+	salt := data[:c.saltSize]
+	nonce := data[c.saltSize : c.saltSize+c.nonceSize]
+	ciphertext := data[c.saltSize+c.nonceSize:]
+
+	// Derive the key using PBKDF2
+	key := pbkdf2.Key([]byte(password), salt, c.iterations, c.keySize, sha256.New)
+
+	// Create AES block cipher
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return "", err
+	}
+
+	// Create the AES-CTR stream
+	stream := cipher.NewCTR(block, nonce)
+
+	// Decrypt the data
+	plaintext := make([]byte, len(ciphertext))
+	stream.XORKeyStream(plaintext, ciphertext)
+
+	return string(plaintext), nil
+}

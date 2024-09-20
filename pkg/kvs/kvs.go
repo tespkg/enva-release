@@ -247,7 +247,7 @@ func (rd *rendering) render(ir io.Reader, iw io.Writer) error {
 				if password == "" {
 					return errors.New("empty password for encryption")
 				}
-				out, err = stdPkdfCreds.Encrypt(val, password)
+				out, err = stdPkdfAesCTRCreds.Encrypt(val, password)
 				if err != nil {
 					return fmt.Errorf("encrypt secret %v failed: %w", rkv.Key.Name, err)
 				}
