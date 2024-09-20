@@ -15,7 +15,7 @@ COPY --from=basis /docker-entrypoint.sh /docker-entrypoint.sh
 # * Alpine not including a nsswitch.conf file. Since Alpine doesn't use glibc
 #   (it uses musl), maintainers argue that the need of nsswitch.conf is a Go bug:
 #   https://github.com/gliderlabs/docker-alpine/issues/367#issuecomment-354316460
-RUN [ ! -e /etc/nsswitch.conf ] && echo 'hosts: files dns' > /etc/nsswitch.conf
+# * Alpine now added a nsswitch.conf file and included `hosts: files dns` in it.
 
 ENV PATH="/usr/local/envs/bin:${PATH}"
 

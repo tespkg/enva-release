@@ -12,8 +12,8 @@ BUILD_ARGS="--build-arg http_proxy=${http_proxy} --build-arg https_proxy=${http_
 
 echo  "Build base images..."
 cd "${ROOT_DIR}"
-docker build ${BUILD_ARGS} -t registry.tespkg.in/library/enva:alpine -f Dockerfile-enva .
-docker build ${BUILD_ARGS} -t registry.tespkg.in/library/enva:debian-slim -f Dockerfile-enva-debian .
+docker build ${BUILD_ARGS} -t registry.tespkg.in/library/enva:alpine -f enva-alpine.Dockerfile .
+docker build ${BUILD_ARGS} -t registry.tespkg.in/library/enva:debian-slim -f enva-debian-slim.Dockerfile .
 docker build ${BUILD_ARGS} -t registry.tespkg.in/library/envs:alpine .
 
 echo "Wrap vendor official images..."
@@ -31,30 +31,20 @@ cd ${ASSETS_DOCKERFILE_DIR}/ubuntu18.04 && docker build ${BUILD_ARGS} -t registr
 
 if [[ $# == 1 ]] && [[ $1 == "true" ]]; then
     echo "Push base images..."
-    docker push registry.tespkg.in/library/enva:alpine3.10
-    docker push registry.tespkg.in/library/enva:debian-buster-slim
-    docker push registry.tespkg.in/library/envs:alpine3.10
+    docker push registry.tespkg.in/library/enva:alpine
+    docker push registry.tespkg.in/library/enva:debian-slim
+    docker push registry.tespkg.in/library/envs:alpine
 
     echo "Push wrapped vendor images..."
-    docker push registry.tespkg.in/library/alpine:3.10
-    docker push registry.tespkg.in/library/golang:1.13-alpine3.10
-    docker push registry.tespkg.in/library/golang:1.13-buster
-    docker push registry.tespkg.in/library/golang:1.13-buster-orcl
-    docker push registry.tespkg.in/library/golang:1.14
-    docker push registry.tespkg.in/library/golang:1.15
+    docker push registry.tespkg.in/library/alpine
+    docker push registry.tespkg.in/library/debian:slim
+    docker push registry.tespkg.in/library/eclipse-temurin-11
     docker push registry.tespkg.in/library/nginx:alpine
-    docker push registry.tespkg.in/library/node:16-alpine3.13
     docker push registry.tespkg.in/library/node:20-alpine
-    docker push registry.tespkg.in/library/debian:buster-slim
-    docker push registry.tespkg.in/library/debian:bullseye-slim
-    docker push registry.tespkg.in/library/debian:bookworm-slim
-    docker push registry.tespkg.in/library/debian:buster-slim-orcl
-    docker push registry.tespkg.in/library/ubuntu:18.04
     docker push registry.tespkg.in/library/openjdk:8-jre-slim
     docker push registry.tespkg.in/library/openjdk:11-jre-slim
     docker push registry.tespkg.in/library/openjdk:17-slim
     docker push registry.tespkg.in/library/python:3.6.10
-    docker push registry.tespkg.in/library/python:3.6.10-alpine3.10
-    docker push registry.tespkg.in/library/mongodb-bi-connector
+    docker push registry.tespkg.in/library/python:3.6.10-alpine
+    docker push registry.tespkg.in/library/ubuntu:18.04
 fi
-

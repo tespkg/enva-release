@@ -10,9 +10,8 @@ FROM alpine
 
 RUN apk add --update ca-certificates openssl busybox-extras bash
 
-COPY --from=builder /build/bin/envs /usr/local/envs/bin/envs
-COPY --from=builder /build/static /usr/local/envs/static
-COPY --from=builder /build/docker-entrypoint.sh /docker-entrypoint.sh
+COPY --from=builder /build/bin/enva /usr/local/envs/bin/enva
+COPY --from=builder /build/docker-entrypoint-enva.sh /docker-entrypoint.sh
 
 ENV PATH="/usr/local/envs/bin:${PATH}"
 
