@@ -104,3 +104,5 @@ build_image_envs:
     - for i in $(seq 1 1 100);do netstat -tunlp; if [ `netstat -tunlp|grep 2375|wc -l` -eq 1 ];then break;fi ;sleep 10;done
     - docker info
     - docker version
+    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.com
+
