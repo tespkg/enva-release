@@ -37,7 +37,21 @@ if [[ $# == 1 ]] && [[ $1 == "true" ]]; then
 
     echo "Push wrapped vendor images..."
     docker push registry.tespkg.in/library/alpine
+
+    docker tag registry.tespkg.in/library/alpine registry.tespkg.in/library/alpine:3.10
+    docker push registry.tespkg.in/library/alpine:3.10
+
     docker push registry.tespkg.in/library/debian:slim
+
+    docker tag registry.tespkg.in/library/debian:slim registry.tespkg.in/library/debian:buster-slim
+    docker push registry.tespkg.in/library/debian:buster-slim
+
+    docker tag registry.tespkg.in/library/debian:slim registry.tespkg.in/library/debian:bullseye-slim
+    docker push registry.tespkg.in/library/debian:bullseye-slim
+
+    docker tag registry.tespkg.in/library/debian:slim registry.tespkg.in/library/debian:bookworm-slim
+    docker push registry.tespkg.in/library/debian:bookworm-slim
+
     docker push registry.tespkg.in/library/eclipse-temurin-11
     docker push registry.tespkg.in/library/nginx:alpine
     docker push registry.tespkg.in/library/node:20-alpine
