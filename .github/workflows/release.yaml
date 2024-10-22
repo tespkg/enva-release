@@ -14,28 +14,24 @@ jobs:
     runs-on: [ubuntu-latest]
     steps:
       - uses: actions/checkout@v4
+      - run: ls -R
       - name: Get version
         id: vars
         run: echo "version=$(cat VERSION)" >> $GITHUB_OUTPUT
-      - name: Clone envs from gitlab
-        run: |
-          git clone https://gitlab-ci-token:${{ secrets.GITLAB_CR_PAT }}@gitlab.com/target-digital-transformation/environment-store.git envs
-          cd envs && git checkout ${{ steps.vars.outputs.version }} && git remote set-url origin git@github.com:tespkg/enva-release
-      - name: Set up Go
-        uses: actions/setup-go@v5
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v6
-        with:
-          # either 'goreleaser' (default) or 'goreleaser-pro'
-          distribution: goreleaser
-          # 'latest', 'nightly', or a semver
-          version: "~> v2"
-          args: release --clean
-          workdir: envs
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #
-      # - uses: goreleaser/goreleaser-action@v2
+      # - name: Clone envs from gitlab
+      #   run: |
+      #     git clone https://gitlab-ci-token:${{ secrets.GITLAB_CR_PAT }}@gitlab.com/target-digital-transformation/environment-store.git envs
+      #     cd envs && git checkout ${{ steps.vars.outputs.version }} && git remote set-url origin git@github.com:tespkg/enva-release
+      # - name: Set up Go
+      #   uses: actions/setup-go@v5
+      # - name: Run GoReleaser
+      #   uses: goreleaser/goreleaser-action@v6
       #   with:
-      #     version: latest
-      #     args: --snapshot --rm-dist
+      #     # either 'goreleaser' (default) or 'goreleaser-pro'
+      #     distribution: goreleaser
+      #     # 'latest', 'nightly', or a semver
+      #     version: "~> v2"
+      #     args: release --clean
+      #     workdir: envs
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
