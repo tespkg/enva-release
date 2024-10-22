@@ -20,7 +20,7 @@ jobs:
         run: echo "version=$(cat ./version)" >> $GITHUB_OUTPUT
       - name: Clone envs from gitlab
         run: |
-          rm -rf .git/ ./*
+          rm -rf .git/ .github/ ./*
           ls -R -la
           git clone https://gitlab-ci-token:${{ secrets.GITLAB_CR_PAT }}@gitlab.com/target-digital-transformation/environment-store.git .
           git checkout ${{ steps.vars.outputs.version }}
