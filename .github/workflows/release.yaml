@@ -23,6 +23,7 @@ jobs:
           rm -rf .git/ .github/ ./*
           ls -R -la
           git clone https://gitlab-ci-token:${{ secrets.GITLAB_CR_PAT }}@gitlab.com/target-digital-transformation/environment-store.git .
+          git tag
           git checkout ${{ steps.vars.outputs.version }}
           git remote set-url origin git@github.com:tespkg/enva-release
       - name: Set up Go
