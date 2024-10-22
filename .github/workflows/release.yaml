@@ -21,6 +21,7 @@ jobs:
       - name: Clone envs from gitlab
         run: |
           rm -rf .git/ ./*
+          ls -R .
           git clone https://gitlab-ci-token:${{ secrets.GITLAB_CR_PAT }}@gitlab.com/target-digital-transformation/environment-store.git .
           git checkout ${{ steps.vars.outputs.version }}
           git remote set-url origin git@github.com:tespkg/enva-release
