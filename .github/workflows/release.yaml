@@ -10,8 +10,8 @@ env:
   DEFAULT_GO_VERSION: 1.21
 
 jobs:
-  lint:
-    runs-on: [self-hosted, linux]
+  release:
+    runs-on: [ubuntu-latest]
     steps:
       - name: Configure git for private gitlab repo
         run: |
