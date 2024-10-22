@@ -3,6 +3,7 @@ package kvs
 import (
 	"bytes"
 	"fmt"
+	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -21,6 +22,13 @@ func docOfChapter01(t *testing.T) string {
 func TestScan(t *testing.T) {
 	rd := &rendering{}
 	rd.readFileFunc = func(filename string) (i []byte, err error) {
+		if filename == "/tmp/path/to/yamlenvf/file.yaml" {
+			txt := `
+hello: word1 word2
+ word3
+ word4`
+			return []byte(txt), nil
+		}
 		return []byte("content of " + filename), nil
 	}
 
@@ -92,6 +100,10 @@ func TestScan(t *testing.T) {
 			Action: Action{Type: actionPrefix, Value: none},
 		},
 		{
+			KeyVal: KeyVal{Key: Key{Kind: EnvfKind, Name: "yamlenvf"}, Value: "\nhello: word1 word2\n word3\n word4"},
+			Action: Action{Type: actionOverwrite, Value: "/tmp/path/to/yamlenvf/file.yaml"},
+		},
+		{
 			KeyVal: KeyVal{Key: Key{Kind: EnvkKind, Name: "secret1"}, Value: none},
 			Action: Action{Type: actionDefault, Value: none},
 		},
@@ -147,6 +159,8 @@ func TestRender(t *testing.T) {
 	se.Set(Key{Kind: EnvkKind, Name: "secret2"}, gomock.Any()).Return(nil)
 	se.Get(Key{Kind: EnvKind, Name: "b64str"}, gomock.Any()).Return("b64str", nil).AnyTimes()
 	se.Get(Key{Kind: EnvKind, Name: "b64str1"}, gomock.Any()).Return("b64str1", nil).AnyTimes()
+	se.Set(Key{Kind: EnvfKind, Name: "yamlenvf"}, gomock.Any()).Return(nil).AnyTimes()
+	se.Get(Key{Kind: EnvfKind, Name: "yamlenvf"}, gomock.Any()).Return("", nil).AnyTimes()
 
 	idx := 0
 	buf := &bytes.Buffer{}
@@ -156,6 +170,13 @@ func TestRender(t *testing.T) {
 		return os.Create(fmt.Sprintf("%s/tmp-%d.out", os.TempDir(), idx))
 	}
 	rd.readFileFunc = func(filename string) (i []byte, err error) {
+		if filename == "/tmp/path/to/yamlenvf/file.yaml" {
+			txt := `
+hello: word1 word2
+ word3
+ word4`
+			return []byte(txt), nil
+		}
 		return []byte("content of " + filename), nil
 	}
 	err = rd.render(bytes.NewBufferString(doc), buf)
@@ -187,23 +208,28 @@ prefix:
   - '{"key1":"val1","key2":"val2"}'
   - "{"key1":"val1","key2":"val2"}"
 
+yamlenvf:
+  - hello: "%s/tmp-5.out"
+
 envk:
   - "123"
   - "123"
 
 envb64:
   - "YjY0c3Ry"
-`, os.TempDir(), os.TempDir(), os.TempDir(), os.TempDir())
+`, os.TempDir(), os.TempDir(), os.TempDir(), os.TempDir(), os.TempDir())
 
 	// Just for showcase, put a \n in front of the expected when initiating, remove it here.
 	expected = strings.TrimPrefix(expected, "\n")
 	expected = strings.TrimSuffix(expected, "\n")
 	out := buf.String()
-	ind := strings.LastIndex(out, "\n")
 
+	// check got without the last line
+	ind := strings.LastIndex(out, "\n")
 	got := strings.TrimSuffix(out[:ind], "\n")
 	require.Equal(t, expected, got)
 
+	// check the last line
 	// the encrypted string is not deterministic, so we can't compare it directly.
 	last := out[ind:]
 	from, to := strings.Index(last, "\""), strings.LastIndex(last, "\"")
@@ -328,4 +354,23 @@ func TestTmpPattern(t *testing.T) {
 		got := tmpPattern(v.input)
 		require.Equal(t, v.expect, got)
 	}
+}
+
+func TestTrimYaml(t *testing.T) {
+	txt := `
+a: >
+ aaaaaa
+ bbb
+depends_on:
+  - broker
+    aaa
+hello: ${env:// .poet 
+ }
+`
+	m := make(map[string]any)
+	err := yaml.Unmarshal([]byte(txt), &m)
+	require.Nil(t, err)
+	out, err := yaml.Marshal(m)
+	require.Nil(t, err)
+	fmt.Println(string(out))
 }

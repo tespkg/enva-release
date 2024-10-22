@@ -23,6 +23,9 @@ prefix:
   - '${env:// .prefixKey | prefix }'
   - "${env:// .prefixKey1 | prefix}"
 
+yamlenvf:
+  - hello: "${envf:// .yamlenvf | overwrite /tmp/path/to/yamlenvf/file.yaml }"
+
 envk:
   - "${envk:// .secret1 }"
   - "${envk:// .secret2 | default 8mhvKjArTGOVy95gWw5Q6wBui7yOXIb/H5ofA7Qi1g== }"

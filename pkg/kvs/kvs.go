@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"gopkg.in/yaml.v2"
 	"io"
 	"io/ioutil"
 	"os"
@@ -317,6 +318,29 @@ func (rd *rendering) render(ir io.Reader, iw io.Writer) error {
 	return nil
 }
 
+func (rd *rendering) rewriteYamlEnvf(rkv RawKeyVal, value string) string {
+	if rkv.Kind != EnvfKind {
+		return value
+	}
+	fname := rkv.Action.Value
+	ext := filepath.Ext(fname)
+	if ext != ".yaml" && ext != ".yml" {
+		return value
+	}
+	// read and overwrite
+	var err error
+	m := map[string]any{}
+	if err = yaml.Unmarshal([]byte(value), &m); err != nil {
+		return value
+	}
+	b, err := yaml.Marshal(m)
+	if err != nil {
+		return value
+	}
+
+	return string(b)
+}
+
 func (rd *rendering) valueof(rkv RawKeyVal) (string, error) {
 	rk := rkv.Key
 	key := rkv.Key
@@ -389,6 +413,7 @@ func (rd *rendering) valueof(rkv RawKeyVal) (string, error) {
 			}
 		}
 	}
+	value = rd.rewriteYamlEnvf(rkv, value)
 
 	rd.kvS.set(key.Name)
 

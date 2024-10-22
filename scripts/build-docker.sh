@@ -7,7 +7,7 @@ shopt -s nullglob
 
 SCRIPT_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ROOT_DIR=$(dirname "${SCRIPT_PATH}")
-ASSETS_DOCKERFILE_DIR=${ROOT_DIR}/assets/dockerfiles
+ASSETS_DOCKERFILE_DIR=${ROOT_DIR}/docker
 BUILD_ARGS="--build-arg http_proxy=${http_proxy} --build-arg https_proxy=${http_proxy} --build-arg no_proxy=${no_proxy}"
 
 echo  "Build base images..."

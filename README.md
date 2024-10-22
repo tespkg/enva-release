@@ -54,7 +54,7 @@ There are three components in environment store lifecycle
 1. enva, agent of envs which act as the bridge between envs & service/application, publish & render/watch
    service/application key value pairs
 
-![envs-arch](assets/images/envs-arch.png)
+![envs-arch](docs/images/envs-arch.png)
 
 ### Liveness/Readiness probe
 
@@ -135,7 +135,7 @@ readinessProbe:
 - It works as a supervisor process of the service/application process.
 - The k8s position of enva was described as follows
 
-![enva-k8s-positioning](assets/images/enva-k8s-positioning.png)
+![enva-k8s-positioning](docs/images/enva-k8s-positioning.png)
 
 ### How to echo a env var in one line
 
