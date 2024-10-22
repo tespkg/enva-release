@@ -10,6 +10,11 @@ builds:
       - -s -w -X tespkg.in/envs/version.Version={{.Version}}
     goos:
       - linux
+    goarch:
+      - amd64
+      - arm64
+    archive:
+      skip: true
 
 ## example:
 # .goreleaser.yaml
