@@ -1,13 +1,15 @@
 # enva release
 
-This repo is for TES environment agent (enva) release.
+This repo is for environment agent (enva) binary release only. It contains only the github workflow which clones the gitlab project, build only the `cmd/enva` module (CGO_ENABLED=0) and publish the binary for linux amd64 and arm64.
+
+The binary can then be used directly in each projects Dockerfile, thus skipping building separate base images like tespkg.in/library/debian, tespkg.in/library/ubuntu etc.
 
 ## How to upgrade / add enva to your project
 
-Step 1: develop and test https://gitlab.com/target-digital-transformation/environment-store/
-Step 2: tag e.g. `1.2.3`
-Step 3: update https://github.com/tespkg/enva-release/blob/main/version with the tag `1.2.3`
-Step 4: change the dockerfile of the repo, e.g.:
+1. develop and test https://gitlab.com/target-digital-transformation/environment-store/
+2. tag e.g. `1.2.3`
+3. update https://github.com/tespkg/enva-release/blob/main/version with the tag `1.2.3`
+4. change the dockerfile of the repo, e.g.:
 
 ```dockerfile
 FROM debian:bookworm-slim
