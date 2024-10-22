@@ -38,3 +38,5 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GORELEASER_CURRENT_TAG: ${{ steps.vars.outputs.version }}
+          GORELEASER_PREVIOUS_TAG: ${{ steps.vars.outputs.version }}
