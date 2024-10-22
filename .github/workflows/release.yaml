@@ -18,7 +18,6 @@ jobs:
       - name: Get version
         id: vars
         run: echo "version=$(cat ./version)" >> $GITHUB_OUTPUT
-      - run: echo Releasing enva version: ${{ steps.vars.outputs.version }}
       - name: Clone envs from gitlab
         run: |
           git clone https://gitlab-ci-token:${{ secrets.GITLAB_CR_PAT }}@gitlab.com/target-digital-transformation/environment-store.git envs
