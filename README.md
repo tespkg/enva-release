@@ -17,7 +17,7 @@ The binary can then be used directly in each projects Dockerfile, thus skipping 
 
 ```dockerfile
 FROM debian:bookworm-slim
-ARG ENVA_VERSION=1.2.1
+ARG ENVA_VERSION=1.2.3
 RUN apt-get update && \
   apt-get install -y --no-install-recommends ca-certificates libaio1 && \
   rm -rf /var/lib/apt/lists/* 
