@@ -15,8 +15,7 @@ jobs:
     steps:
       - name: Configure git for private gitlab repo
         run: |
-          git config --global url."https://gitlab-ci-token:${{ secrets.GITLAB_CR_PAT }}@gitlab.com/".insteadOf "https://gitlab.com/"
-          git clone https://gitlab.com/target-digital-transformation/environment-store.git
+          git clone https://{{ secrets.GITLAB_CR_USER }}:${{ secrets.GITLAB_CR_PAT }}@gitlab.com/target-digital-transformation/environment-store.git
           ls -R .
 
       # - name: Set up Go
