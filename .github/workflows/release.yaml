@@ -15,7 +15,7 @@ jobs:
     steps:
       - name: Configure git for private gitlab repo
         run: |
-          git clone https://{{ secrets.GITLAB_CR_USER }}:${{ secrets.GITLAB_CR_PAT }}@gitlab.com/target-digital-transformation/environment-store.git
+          git clone https://${{ secrets.GITLAB_CR_USER }}:${{ secrets.GITLAB_CR_PAT }}@gitlab.com/target-digital-transformation/environment-store.git
           ls -R .
 
       # - name: Set up Go
